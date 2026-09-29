@@ -1,8 +1,10 @@
-# Prisma Schema — RicozViz
-# ========================================
-# Foundation configuration only.
-# Entity models will be added in Day 1 Step 3 (Database & Schema).
-# ========================================
+// ========================================
+// RicozViz — Prisma Schema
+// Day 1, Step 3: Core Database Architecture
+// ========================================
+// Database: PostgreSQL 16
+// ORM:      Prisma 5
+// ========================================
 
 generator client {
   provider = "prisma-client-js"
@@ -13,21 +15,453 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-# ── PLACEHOLDER ─────────────────────────────────────────────────────────
-#
-# RicozViz data models will be defined here in the next step.
-#
-# Upcoming entities:
-#   - User
-#   - Organization
-#   - Role
-#   - Permission
-#   - DataSource
-#   - Dataset
-#   - Dashboard
-#   - Chart
-#   - DashboardPermission
-#   - Report
-#   - AuditLog
-#
-# ────────────────────────────────────────────────────────────────────────
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INACTIVE
+  INVITED
+}
+
+enum DataSourceType {
+  POSTGRESQL
+  MYSQL
+  SQLITE
+  MONGODB
+  REST_API
+  CSV_UPLOAD
+  GOOGLE_SHEETS
+  BIGQUERY
+  SNOWFLAKE
+  REDSHIFT
+  OTHER
+}
+
+enum DataSourceStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+  PENDING
+}
+
+enum DatasetType {
+  CONNECTED // Live query against a DataSource
+  UPLOADED // Imported file / static data
+  DERIVED // Computed from other datasets (future)
+}
+
+enum DatasetStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+  ERROR
+}
+
+enum DashboardStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum DashboardVisibility {
+  PRIVATE // Owner only
+  ORGANIZATION // All org members
+  PUBLIC // Link-based public access (future)
+}
+
+enum ReportStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ReportFormat {
+  PDF
+  CSV
+  PNG
+  EXCEL
+}
+
+enum DashboardAccessLevel {
+  VIEW
+  EDIT
+  ADMIN
+}
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  status       UserStatus @default(PENDING_VERIFICATION)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // ---- Relationships ----
+  memberships        OrganizationMember[]
+  ownedDashboards    Dashboard[]          @relation("DashboardOwner")
+  createdDataSources DataSource[]         @relation("DataSourceCreator")
+  createdDatasets    Dataset[]            @relation("DatasetCreator")
+  createdReports     Report[]             @relation("ReportCreator")
+  dashboardAccess    DashboardAccess[]
+  auditLogs          AuditLog[]
+
+  @@map("users")
+}
+
+// ============================================================
+// ORGANIZATION
+// ============================================================
+
+model Organization {
+  id        String             @id @default(uuid())
+  name      String
+  slug      String             @unique
+  logoUrl   String?
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  // ---- Relationships ----
+  members     OrganizationMember[]
+  dataSources DataSource[]
+  datasets    Dataset[]
+  dashboards  Dashboard[]
+  reports     Report[]
+  auditLogs   AuditLog[]
+
+  @@map("organizations")
+}
+
+// ============================================================
+// ROLE
+// ============================================================
+// Roles are stored in the database (not hardcoded) to allow
+// custom org-level roles in the future. The system seeds three
+// default roles: ADMIN, ANALYST, BUSINESS_USER.
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false) // true = cannot be deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // ---- Relationships ----
+  members     OrganizationMember[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+// ============================================================
+// PERMISSION
+// ============================================================
+
+model Permission {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g. "DASHBOARD_CREATE"
+  description String?
+  createdAt   DateTime @default(now())
+
+  // ---- Relationships ----
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+// ============================================================
+// ROLE ↔ PERMISSION  (many-to-many join)
+// ============================================================
+
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================================
+// ORGANIZATION MEMBER
+// ============================================================
+// Junction between User, Organization, and Role.
+// Supports future multi-org membership (one user in N orgs).
+
+model OrganizationMember {
+  id             String           @id @default(uuid())
+  organizationId String
+  userId         String
+  roleId         String
+  status         MembershipStatus @default(ACTIVE)
+  joinedAt       DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id])
+
+  // A user can only have one active membership per organization.
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("organization_members")
+}
+
+// ============================================================
+// DATA SOURCE
+// ============================================================
+// Represents a configured enterprise data connection.
+//
+// SECURITY DESIGN:
+//   - `connectionMeta` stores NON-secret configuration:
+//     host, port, database name, schema, SSL mode, etc.
+//   - Credentials (passwords, API keys, tokens) are NOT stored
+//     here. They will be stored in a secrets manager or encrypted
+//     vault in a later implementation step.
+//   - `credentialRef` is a future opaque pointer to the
+//     external secrets store (e.g. AWS Secrets Manager ARN,
+//     HashiCorp Vault path).
+
+model DataSource {
+  id             String           @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  type           DataSourceType
+  status         DataSourceStatus @default(PENDING)
+
+  // Non-secret connection metadata (host, port, dbname, schema, ssl)
+  connectionMeta Json @default("{}")
+
+  // Opaque reference to credentials in external secrets store.
+  // NULL until credentials are registered with the vault.
+  credentialRef String?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("DataSourceCreator", fields: [createdById], references: [id])
+
+  datasets Dataset[]
+
+  @@index([organizationId])
+  @@index([createdById])
+  @@map("data_sources")
+}
+
+// ============================================================
+// DATASET
+// ============================================================
+
+model Dataset {
+  id             String        @id @default(uuid())
+  organizationId String
+  dataSourceId   String? // NULL for uploaded/file-based datasets
+  name           String
+  description    String?
+  type           DatasetType
+  status         DatasetStatus @default(DRAFT)
+
+  // Stores column definitions, inferred types, row count snapshot, etc.
+  schemaMeta Json @default("{}")
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dataSource   DataSource?  @relation(fields: [dataSourceId], references: [id], onDelete: SetNull)
+  createdBy    User         @relation("DatasetCreator", fields: [createdById], references: [id])
+
+  charts Chart[]
+
+  @@index([organizationId])
+  @@index([dataSourceId])
+  @@index([createdById])
+  @@map("datasets")
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+
+model Dashboard {
+  id             String              @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  status         DashboardStatus     @default(DRAFT)
+  visibility     DashboardVisibility @default(PRIVATE)
+  ownerId        String
+
+  // Stores grid layout configuration (column count, row height, etc.)
+  layoutConfig Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation("DashboardOwner", fields: [ownerId], references: [id])
+
+  charts  Chart[]
+  access  DashboardAccess[]
+  reports Report[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([organizationId, status])
+  @@map("dashboards")
+}
+
+// ============================================================
+// CHART
+// ============================================================
+
+model Chart {
+  id          String  @id @default(uuid())
+  dashboardId String
+  datasetId   String?
+  title       String
+  description String?
+
+  // Visualization type: "bar", "line", "pie", "table", "metric", etc.
+  chartType String
+
+  // Full visualization config: axes, aggregations, filters, colors, etc.
+  // Stored as JSONB so it can evolve without schema migrations.
+  config Json @default("{}")
+
+  // Grid position & size: { x, y, w, h } in grid units
+  position Json @default("{}")
+
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  dataset   Dataset?  @relation(fields: [datasetId], references: [id], onDelete: SetNull)
+
+  @@index([dashboardId])
+  @@index([datasetId])
+  @@map("charts")
+}
+
+// ============================================================
+// DASHBOARD ACCESS
+// ============================================================
+// Supports both user-level and role-level access grants.
+// Either userId or roleId must be non-null (not both null).
+// Application layer enforces this invariant.
+
+model DashboardAccess {
+  id          String               @id @default(uuid())
+  dashboardId String
+  userId      String? // Grant to a specific user
+  roleId      String? // Grant to all members of a role
+  accessLevel DashboardAccessLevel @default(VIEW)
+  grantedAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("dashboard_access")
+}
+
+// ============================================================
+// REPORT
+// ============================================================
+
+model Report {
+  id             String       @id @default(uuid())
+  organizationId String
+  dashboardId    String
+  name           String
+  description    String?
+  status         ReportStatus @default(ACTIVE)
+  format         ReportFormat @default(PDF)
+
+  // Cron expression for scheduling (e.g. "0 9 * * 1" = every Monday at 9am)
+  // NULL = one-time / on-demand report
+  cronExpression String?
+
+  // Delivery configuration: email recipients, webhook URL, etc.
+  // Stored as JSONB to stay flexible without migrations.
+  deliveryConfig Json @default("{}")
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dashboard    Dashboard    @relation(fields: [dashboardId], references: [id])
+  createdBy    User         @relation("ReportCreator", fields: [createdById], references: [id])
+
+  @@index([organizationId])
+  @@index([dashboardId])
+  @@index([createdById])
+  @@map("reports")
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+// Append-only governance log. Never updated or deleted.
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String
+  action         String // e.g. "DASHBOARD_CREATED", "DATA_SOURCE_DELETED"
+  resourceType   String // e.g. "Dashboard", "DataSource"
+  resourceId     String? // UUID of the affected resource
+  ipAddress      String?
+  userAgent      String?
+  metadata       Json     @default("{}") // additional context
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([organizationId, createdAt])
+  @@index([resourceType, resourceId])
+  @@map("audit_logs")
+}
