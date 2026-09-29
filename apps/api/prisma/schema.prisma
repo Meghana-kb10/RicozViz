@@ -1,0 +1,33 @@
+# Prisma Schema — RicozViz
+# ========================================
+# Foundation configuration only.
+# Entity models will be added in Day 1 Step 3 (Database & Schema).
+# ========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+# ── PLACEHOLDER ─────────────────────────────────────────────────────────
+#
+# RicozViz data models will be defined here in the next step.
+#
+# Upcoming entities:
+#   - User
+#   - Organization
+#   - Role
+#   - Permission
+#   - DataSource
+#   - Dataset
+#   - Dashboard
+#   - Chart
+#   - DashboardPermission
+#   - Report
+#   - AuditLog
+#
+# ────────────────────────────────────────────────────────────────────────

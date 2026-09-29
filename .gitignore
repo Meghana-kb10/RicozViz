@@ -1,0 +1,72 @@
+# ========================================
+# RicozViz — .gitignore
+# ========================================
+
+# ---- Dependencies ----
+node_modules/
+.pnp
+.pnp.js
+
+# ---- Next.js ----
+.next/
+out/
+next-env.d.ts
+
+# ---- Build outputs ----
+dist/
+build/
+*.tsbuildinfo
+
+# ---- Environment files ----
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+.env.production
+# Allow the example file
+!.env.example
+
+# ---- Prisma ----
+# Keep schema, ignore generated client (regenerated via prisma generate)
+apps/api/src/generated/
+prisma/migrations/dev.db
+prisma/migrations/dev.db-journal
+
+# ---- Logs ----
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---- Testing ----
+coverage/
+.nyc_output/
+
+# ---- OS-specific ----
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---- Editor / IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ---- Misc ----
+.turbo/
+.cache/
+tmp/
+temp/
