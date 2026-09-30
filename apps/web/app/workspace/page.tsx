@@ -236,7 +236,7 @@ const SIDEBAR_ITEMS = [
   { icon: "📊", label: "Dashboards" },
   { icon: "📈", label: "Charts" },
   { icon: "🔌", label: "Data Sources", href: "/data-sources" },
-  { icon: "🗃️", label: "Datasets" },
+  { icon: "🗃️", label: "Datasets", href: "/datasets" },
   { icon: "📤", label: "Reports" },
   { icon: "👥", label: "Team" },
   { icon: "⚙️", label: "Settings" },
@@ -250,6 +250,7 @@ const BUILD_STATUS = [
   { label: "Authentication", done: true },
   { label: "RBAC", done: true },
   { label: "Data Sources", done: true },
+  { label: "Datasets", done: true },
   { label: "Dashboards", done: false },
   { label: "Charts", done: false },
 ];
@@ -270,6 +271,7 @@ const QUICK_ACTIONS = [
     icon: "📋",
     title: "Explore Dataset",
     description: "Browse and query your existing datasets.",
+    href: "/datasets",
   },
   {
     icon: "📤",

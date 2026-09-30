@@ -235,3 +235,138 @@ export async function apiTestDataSourceConnection(
   );
 }
 
+// ============================================================
+// DATASET TYPES & API METHODS
+// ============================================================
+
+export type DatasetType = "CONNECTED" | "UPLOADED" | "DERIVED";
+export type DatasetStatus = "READY" | "DRAFT" | "FAILED" | "ARCHIVED";
+
+export interface DatasetColumn {
+  name: string;
+  type: "string" | "number" | "integer" | "boolean" | "date";
+  nullable: boolean;
+}
+
+export interface DatasetData {
+  id: string;
+  name: string;
+  description: string | null;
+  type: DatasetType;
+  status: DatasetStatus;
+  dataSourceId: string | null;
+  dataSourceName: string | null;
+  dataSourceType: string | null;
+  columns: DatasetColumn[];
+  tableName: string | null;
+  rowCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DatasetPreviewResult {
+  columns: string[];
+  rows: Record<string, unknown>[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface CsvPreviewSchemaResult {
+  columns: DatasetColumn[];
+  previewRows: Record<string, unknown>[];
+  totalRows: number;
+}
+
+export interface SourceTable {
+  name: string;
+  type: "table" | "view";
+}
+
+export async function apiListDatasets(params?: {
+  search?: string;
+  type?: string;
+  page?: number;
+  limit?: number;
+}): Promise<DatasetData[]> {
+  const query = new URLSearchParams();
+  if (params?.search) query.set("search", params.search);
+  if (params?.type) query.set("type", params.type);
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.limit) query.set("limit", String(params.limit));
+
+  const qs = query.toString();
+  return apiFetch<DatasetData[]>(`/api/v1/datasets${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetDataset(id: string): Promise<DatasetData> {
+  return apiFetch<DatasetData>(`/api/v1/datasets/${id}`);
+}
+
+export async function apiCreateDataset(input: {
+  name: string;
+  description?: string;
+  type?: DatasetType;
+  dataSourceId?: string | null;
+  tableName?: string;
+  columns?: DatasetColumn[];
+  sampleData?: Record<string, unknown>[];
+  csvText?: string;
+}): Promise<DatasetData> {
+  return apiFetch<DatasetData>("/api/v1/datasets", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiUpdateDataset(
+  id: string,
+  input: {
+    name?: string;
+    description?: string | null;
+    status?: string;
+  }
+): Promise<DatasetData> {
+  return apiFetch<DatasetData>(`/api/v1/datasets/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiDeleteDataset(id: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/v1/datasets/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function apiPreviewDataset(
+  id: string,
+  limit = 25
+): Promise<DatasetPreviewResult> {
+  return apiFetch<DatasetPreviewResult>(`/api/v1/datasets/${id}/preview?limit=${limit}`);
+}
+
+export async function apiPreviewCsvSchema(
+  csvText: string,
+  delimiter = ","
+): Promise<CsvPreviewSchemaResult> {
+  return apiFetch<CsvPreviewSchemaResult>("/api/v1/datasets/csv/preview-schema", {
+    method: "POST",
+    body: JSON.stringify({ csvText, delimiter }),
+  });
+}
+
+export async function apiListSourceTables(dataSourceId: string): Promise<SourceTable[]> {
+  return apiFetch<SourceTable[]>(`/api/v1/datasets/source/${dataSourceId}/tables`);
+}
+
+export async function apiGetSourceTableSchema(
+  dataSourceId: string,
+  tableName: string
+): Promise<{ tableName: string; columns: DatasetColumn[] }> {
+  return apiFetch<{ tableName: string; columns: DatasetColumn[] }>(
+    `/api/v1/datasets/source/${dataSourceId}/tables/${tableName}/schema`
+  );
+}
+
+

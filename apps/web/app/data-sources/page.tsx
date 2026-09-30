@@ -303,6 +303,10 @@ export default function DataSourcesPage() {
             </Link>
             <span className="text-gray-300">/</span>
             <span className="text-sm font-semibold text-gray-900">Data Sources</span>
+            <span className="text-gray-300">|</span>
+            <Link href="/datasets" className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+              Datasets
+            </Link>
           </div>
 
           <div className="flex items-center gap-4">
