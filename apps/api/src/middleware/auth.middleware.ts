@@ -106,6 +106,32 @@ export function requirePermission(permissionKey: string) {
 }
 
 /**
+ * requireAnyPermission — RBAC guard accepting any of the specified permissions.
+ */
+export function requireAnyPermission(...permissionKeys: string[]) {
+  return function (req: Request, _res: Response, next: NextFunction): void {
+    const user = req.user;
+
+    if (!user) {
+      next(AppError.unauthorized());
+      return;
+    }
+
+    const hasAny = permissionKeys.some((p) => user.permissions.includes(p));
+    if (!hasAny) {
+      next(
+        AppError.forbidden(
+          `Permission required: ${permissionKeys.join(" or ")}`
+        )
+      );
+      return;
+    }
+
+    next();
+  };
+}
+
+/**
  * requireOrganization — validates that the requesting user
  * belongs to the organization specified in the route/query.
  *

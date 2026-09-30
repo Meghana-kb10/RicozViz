@@ -539,5 +539,137 @@ export async function apiDeleteDashboard(id: string): Promise<{ message: string 
   });
 }
 
+// ============================================================
+// Chart Configuration Types & API
+// ============================================================
+
+export type ChartType =
+  | "BAR"
+  | "LINE"
+  | "AREA"
+  | "PIE"
+  | "DONUT"
+  | "SCATTER"
+  | "TABLE"
+  | "KPI";
+
+export interface ChartPosition {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface ChartMeasure {
+  column: string;
+  aggregation: "SUM" | "AVG" | "COUNT" | "MIN" | "MAX" | "DISTINCT_COUNT";
+  alias?: string;
+}
+
+export interface ChartFilter {
+  column: string;
+  operator: string;
+  value?: unknown;
+}
+
+export interface ChartSort {
+  column: string;
+  direction: "asc" | "desc" | "ASC" | "DESC";
+}
+
+export interface ChartConfig {
+  dimensions?: string[];
+  measures?: ChartMeasure[];
+  xAxis?: string;
+  yAxis?: string | string[];
+  filters?: ChartFilter[];
+  sort?: ChartSort;
+  options?: Record<string, unknown>;
+}
+
+export interface ChartData {
+  id: string;
+  dashboardId: string;
+  datasetId: string | null;
+  datasetName: string | null;
+  datasetType: string | null;
+  title: string;
+  description: string | null;
+  chartType: ChartType;
+  config: ChartConfig;
+  position: ChartPosition;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateChartInput {
+  title: string;
+  description?: string | null;
+  chartType: ChartType;
+  datasetId?: string | null;
+  config?: ChartConfig;
+  position?: Partial<ChartPosition>;
+  sortOrder?: number;
+}
+
+export interface UpdateChartInput {
+  title?: string;
+  description?: string | null;
+  chartType?: ChartType;
+  datasetId?: string | null;
+  config?: ChartConfig;
+  position?: Partial<ChartPosition>;
+  sortOrder?: number;
+}
+
+export async function apiListCharts(dashboardId: string): Promise<ChartData[]> {
+  return apiFetch<ChartData[]>(`/api/v1/dashboards/${dashboardId}/charts`);
+}
+
+export async function apiGetChart(
+  dashboardId: string,
+  chartId: string
+): Promise<ChartData> {
+  return apiFetch<ChartData>(`/api/v1/dashboards/${dashboardId}/charts/${chartId}`);
+}
+
+export async function apiCreateChart(
+  dashboardId: string,
+  input: CreateChartInput
+): Promise<ChartData> {
+  return apiFetch<ChartData>(`/api/v1/dashboards/${dashboardId}/charts`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiUpdateChart(
+  dashboardId: string,
+  chartId: string,
+  input: UpdateChartInput
+): Promise<ChartData> {
+  return apiFetch<ChartData>(
+    `/api/v1/dashboards/${dashboardId}/charts/${chartId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function apiDeleteChart(
+  dashboardId: string,
+  chartId: string
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    `/api/v1/dashboards/${dashboardId}/charts/${chartId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+
 
 

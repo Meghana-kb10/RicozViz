@@ -15,8 +15,12 @@ import {
   deleteDashboard,
 } from "../services/dashboard/dashboard.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import chartRouter from "./chart.routes.js";
 
 const router = Router();
+
+// Subrouter for charts nested under a dashboard: /api/v1/dashboards/:dashboardId/charts
+router.use("/:dashboardId/charts", chartRouter);
 
 // All dashboard endpoints require authentication
 router.use(requireAuth);

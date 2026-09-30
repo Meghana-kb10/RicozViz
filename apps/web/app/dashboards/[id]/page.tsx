@@ -8,11 +8,30 @@ import {
   apiGetDashboard,
   apiUpdateDashboard,
   apiDeleteDashboard,
+  apiListCharts,
+  apiCreateChart,
+  apiUpdateChart,
+  apiDeleteChart,
+  apiListDatasets,
   type DashboardData,
   type DashboardStatus,
   type DashboardVisibility,
+  type ChartData,
+  type ChartType,
+  type DatasetData,
   ApiError,
 } from "../../../lib/api";
+
+const CHART_TYPES: { value: ChartType; label: string; icon: string }[] = [
+  { value: "BAR", label: "Bar Chart", icon: "📊" },
+  { value: "LINE", label: "Line Chart", icon: "📈" },
+  { value: "AREA", label: "Area Chart", icon: "📉" },
+  { value: "PIE", label: "Pie Chart", icon: "🥧" },
+  { value: "DONUT", label: "Donut Chart", icon: "🍩" },
+  { value: "SCATTER", label: "Scatter Plot", icon: "⚬" },
+  { value: "TABLE", label: "Data Table", icon: "📋" },
+  { value: "KPI", label: "KPI Metric", icon: "🔢" },
+];
 
 export default function DashboardDetailPage({
   params,
@@ -26,11 +45,13 @@ export default function DashboardDetailPage({
   const router = useRouter();
 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [charts, setCharts] = useState<ChartData[]>([]);
+  const [datasets, setDatasets] = useState<DatasetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Edit State
+  // Edit Dashboard State
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -38,9 +59,31 @@ export default function DashboardDetailPage({
   const [editVisibility, setEditVisibility] = useState<DashboardVisibility>("ORGANIZATION");
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Delete State
+  // Delete Dashboard State
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Add Chart Modal State
+  const [showAddChart, setShowAddChart] = useState(false);
+  const [chartTitle, setChartTitle] = useState("");
+  const [chartDesc, setChartDesc] = useState("");
+  const [chartType, setChartType] = useState<ChartType>("BAR");
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>("");
+  const [dimensionCol, setDimensionCol] = useState("");
+  const [measureCol, setMeasureCol] = useState("");
+  const [measureAgg, setMeasureAgg] = useState<"SUM" | "AVG" | "COUNT" | "MIN" | "MAX" | "DISTINCT_COUNT">("SUM");
+  const [savingChart, setSavingChart] = useState(false);
+
+  // Edit Chart Modal State
+  const [editingChart, setEditingChart] = useState<ChartData | null>(null);
+  const [editChartTitle, setEditChartTitle] = useState("");
+  const [editChartDesc, setEditChartDesc] = useState("");
+  const [editChartType, setEditChartType] = useState<ChartType>("BAR");
+  const [editDatasetId, setEditDatasetId] = useState("");
+  const [updatingChart, setUpdatingChart] = useState(false);
+
+  // Delete Chart State
+  const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !auth) {
@@ -52,14 +95,20 @@ export default function DashboardDetailPage({
     if (!auth || !id) return;
     let ignore = false;
 
-    apiGetDashboard(id)
-      .then((data) => {
+    Promise.all([
+      apiGetDashboard(id),
+      apiListCharts(id),
+      apiListDatasets().catch(() => [] as DatasetData[]),
+    ])
+      .then(([dashData, chartsData, datasetsData]) => {
         if (!ignore) {
-          setDashboard(data);
-          setEditName(data.name);
-          setEditDescription(data.description || "");
-          setEditStatus(data.status);
-          setEditVisibility(data.visibility);
+          setDashboard(dashData);
+          setCharts(chartsData);
+          setDatasets(datasetsData);
+          setEditName(dashData.name);
+          setEditDescription(dashData.description || "");
+          setEditStatus(dashData.status);
+          setEditVisibility(dashData.visibility);
           setLoading(false);
         }
       })
@@ -110,6 +159,92 @@ export default function DashboardDetailPage({
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to delete dashboard");
       setIsDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  }
+
+  async function handleCreateChart(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dashboard) return;
+    setSavingChart(true);
+    setErrorMsg(null);
+
+    try {
+      const config: ChartData["config"] = {
+        dimensions: dimensionCol.trim() ? [dimensionCol.trim()] : [],
+        measures: measureCol.trim()
+          ? [{ column: measureCol.trim(), aggregation: measureAgg }]
+          : [],
+      };
+
+      const created = await apiCreateChart(dashboard.id, {
+        title: chartTitle.trim(),
+        description: chartDesc.trim() || null,
+        chartType,
+        datasetId: selectedDatasetId || null,
+        config,
+      });
+
+      setCharts((prev) => [...prev, created]);
+      setSuccessMsg(`Visualization "${created.title}" added.`);
+      setShowAddChart(false);
+      // Reset form
+      setChartTitle("");
+      setChartDesc("");
+      setChartType("BAR");
+      setSelectedDatasetId("");
+      setDimensionCol("");
+      setMeasureCol("");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to create chart");
+    } finally {
+      setSavingChart(false);
+    }
+  }
+
+  function startEditChart(chart: ChartData) {
+    setEditingChart(chart);
+    setEditChartTitle(chart.title);
+    setEditChartDesc(chart.description || "");
+    setEditChartType(chart.chartType);
+    setEditDatasetId(chart.datasetId || "");
+  }
+
+  async function handleUpdateChart(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dashboard || !editingChart) return;
+    setUpdatingChart(true);
+    setErrorMsg(null);
+
+    try {
+      const updated = await apiUpdateChart(dashboard.id, editingChart.id, {
+        title: editChartTitle.trim(),
+        description: editChartDesc.trim() || null,
+        chartType: editChartType,
+        datasetId: editDatasetId || null,
+      });
+
+      setCharts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      setSuccessMsg(`Visualization "${updated.title}" updated.`);
+      setEditingChart(null);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to update chart");
+    } finally {
+      setUpdatingChart(false);
+    }
+  }
+
+  async function handleDeleteChart(chartId: string) {
+    if (!dashboard) return;
+    setErrorMsg(null);
+
+    try {
+      await apiDeleteChart(dashboard.id, chartId);
+      setCharts((prev) => prev.filter((c) => c.id !== chartId));
+      setSuccessMsg("Visualization deleted successfully.");
+      setDeletingChartId(null);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to delete chart");
+      setDeletingChartId(null);
     }
   }
 
@@ -334,7 +469,7 @@ export default function DashboardDetailPage({
             <div>
               <span className="text-gray-400 block mb-0.5">Visualizations</span>
               <span className="font-semibold text-gray-900">
-                {dashboard.chartCount} {dashboard.chartCount === 1 ? "chart" : "charts"}
+                {charts.length} {charts.length === 1 ? "chart" : "charts"}
               </span>
             </div>
             <div>
@@ -352,48 +487,413 @@ export default function DashboardDetailPage({
           </div>
         </div>
 
-        {/* Dashboard Canvas Area */}
-        {dashboard.charts.length === 0 ? (
+        {/* Visualizations Section Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Visualizations</h2>
+            <p className="text-xs text-gray-500">
+              Configured charts and metrics in this dashboard canvas.
+            </p>
+          </div>
+          {canEdit && (
+            <button
+              onClick={() => setShowAddChart(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 transition"
+            >
+              <span>+</span>
+              <span>Add Visualization</span>
+            </button>
+          )}
+        </div>
+
+        {/* Dashboard Charts Canvas Area */}
+        {charts.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-300 p-16 text-center bg-white shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 text-3xl">
               📈
             </div>
             <h3 className="mt-4 text-base font-bold text-gray-900">No visualizations added yet.</h3>
             <p className="mt-1 text-xs text-gray-500 max-w-md mx-auto">
-              This dashboard canvas is ready for charts. You will be able to construct and place visualizations using the Visualization Studio in the next step.
+              Add your first chart to start exploring metrics and trends on this dashboard.
             </p>
+            {canEdit && (
+              <button
+                onClick={() => setShowAddChart(true)}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500"
+              >
+                + Add Visualization
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {dashboard.charts.map((chart) => (
-              <div
-                key={chart.id}
-                className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-sm text-gray-900">{chart.title}</h4>
-                  <span className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 uppercase">
-                    {chart.chartType}
-                  </span>
+            {charts.map((chart) => {
+              const matchedType = CHART_TYPES.find((t) => t.value === chart.chartType);
+              const dims = chart.config?.dimensions || [];
+              const measures = chart.config?.measures || [];
+
+              return (
+                <div
+                  key={chart.id}
+                  className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Top Row: Title & Type */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h4 className="font-bold text-sm text-gray-900 leading-snug">
+                        {chart.title}
+                      </h4>
+                      <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 uppercase shrink-0">
+                        <span>{matchedType?.icon || "📊"}</span>
+                        <span>{chart.chartType}</span>
+                      </span>
+                    </div>
+
+                    {/* Description */}
+                    {chart.description && (
+                      <p className="text-xs text-gray-500 mb-3">{chart.description}</p>
+                    )}
+
+                    {/* Dataset Info */}
+                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 mb-3 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Dataset:</span>
+                        <span className="font-semibold text-gray-800">
+                          {chart.datasetName || "None linked"}
+                        </span>
+                      </div>
+                      {dims.length > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Dimension:</span>
+                          <span className="font-mono text-gray-700">{dims.join(", ")}</span>
+                        </div>
+                      )}
+                      {measures.length > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Measure:</span>
+                          <span className="font-mono text-gray-700">
+                            {measures.map((m) => `${m.aggregation}(${m.column})`).join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Actions: Edit / Delete */}
+                  <div className="border-t border-gray-100 pt-3 flex items-center justify-end gap-2 text-xs">
+                    {canEdit && (
+                      <button
+                        onClick={() => startEditChart(chart)}
+                        className="rounded px-2 py-1 text-gray-600 hover:bg-gray-100 font-medium"
+                      >
+                        ✏️ Edit
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button
+                        onClick={() => setDeletingChartId(chart.id)}
+                        className="rounded px-2 py-1 text-red-600 hover:bg-red-50 font-medium"
+                      >
+                        🗑️ Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {chart.description && (
-                  <p className="text-xs text-gray-500 mb-3">{chart.description}</p>
-                )}
-                <div className="h-44 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-xs text-gray-400 font-mono">
-                  [Visualization Placeholder]
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* Delete Confirmation Modal */}
+        {/* Add Visualization Modal */}
+        {showAddChart && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                <h3 className="text-base font-bold text-gray-900">Add Visualization</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowAddChart(false)}
+                  className="text-gray-400 hover:text-gray-600 text-lg font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateChart} className="space-y-4 text-xs">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    Visualization Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={100}
+                    placeholder="e.g. Monthly Revenue by Region"
+                    value={chartTitle}
+                    onChange={(e) => setChartTitle(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    Chart Type *
+                  </label>
+                  <select
+                    value={chartType}
+                    onChange={(e) => setChartType(e.target.value as ChartType)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  >
+                    {CHART_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.icon} {type.label} ({type.value})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    Linked Dataset
+                  </label>
+                  <select
+                    value={selectedDatasetId}
+                    onChange={(e) => setSelectedDatasetId(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="">-- No dataset linked --</option>
+                    {datasets.map((ds) => (
+                      <option key={ds.id} value={ds.id}>
+                        {ds.name} ({ds.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    Description (optional)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={500}
+                    placeholder="Brief description or purpose"
+                    value={chartDesc}
+                    onChange={(e) => setChartDesc(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+                  <h4 className="font-semibold text-gray-800 text-[11px] uppercase tracking-wider">
+                    Query Configuration
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-medium text-gray-600 mb-1">
+                        Dimension (e.g. region, date)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Column name"
+                        value={dimensionCol}
+                        onChange={(e) => setDimensionCol(e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-medium text-gray-600 mb-1">
+                        Measure Column
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Column name (e.g. revenue)"
+                        value={measureCol}
+                        onChange={(e) => setMeasureCol(e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-gray-600 mb-1">
+                      Aggregation
+                    </label>
+                    <select
+                      value={measureAgg}
+                      onChange={(e) =>
+                        setMeasureAgg(e.target.value as "SUM" | "AVG" | "COUNT" | "MIN" | "MAX" | "DISTINCT_COUNT")
+                      }
+                      className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 bg-white"
+                    >
+                      <option value="SUM">SUM</option>
+                      <option value="AVG">AVG</option>
+                      <option value="COUNT">COUNT</option>
+                      <option value="MIN">MIN</option>
+                      <option value="MAX">MAX</option>
+                      <option value="DISTINCT_COUNT">DISTINCT_COUNT</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddChart(false)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingChart}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    {savingChart ? "Creating..." : "Create Visualization"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Visualization Modal */}
+        {editingChart && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                <h3 className="text-base font-bold text-gray-900">Edit Visualization</h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingChart(null)}
+                  className="text-gray-400 hover:text-gray-600 text-lg font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateChart} className="space-y-4 text-xs">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={100}
+                    value={editChartTitle}
+                    onChange={(e) => setEditChartTitle(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    Chart Type *
+                  </label>
+                  <select
+                    value={editChartType}
+                    onChange={(e) => setEditChartType(e.target.value as ChartType)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900"
+                  >
+                    {CHART_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.icon} {type.label} ({type.value})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    Linked Dataset
+                  </label>
+                  <select
+                    value={editDatasetId}
+                    onChange={(e) => setEditDatasetId(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900"
+                  >
+                    <option value="">-- No dataset linked --</option>
+                    {datasets.map((ds) => (
+                      <option key={ds.id} value={ds.id}>
+                        {ds.name} ({ds.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={500}
+                    value={editChartDesc}
+                    onChange={(e) => setEditChartDesc(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingChart(null)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updatingChart}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    {updatingChart ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Chart Confirmation Modal */}
+        {deletingChartId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+              <h3 className="text-base font-bold text-gray-900 mb-2">Delete Visualization</h3>
+              <p className="text-xs text-gray-500 mb-4">
+                Are you sure you want to remove this visualization from the dashboard?
+              </p>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeletingChartId(null)}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteChart(deletingChartId)}
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Dashboard Confirmation Modal */}
         {showDeleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
               <h3 className="text-base font-bold text-gray-900 mb-2">Delete Dashboard</h3>
               <p className="text-xs text-gray-500 mb-4">
-                Are you sure you want to delete <span className="font-semibold text-gray-900">&ldquo;{dashboard.name}&rdquo;</span>? This will permanently delete this dashboard canvas.
+                Are you sure you want to delete <span className="font-semibold text-gray-900">&ldquo;{dashboard.name}&rdquo;</span>? This will permanently delete this dashboard canvas and all configured visualizations.
               </p>
 
               <div className="flex justify-end gap-3">
@@ -420,3 +920,4 @@ export default function DashboardDetailPage({
     </div>
   );
 }
+

@@ -66,6 +66,12 @@ const PERMISSIONS = [
   { key: "DASHBOARD_PUBLISH", description: "Publish a dashboard to the organization" },
   { key: "DASHBOARD_SHARE", description: "Share a dashboard with specific users or roles" },
 
+  // Chart management
+  { key: "CHART_CREATE", description: "Create a new chart in a dashboard" },
+  { key: "CHART_VIEW", description: "View charts in a dashboard" },
+  { key: "CHART_EDIT", description: "Edit chart configuration" },
+  { key: "CHART_DELETE", description: "Delete a chart from a dashboard" },
+
   // Report management
   { key: "REPORT_CREATE", description: "Schedule or generate a report" },
   { key: "REPORT_VIEW", description: "View scheduled reports and their history" },
@@ -97,6 +103,9 @@ const ANALYST_PERMISSIONS = [
   "DASHBOARD_DELETE",
   "DASHBOARD_PUBLISH",
   "DASHBOARD_SHARE",
+  "CHART_CREATE",
+  "CHART_VIEW",
+  "CHART_EDIT",
   "REPORT_CREATE",
   "REPORT_VIEW",
   "REPORT_DELETE",
@@ -104,6 +113,7 @@ const ANALYST_PERMISSIONS = [
 
 const BUSINESS_USER_PERMISSIONS = [
   "DASHBOARD_VIEW",
+  "CHART_VIEW",
   "DATASET_VIEW",
   "REPORT_VIEW",
 ] as const;
