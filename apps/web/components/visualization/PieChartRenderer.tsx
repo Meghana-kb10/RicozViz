@@ -29,6 +29,8 @@ export interface PieChartRendererProps {
   config: ChartConfig;
   isDonut?: boolean;
   height?: number | string;
+  onDataPointClick?: (field: string, value: unknown) => void;
+  selectedFilterValue?: unknown;
 }
 
 export function PieChartRenderer({
@@ -36,6 +38,8 @@ export function PieChartRenderer({
   config,
   isDonut = false,
   height = "100%",
+  onDataPointClick,
+  selectedFilterValue,
 }: PieChartRendererProps) {
   const options = config.options || {};
   const showLegend = options.showLegend !== false;
@@ -43,6 +47,7 @@ export function PieChartRenderer({
 
   const slices = data.pieSlices || [];
   const totalValue = slices.reduce((acc, slice) => acc + (slice.value || 0), 0);
+  const xKey = data.xKey || "category";
 
   const formatSliceValue = (val: unknown) => {
     if (typeof val !== "number") return String(val ?? "");
@@ -82,13 +87,29 @@ export function PieChartRenderer({
               `${name ?? ""}: ${((percent ?? 0) * 100).toFixed(0)}%`
             }
             labelLine={false}
+            className="cursor-pointer"
+            onClick={(entry) => {
+              if (onDataPointClick && entry && entry.name) {
+                onDataPointClick(xKey, entry.name);
+              }
+            }}
           >
-            {slices.map((_, index) => (
-              <Cell
-                key={`slice-${index}`}
-                fill={PALETTE[index % PALETTE.length]}
-              />
-            ))}
+            {slices.map((slice, index) => {
+              const isSelected =
+                selectedFilterValue === undefined ||
+                selectedFilterValue === null ||
+                String(slice.name) === String(selectedFilterValue);
+
+              return (
+                <Cell
+                  key={`slice-${index}`}
+                  fill={PALETTE[index % PALETTE.length]}
+                  opacity={isSelected ? 1 : 0.35}
+                  stroke={isSelected && selectedFilterValue !== undefined ? "#1e1b4b" : "none"}
+                  strokeWidth={isSelected && selectedFilterValue !== undefined ? 2 : 0}
+                />
+              );
+            })}
           </Pie>
         </PieChart>
       </ResponsiveContainer>

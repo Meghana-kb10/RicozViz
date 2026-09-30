@@ -9,11 +9,20 @@ export interface TableRendererProps {
   data: MappedChartData;
   config: ChartConfig;
   height?: number | string;
+  onDataPointClick?: (field: string, value: unknown) => void;
+  selectedFilterValue?: unknown;
 }
 
-export function TableRenderer({ data, config, height = "100%" }: TableRendererProps) {
+export function TableRenderer({
+  data,
+  config,
+  height = "100%",
+  onDataPointClick,
+  selectedFilterValue,
+}: TableRendererProps) {
   const options = config.options || {};
   const numberFormat = (options.numberFormat as FormatType) || "auto";
+  const primaryDim = data.xKey || data.columns[0]?.name;
 
   return (
     <div style={{ height }} className="w-full h-full overflow-auto rounded-lg border border-gray-200 bg-white">
@@ -36,20 +45,40 @@ export function TableRenderer({ data, config, height = "100%" }: TableRendererPr
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
-          {data.rows.slice(0, 100).map((row, rIdx) => (
-            <tr key={rIdx} className="hover:bg-indigo-50/30 transition-colors">
-              {data.columns.map((col) => (
-                <td
-                  key={col.name}
-                  className="px-3.5 py-2 text-gray-800 font-mono text-[11px] whitespace-nowrap"
-                >
-                  {row[col.name] !== null && row[col.name] !== undefined
-                    ? formatValue(row[col.name], numberFormat)
-                    : "—"}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {data.rows.slice(0, 100).map((row, rIdx) => {
+            const isSelected =
+              selectedFilterValue !== undefined &&
+              selectedFilterValue !== null &&
+              primaryDim &&
+              String(row[primaryDim]) === String(selectedFilterValue);
+
+            return (
+              <tr
+                key={rIdx}
+                onClick={() => {
+                  if (onDataPointClick && primaryDim && row[primaryDim] !== undefined) {
+                    onDataPointClick(primaryDim, row[primaryDim]);
+                  }
+                }}
+                className={`transition-colors cursor-pointer ${
+                  isSelected
+                    ? "bg-indigo-50 font-semibold"
+                    : "hover:bg-indigo-50/30"
+                }`}
+              >
+                {data.columns.map((col) => (
+                  <td
+                    key={col.name}
+                    className="px-3.5 py-2 text-gray-800 font-mono text-[11px] whitespace-nowrap"
+                  >
+                    {row[col.name] !== null && row[col.name] !== undefined
+                      ? formatValue(row[col.name], numberFormat)
+                      : "—"}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       {data.rows.length > 100 && (

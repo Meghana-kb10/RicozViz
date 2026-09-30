@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useCallback } from "react";
+import { useEffect, useState, use, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../contexts/auth-context";
@@ -18,12 +18,25 @@ import {
   type ChartData,
   type ChartType,
   type DatasetData,
+  type DatasetColumn,
   type DatasetQueryResult,
   ApiError,
 } from "../../../lib/api";
 import { buildChartQueryParams } from "../../../lib/chart-query-mapper";
 import { ChartRenderer } from "../../../components/visualization/ChartRenderer";
 import { VisualizationStudio } from "../../../components/visualization/VisualizationStudio";
+import { DashboardFilterBar } from "../../../components/dashboard/DashboardFilterBar";
+import {
+  type DashboardFilter,
+  type DrillDownState,
+  isFilterApplicableToChart,
+  mergeChartAndDashboardFilters,
+  toggleCrossFilter,
+  drillDownNext,
+  drillDownPrev,
+  encodeFiltersToUrl,
+  parseFiltersFromUrl,
+} from "../../../lib/dashboard-filters";
 import {
   BarChart3,
   LineChart as LineChartIcon,
@@ -78,6 +91,13 @@ export default function DashboardDetailPage({
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [editingChart, setEditingChart] = useState<ChartData | null>(null);
 
+  // Interactive Dashboard Filters & Cross-filtering
+  const [dashboardFilters, setDashboardFilters] = useState<DashboardFilter[]>([]);
+  // Drill-down state per chart
+  const [drillDownStates, setDrillDownStates] = useState<Record<string, DrillDownState>>({});
+  // Cache of query params to avoid duplicate requests
+  const lastQueryParamsRef = useRef<Record<string, string>>({});
+
   // Query Results Cache for Canvas Charts: chartId -> query state
   const [chartQueryResults, setChartQueryResults] = useState<
     Record<string, { data: DatasetQueryResult | null; loading: boolean; error: string | null }>
@@ -100,6 +120,24 @@ export default function DashboardDetailPage({
       void router.replace("/login");
     }
   }, [auth, isLoading, router]);
+
+  // URL search params sync: Load initial filters from URL on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const initial = parseFiltersFromUrl(window.location.search);
+    if (initial.length > 0) {
+      setDashboardFilters(initial);
+    }
+  }, []);
+
+  // URL search params sync: Update URL when dashboard filters change
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = encodeFiltersToUrl(dashboardFilters);
+    const currentPath = window.location.pathname;
+    const targetUrl = q ? `${currentPath}?${q}` : currentPath;
+    window.history.replaceState(null, "", targetUrl);
+  }, [dashboardFilters]);
 
   // Load dashboard, charts, and datasets
   useEffect(() => {
@@ -135,48 +173,155 @@ export default function DashboardDetailPage({
     };
   }, [auth, id]);
 
-  // Execute query for a chart on the canvas
-  const executeChartQuery = useCallback(async (chart: ChartData) => {
-    if (!chart.datasetId) {
+  // Execute query for a chart on the canvas with merged filters and drill-down
+  const executeChartQuery = useCallback(
+    async (
+      chart: ChartData,
+      activeFilters: DashboardFilter[],
+      activeDrill?: DrillDownState | null,
+      forceRefresh = false
+    ) => {
+      if (!chart.datasetId) {
+        setChartQueryResults((prev) => ({
+          ...prev,
+          [chart.id]: { data: null, loading: false, error: null },
+        }));
+        return;
+      }
+
+      const dataset = datasets.find((d) => d.id === chart.datasetId);
+      const datasetColumns = dataset?.columns;
+
+      // Construct effective chart configuration with active drill dimension
+      const effectiveConfig = JSON.parse(JSON.stringify(chart.config || {}));
+      if (activeDrill && activeDrill.path && activeDrill.path.length > activeDrill.currentLevel) {
+        const drillDim = activeDrill.path[activeDrill.currentLevel];
+        effectiveConfig.dimensions = [drillDim];
+      }
+
+      // Merge chart-level filters with dashboard-level filters
+      const mergedFilters = mergeChartAndDashboardFilters(
+        chart,
+        activeFilters,
+        datasetColumns
+      );
+
+      // Append drill-down parent filters
+      if (activeDrill && activeDrill.filters) {
+        for (const df of activeDrill.filters) {
+          mergedFilters.push({
+            column: df.field,
+            operator: "=",
+            value: df.value,
+          });
+        }
+      }
+
+      effectiveConfig.filters = mergedFilters;
+      const queryParams = buildChartQueryParams(effectiveConfig);
+
+      // Query optimization: skip querying if params are identical and not forced
+      const paramKey = JSON.stringify(queryParams);
+      if (!forceRefresh && lastQueryParamsRef.current[chart.id] === paramKey) {
+        return;
+      }
+      lastQueryParamsRef.current[chart.id] = paramKey;
+
       setChartQueryResults((prev) => ({
         ...prev,
-        [chart.id]: { data: null, loading: false, error: null },
+        [chart.id]: { data: prev[chart.id]?.data ?? null, loading: true, error: null },
       }));
-      return;
-    }
 
-    setChartQueryResults((prev) => ({
-      ...prev,
-      [chart.id]: { data: prev[chart.id]?.data ?? null, loading: true, error: null },
-    }));
+      try {
+        const res = await apiQueryDataset(chart.datasetId, queryParams);
+        setChartQueryResults((prev) => ({
+          ...prev,
+          [chart.id]: { data: res, loading: false, error: null },
+        }));
+      } catch (err) {
+        setChartQueryResults((prev) => ({
+          ...prev,
+          [chart.id]: {
+            data: null,
+            loading: false,
+            error: err instanceof ApiError ? err.message : "Query execution failed",
+          },
+        }));
+      }
+    },
+    [datasets]
+  );
 
-    try {
-      const queryParams = buildChartQueryParams(chart.config);
-      const res = await apiQueryDataset(chart.datasetId, queryParams);
-      setChartQueryResults((prev) => ({
-        ...prev,
-        [chart.id]: { data: res, loading: false, error: null },
-      }));
-    } catch (err) {
-      setChartQueryResults((prev) => ({
-        ...prev,
-        [chart.id]: {
-          data: null,
-          loading: false,
-          error: err instanceof ApiError ? err.message : "Query execution failed",
-        },
-      }));
-    }
-  }, []);
-
-  // Fetch queries for all charts on canvas
+  // Re-run queries for canvas charts when filters, drill levels, or charts list change
   useEffect(() => {
+    if (loading || charts.length === 0) return;
     for (const chart of charts) {
-      if (!chartQueryResults[chart.id]) {
-        void executeChartQuery(chart);
+      void executeChartQuery(chart, dashboardFilters, drillDownStates[chart.id] || null);
+    }
+  }, [charts, dashboardFilters, drillDownStates, executeChartQuery, loading]);
+
+  // Handle data point interaction for cross-filtering or drill-down
+  const handleChartDataPointClick = (chart: ChartData, field: string, value: unknown) => {
+    // Check if chart has drillPath configured in config.options
+    const drillPath = chart.config?.options?.drillPath as string[] | undefined;
+    if (drillPath && drillPath.length > 1) {
+      const currentDrill = drillDownStates[chart.id] || null;
+      const nextDrill = drillDownNext(currentDrill, chart.id, drillPath, field, value);
+      if (nextDrill && nextDrill !== currentDrill) {
+        setDrillDownStates((prev) => ({ ...prev, [chart.id]: nextDrill }));
+        return;
       }
     }
-  }, [charts, executeChartQuery, chartQueryResults]);
+
+    // Standard cross-filter toggle
+    setDashboardFilters((prev) =>
+      toggleCrossFilter(prev, field, value, chart.id, chart.datasetId || undefined)
+    );
+  };
+
+  // Revert drill-down to previous level
+  const handleDrillBack = (chartId: string) => {
+    setDrillDownStates((prev) => {
+      const current = prev[chartId];
+      if (!current) return prev;
+      const reverted = drillDownPrev(current);
+      if (!reverted) {
+        const copy = { ...prev };
+        delete copy[chartId];
+        return copy;
+      }
+      return { ...prev, [chartId]: reverted };
+    });
+  };
+
+  // Add dashboard filter
+  const handleAddFilter = (filter: DashboardFilter) => {
+    setDashboardFilters((prev) => [...prev, filter]);
+  };
+
+  // Remove dashboard filter
+  const handleRemoveFilter = (filterId: string) => {
+    setDashboardFilters((prev) => prev.filter((f) => f.id !== filterId));
+  };
+
+  // Clear all filters
+  const handleClearAllFilters = () => {
+    setDashboardFilters([]);
+  };
+
+  // Reset entire dashboard to default state
+  const handleResetDashboard = () => {
+    setDashboardFilters([]);
+    setDrillDownStates({});
+    lastQueryParamsRef.current = {};
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    for (const chart of charts) {
+      void executeChartQuery(chart, [], null, true);
+    }
+    setSuccessMsg("Dashboard filters and drill levels reset to default state.");
+  };
 
   // Open Visualization Studio for New Chart
   const handleOpenNewStudio = (presetType?: ChartType) => {
@@ -297,7 +442,7 @@ export default function DashboardDetailPage({
             }
             return [...prev, savedChart];
           });
-          void executeChartQuery(savedChart);
+          void executeChartQuery(savedChart, dashboardFilters, null, true);
           setIsStudioOpen(false);
           setEditingChart(null);
           setSuccessMsg(`Visualization "${savedChart.title}" saved successfully.`);
@@ -314,6 +459,14 @@ export default function DashboardDetailPage({
     .slice(0, 2);
 
   const canEdit = auth?.role === "ADMIN" || auth?.role === "ANALYST";
+
+  const availableColumns: DatasetColumn[] = Array.from(
+    new Map(
+      datasets
+        .flatMap((d) => d.columns || [])
+        .map((c) => [c.name, c])
+    ).values()
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col antialiased">
@@ -420,6 +573,16 @@ export default function DashboardDetailPage({
           </div>
         </div>
       </header>
+
+      {/* Interactive Dashboard Filter Bar */}
+      <DashboardFilterBar
+        availableColumns={availableColumns}
+        filters={dashboardFilters}
+        onAddFilter={handleAddFilter}
+        onRemoveFilter={handleRemoveFilter}
+        onClearAll={handleClearAllFilters}
+        onResetDashboard={handleResetDashboard}
+      />
 
       {/* Global Alerts */}
       {errorMsg && (
@@ -646,6 +809,21 @@ export default function DashboardDetailPage({
                 const queryState = chartQueryResults[chart.id];
                 const dims = chart.config?.dimensions || [];
                 const measures = chart.config?.measures || [];
+                const dataset = datasets.find((d) => d.id === chart.datasetId);
+                const datasetColumns = dataset?.columns;
+
+                const applicableFilters = dashboardFilters.filter((df) => {
+                  if (df.isCrossFilter && df.sourceChartId === chart.id) return false;
+                  return isFilterApplicableToChart(df, chart, datasetColumns);
+                });
+
+                const isCrossFilterSource = dashboardFilters.some(
+                  (df) => df.isCrossFilter && df.sourceChartId === chart.id
+                );
+                const activeSourceFilter = dashboardFilters.find(
+                  (df) => df.isCrossFilter && df.sourceChartId === chart.id
+                );
+                const activeDrill = drillDownStates[chart.id];
 
                 return (
                   <div
@@ -674,7 +852,7 @@ export default function DashboardDetailPage({
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           type="button"
-                          onClick={() => void executeChartQuery(chart)}
+                          onClick={() => void executeChartQuery(chart, dashboardFilters, activeDrill, true)}
                           title="Refresh Query"
                           disabled={queryState?.loading}
                           className="rounded p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 text-xs transition"
@@ -704,6 +882,53 @@ export default function DashboardDetailPage({
                       </div>
                     </div>
 
+                    {/* Filter / Drill-down Indicators */}
+                    {(applicableFilters.length > 0 || isCrossFilterSource || activeDrill) && (
+                      <div className="px-4 py-1.5 bg-indigo-50/40 border-b border-indigo-100 flex flex-wrap items-center gap-1.5 text-[11px]">
+                        {isCrossFilterSource && activeSourceFilter && (
+                          <span className="inline-flex items-center gap-1 rounded bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 shadow-2xs">
+                            <span>⚡ Cross-filtering: {activeSourceFilter.field} = {String(activeSourceFilter.value)}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFilter(activeSourceFilter.id)}
+                              className="hover:text-indigo-950 font-bold ml-1"
+                              title="Clear cross-filter"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )}
+                        {applicableFilters.map((af) => (
+                          <span
+                            key={af.id}
+                            className="inline-flex items-center gap-1 rounded bg-white text-gray-700 border border-indigo-200 px-2 py-0.5 shadow-2xs font-medium"
+                          >
+                            <span>Filtered by: <strong className="font-semibold text-gray-900">{af.field}</strong> {af.operator} {String(af.value)}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFilter(af.id)}
+                              className="text-gray-400 hover:text-gray-700 font-bold ml-1"
+                              title="Remove this filter"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                        {activeDrill && (
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 font-medium shadow-2xs">
+                            <span>Drill level: <strong>{activeDrill.path[activeDrill.currentLevel]}</strong></span>
+                            <button
+                              type="button"
+                              onClick={() => handleDrillBack(chart.id)}
+                              className="text-indigo-600 hover:text-indigo-800 underline font-semibold ml-1 cursor-pointer"
+                            >
+                              ← Back
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {/* Card Visualization Body */}
                     <div className="p-4 flex-1 flex flex-col justify-center min-h-[260px]">
                       <ChartRenderer
@@ -713,6 +938,26 @@ export default function DashboardDetailPage({
                         isLoading={queryState?.loading || false}
                         error={queryState?.error || null}
                         height={250}
+                        onDataPointClick={(field, value) => handleChartDataPointClick(chart, field, value)}
+                        selectedFilterValue={
+                          dashboardFilters.find(
+                            (f) => f.isCrossFilter && f.sourceChartId === chart.id
+                          )?.value
+                        }
+                        onClearFilter={() => {
+                          setDashboardFilters((prev) =>
+                            prev.filter((f) => !isFilterApplicableToChart(f, chart, datasetColumns))
+                          );
+                        }}
+                        drillDown={
+                          chart.config?.options?.drillPath
+                            ? {
+                                path: chart.config.options.drillPath as string[],
+                                currentLevel: drillDownStates[chart.id]?.currentLevel ?? 0,
+                                onDrillBack: () => handleDrillBack(chart.id),
+                              }
+                            : null
+                        }
                       />
                     </div>
 

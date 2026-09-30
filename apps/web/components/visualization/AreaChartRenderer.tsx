@@ -30,9 +30,16 @@ export interface AreaChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
   height?: number | string;
+  onDataPointClick?: (field: string, value: unknown) => void;
+  selectedFilterValue?: unknown;
 }
 
-export function AreaChartRenderer({ data, config, height = "100%" }: AreaChartRendererProps) {
+export function AreaChartRenderer({
+  data,
+  config,
+  height = "100%",
+  onDataPointClick,
+}: AreaChartRendererProps) {
   const options = config.options || {};
   const showLegend = options.showLegend !== false && data.measureKeys.length > 1;
   const showGrid = options.showGrid !== false;
@@ -56,6 +63,11 @@ export function AreaChartRenderer({ data, config, height = "100%" }: AreaChartRe
         <AreaChart
           data={data.rows}
           margin={{ top: 12, right: 16, left: 0, bottom: 20 }}
+          onClick={(state) => {
+            if (state && state.activeLabel !== undefined && onDataPointClick) {
+              onDataPointClick(xKey, state.activeLabel);
+            }
+          }}
         >
           <defs>
             {measureKeys.map((key, idx) => {
@@ -109,6 +121,7 @@ export function AreaChartRenderer({ data, config, height = "100%" }: AreaChartRe
               stroke={PALETTE[idx % PALETTE.length]}
               fill={`url(#area-grad-${idx})`}
               strokeWidth={2}
+              activeDot={{ r: 6, stroke: "#1e1b4b", strokeWidth: 2, className: "cursor-pointer" }}
             />
           ))}
         </AreaChart>

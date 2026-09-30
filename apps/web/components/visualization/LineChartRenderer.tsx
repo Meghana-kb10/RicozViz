@@ -30,9 +30,16 @@ export interface LineChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
   height?: number | string;
+  onDataPointClick?: (field: string, value: unknown) => void;
+  selectedFilterValue?: unknown;
 }
 
-export function LineChartRenderer({ data, config, height = "100%" }: LineChartRendererProps) {
+export function LineChartRenderer({
+  data,
+  config,
+  height = "100%",
+  onDataPointClick,
+}: LineChartRendererProps) {
   const options = config.options || {};
   const showLegend = options.showLegend !== false && data.measureKeys.length > 1;
   const showGrid = options.showGrid !== false;
@@ -56,6 +63,11 @@ export function LineChartRenderer({ data, config, height = "100%" }: LineChartRe
         <LineChart
           data={data.rows}
           margin={{ top: 12, right: 16, left: 0, bottom: 20 }}
+          onClick={(state) => {
+            if (state && state.activeLabel !== undefined && onDataPointClick) {
+              onDataPointClick(xKey, state.activeLabel);
+            }
+          }}
         >
           {showGrid && (
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
@@ -98,7 +110,7 @@ export function LineChartRenderer({ data, config, height = "100%" }: LineChartRe
               stroke={PALETTE[idx % PALETTE.length]}
               strokeWidth={2}
               dot={{ r: 3, fill: PALETTE[idx % PALETTE.length] }}
-              activeDot={{ r: 5 }}
+              activeDot={{ r: 6, stroke: "#1e1b4b", strokeWidth: 2, className: "cursor-pointer" }}
             />
           ))}
         </LineChart>

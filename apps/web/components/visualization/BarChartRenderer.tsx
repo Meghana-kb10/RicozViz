@@ -5,6 +5,7 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -30,9 +31,17 @@ export interface BarChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
   height?: number | string;
+  onDataPointClick?: (field: string, value: unknown) => void;
+  selectedFilterValue?: unknown;
 }
 
-export function BarChartRenderer({ data, config, height = "100%" }: BarChartRendererProps) {
+export function BarChartRenderer({
+  data,
+  config,
+  height = "100%",
+  onDataPointClick,
+  selectedFilterValue,
+}: BarChartRendererProps) {
   const options = config.options || {};
   const showLegend = options.showLegend !== false && data.measureKeys.length > 1;
   const showGrid = options.showGrid !== false;
@@ -50,12 +59,23 @@ export function BarChartRenderer({ data, config, height = "100%" }: BarChartRend
     return formatNumber(val, undefined, true);
   };
 
+  const handleBarClick = (entry: Record<string, unknown>) => {
+    if (onDataPointClick && entry && entry[xKey] !== undefined) {
+      onDataPointClick(xKey, entry[xKey]);
+    }
+  };
+
   return (
     <div style={{ height }} className="w-full h-full relative">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data.rows}
           margin={{ top: 12, right: 16, left: 0, bottom: 20 }}
+          onClick={(state) => {
+            if (state && state.activeLabel !== undefined && onDataPointClick) {
+              onDataPointClick(xKey, state.activeLabel);
+            }
+          }}
         >
           {showGrid && (
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
@@ -97,7 +117,23 @@ export function BarChartRenderer({ data, config, height = "100%" }: BarChartRend
               fill={PALETTE[idx % PALETTE.length]}
               radius={[4, 4, 0, 0]}
               maxBarSize={50}
-            />
+              className="cursor-pointer"
+            >
+              {data.rows.map((row, rIdx) => {
+                const isSelected =
+                  selectedFilterValue === undefined ||
+                  selectedFilterValue === null ||
+                  String(row[xKey]) === String(selectedFilterValue);
+                return (
+                  <Cell
+                    key={`cell-${rIdx}`}
+                    fill={PALETTE[idx % PALETTE.length]}
+                    opacity={isSelected ? 1 : 0.35}
+                    onClick={() => handleBarClick(row)}
+                  />
+                );
+              })}
+            </Bar>
           ))}
         </BarChart>
       </ResponsiveContainer>
