@@ -14,6 +14,7 @@ import type {
   DatasetQueryMeasure,
   AggregationFunction,
   FilterOperator,
+  DatasetColumn,
 } from "./api";
 
 export interface MappedChartData {
@@ -29,15 +30,68 @@ export interface MappedChartData {
 }
 
 /**
+ * Returns allowed aggregations based on column type to prevent incompatible aggregations (e.g. SUM of string).
+ */
+export function getAllowedAggregations(dataType?: string): AggregationFunction[] {
+  if (!dataType) return ["COUNT", "SUM", "AVG", "MIN", "MAX"];
+  const normalized = dataType.toLowerCase();
+
+  if (normalized === "string" || normalized === "boolean") {
+    return ["COUNT"];
+  }
+
+  if (normalized === "date" || normalized === "timestamp" || normalized === "datetime") {
+    return ["COUNT", "MIN", "MAX"];
+  }
+
+  // numeric: number, integer, float, decimal
+  return ["SUM", "AVG", "COUNT", "MIN", "MAX"];
+}
+
+/**
+ * Validates if an aggregation function is compatible with a field data type.
+ */
+export function isAggregationCompatible(
+  agg: AggregationFunction,
+  dataType?: string
+): boolean {
+  return getAllowedAggregations(dataType).includes(agg);
+}
+
+/**
+ * Intelligently categorizes dataset columns into Dimensions and Measures.
+ */
+export function categorizeColumns(columns: DatasetColumn[]): {
+  dimensions: DatasetColumn[];
+  measures: DatasetColumn[];
+} {
+  const dimensions: DatasetColumn[] = [];
+  const measures: DatasetColumn[] = [];
+
+  for (const col of columns) {
+    const t = col.type.toLowerCase();
+    if (t === "number" || t === "integer") {
+      measures.push(col);
+    } else {
+      dimensions.push(col);
+    }
+  }
+
+  return { dimensions, measures };
+}
+
+/**
  * Builds the query engine request parameters from a Chart configuration.
  * Strictly adheres to allowed aggregations, filters, dimensions, and measures.
  */
 export function buildChartQueryParams(
   config: ChartConfig,
-  limit = 100
+  limit = 100,
+  filterLogic: "AND" | "OR" = "AND"
 ): DatasetQueryParams {
   const params: DatasetQueryParams = {
     limit,
+    filterLogic,
   };
 
   // Measures & Dimensions (Aggregation mode)
@@ -77,6 +131,17 @@ export function buildChartQueryParams(
   }
 
   return params;
+}
+
+/**
+ * Pure Query Builder Adapter specifically for Visualization Studio.
+ */
+export function buildVisualizationQuery(
+  config: ChartConfig,
+  limit = 100,
+  filterLogic: "AND" | "OR" = "AND"
+): DatasetQueryParams {
+  return buildChartQueryParams(config, limit, filterLogic);
 }
 
 /**

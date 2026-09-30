@@ -385,11 +385,123 @@ describe("Visualization Data Mapping", () => {
     expect(mapped.kpiLabel).toBe("SUM of revenue");
   });
 
+  it("maps AREA rendering data with continuous series", () => {
+    const config = {
+      dimensions: ["category"],
+      measures: [{ column: "revenue", aggregation: "SUM", alias: "revenue" }],
+    };
+
+    const mapped = mapQueryResultToChartDataTest("AREA", mockResult, config);
+    expect(mapped.chartType).toBe("AREA");
+    expect(mapped.xKey).toBe("category");
+    expect(mapped.measureKeys).toContain("revenue");
+    expect(mapped.rows).toHaveLength(3);
+  });
+
+  it("maps multiple measures correctly across rows", () => {
+    const multiMeasureResult = {
+      columns: [
+        { name: "month", type: "string" },
+        { name: "revenue", type: "number" },
+        { name: "profit", type: "number" },
+      ],
+      rows: [
+        { month: "Jan", revenue: "10000", profit: "3000" },
+        { month: "Feb", revenue: "15000", profit: "4500" },
+      ],
+    };
+
+    const config = {
+      dimensions: ["month"],
+      measures: [
+        { column: "revenue", aggregation: "SUM", alias: "revenue" },
+        { column: "profit", aggregation: "SUM", alias: "profit" },
+      ],
+    };
+
+    const mapped = mapQueryResultToChartDataTest("BAR", multiMeasureResult, config);
+    expect(mapped.measureKeys).toEqual(["revenue", "profit"]);
+    expect(mapped.rows[0].revenue).toBe(10000);
+    expect(mapped.rows[0].profit).toBe(3000);
+  });
+
+  it("converts all query filter operators and sorting correctly", () => {
+    const operators = [
+      "=",
+      "!=",
+      ">",
+      ">=",
+      "<",
+      "<=",
+      "contains",
+      "startsWith",
+      "endsWith",
+      "isNull",
+      "isNotNull",
+    ];
+
+    const config = {
+      filters: operators.map((op) => ({
+        column: "field",
+        operator: op,
+        value: op.includes("Null") ? undefined : "val",
+      })),
+      sort: { column: "field", direction: "asc" as const },
+    };
+
+    const params = buildChartQueryParamsTest(config);
+    expect(params.filters).toHaveLength(operators.length);
+    expect(params.orderBy).toEqual({ column: "field", direction: "asc" });
+  });
+
   it("gracefully handles empty query results without crashing", () => {
     const mapped = mapQueryResultToChartDataTest("BAR", null, {});
     expect(mapped.rows).toEqual([]);
     expect(mapped.kpiValue).toBe(0);
     expect(mapped.kpiLabel).toBe("No Data");
+  });
+});
+
+// ============================================================
+// 2B. FORMATTING UTILITIES TESTS
+// ============================================================
+
+describe("Visualization Formatting Utilities", () => {
+  function formatNumberTest(num: number): string {
+    return new Intl.NumberFormat("en-US").format(num);
+  }
+
+  function formatCurrencyTest(num: number): string {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(num);
+  }
+
+  function formatPercentTest(num: number): string {
+    const percentage = Math.abs(num) <= 1 && num !== 0 ? num * 100 : num;
+    return `${percentage.toFixed(1)}%`;
+  }
+
+  function formatDateTest(dateStr: string): string {
+    const d = new Date(dateStr);
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(d);
+  }
+
+  it("formats integers and decimals cleanly", () => {
+    expect(formatNumberTest(12450)).toBe("12,450");
+    expect(formatNumberTest(1000000)).toBe("1,000,000");
+  });
+
+  it("formats currency accurately with configured currency symbol", () => {
+    expect(formatCurrencyTest(4850.5)).toBe("$4,850.50");
+  });
+
+  it("formats percentage fractional and scalar numbers", () => {
+    expect(formatPercentTest(0.184)).toBe("18.4%");
+    expect(formatPercentTest(42.5)).toBe("42.5%");
+  });
+
+  it("formats ISO date strings without throwing errors", () => {
+    const formatted = formatDateTest("2026-09-30T12:00:00Z");
+    expect(formatted).toContain("2026");
   });
 });
 
