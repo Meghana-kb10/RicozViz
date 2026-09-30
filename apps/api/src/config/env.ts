@@ -6,6 +6,13 @@
 // ========================================
 
 import { z } from "zod";
+import * as dotenv from "dotenv";
+import * as path from "path";
+
+// Load from current working directory, workspace, and monorepo root
+dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), "../../.env") });
 
 const envSchema = z.object({
   // ---- Node ----
