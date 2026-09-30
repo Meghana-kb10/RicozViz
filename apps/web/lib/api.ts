@@ -435,4 +435,109 @@ export async function apiQueryDataset(
   });
 }
 
+// ============================================================
+// DASHBOARD TYPES & API METHODS
+// ============================================================
+
+export type DashboardStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export type DashboardVisibility = "PRIVATE" | "ORGANIZATION" | "PUBLIC";
+
+export interface DashboardChart {
+  id: string;
+  title: string;
+  description: string | null;
+  chartType: string;
+  config: Record<string, unknown>;
+  position: Record<string, unknown>;
+  sortOrder: number;
+  datasetId: string | null;
+}
+
+export interface DashboardData {
+  id: string;
+  name: string;
+  description: string | null;
+  status: DashboardStatus;
+  visibility: DashboardVisibility;
+  organizationId: string;
+  ownerId: string;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  layoutConfig: Record<string, unknown>;
+  chartCount: number;
+  charts: DashboardChart[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DashboardListResponse {
+  dashboards: DashboardData[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export async function apiListDashboards(params?: {
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: "name" | "createdAt" | "updatedAt";
+  sortOrder?: "asc" | "desc";
+}): Promise<DashboardListResponse> {
+  const query = new URLSearchParams();
+  if (params?.search) query.set("search", params.search);
+  if (params?.status) query.set("status", params.status);
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.limit) query.set("limit", String(params.limit));
+  if (params?.sortBy) query.set("sortBy", params.sortBy);
+  if (params?.sortOrder) query.set("sortOrder", params.sortOrder);
+
+  const qs = query.toString();
+  return apiFetch<DashboardListResponse>(`/api/v1/dashboards${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetDashboard(id: string): Promise<DashboardData> {
+  return apiFetch<DashboardData>(`/api/v1/dashboards/${id}`);
+}
+
+export async function apiCreateDashboard(input: {
+  name: string;
+  description?: string | null;
+  status?: DashboardStatus;
+  visibility?: DashboardVisibility;
+  layoutConfig?: Record<string, unknown>;
+}): Promise<DashboardData> {
+  return apiFetch<DashboardData>("/api/v1/dashboards", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiUpdateDashboard(
+  id: string,
+  input: {
+    name?: string;
+    description?: string | null;
+    status?: DashboardStatus;
+    visibility?: DashboardVisibility;
+    layoutConfig?: Record<string, unknown>;
+  }
+): Promise<DashboardData> {
+  return apiFetch<DashboardData>(`/api/v1/dashboards/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiDeleteDashboard(id: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/v1/dashboards/${id}`, {
+    method: "DELETE",
+  });
+}
+
+
 

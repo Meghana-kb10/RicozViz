@@ -7,6 +7,7 @@ import healthRouter from "./health.routes.js";
 import authRouter from "./auth.routes.js";
 import dataSourceRouter from "./data-source.routes.js";
 import datasetRouter from "./dataset.routes.js";
+import dashboardRouter from "./dashboard.routes.js";
 
 const v1Router = Router();
 
@@ -15,11 +16,11 @@ v1Router.use("/health", healthRouter);
 v1Router.use("/auth", authRouter);
 v1Router.use("/data-sources", dataSourceRouter);
 v1Router.use("/datasets", datasetRouter);
+v1Router.use("/dashboards", dashboardRouter);
 
 // Future routes will be added here:
 // v1Router.use("/users",        usersRouter);
 // v1Router.use("/organizations",orgRouter);
-// v1Router.use("/dashboards",   dashboardsRouter);
 
 // ---- /api/v1 index ----
 v1Router.get("/", (_req: Request, res: Response) => {
@@ -32,6 +33,7 @@ v1Router.get("/", (_req: Request, res: Response) => {
         "/api/v1/auth",
         "/api/v1/data-sources",
         "/api/v1/datasets",
+        "/api/v1/dashboards",
       ],
     },
   });

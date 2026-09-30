@@ -233,7 +233,7 @@ export default function WorkspacePage() {
 }
 
 const SIDEBAR_ITEMS = [
-  { icon: "📊", label: "Dashboards" },
+  { icon: "📊", label: "Dashboards", href: "/dashboards" },
   { icon: "📈", label: "Charts" },
   { icon: "🔌", label: "Data Sources", href: "/data-sources" },
   { icon: "🗃️", label: "Datasets", href: "/datasets" },
@@ -251,7 +251,7 @@ const BUILD_STATUS = [
   { label: "RBAC", done: true },
   { label: "Data Sources", done: true },
   { label: "Datasets", done: true },
-  { label: "Dashboards", done: false },
+  { label: "Dashboards", done: true },
   { label: "Charts", done: false },
 ];
 
@@ -266,6 +266,7 @@ const QUICK_ACTIONS = [
     icon: "➕",
     title: "New Dashboard",
     description: "Create a blank dashboard and add charts.",
+    href: "/dashboards",
   },
   {
     icon: "📋",
