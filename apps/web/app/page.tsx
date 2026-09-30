@@ -21,10 +21,16 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-4">
             <Link
-              href="/workspace"
+              href="/login"
+              className="text-sm font-medium text-gray-600 hover:text-gray-900"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/register"
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
-              Go to Workspace
+              Get started
             </Link>
           </div>
         </div>
@@ -35,7 +41,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-3xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm text-indigo-700">
             <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-            Platform Foundation — Day 1, Step 2
+            Platform Foundation — Day 1, Step 5 Complete
           </div>
 
           <h1 className="mb-6 text-5xl font-bold tracking-tight text-gray-900">
@@ -52,19 +58,17 @@ export default function HomePage() {
 
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/workspace"
+              href="/register"
               className="rounded-xl bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md"
             >
-              Open Workspace
+              Get Started Free
             </Link>
-            <a
-              href="http://localhost:4000/api/v1/health"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/login"
               className="rounded-xl border border-gray-300 bg-white px-6 py-3 text-base font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
             >
-              API Health Check ↗
-            </a>
+              Sign In
+            </Link>
           </div>
         </div>
       </section>

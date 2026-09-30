@@ -7,6 +7,7 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 
 import { config } from "./config/env.js";
 import v1Router from "./routes/index.js";
@@ -26,7 +27,7 @@ export function createApp(): express.Application {
     cors({
       origin:
         config.NODE_ENV === "production"
-          ? process.env["ALLOWED_ORIGIN"] ?? "https://ricozviz.com"
+          ? config.ALLOWED_ORIGIN ?? "https://ricozviz.com"
           : ["http://localhost:3000", "http://127.0.0.1:3000"],
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -36,6 +37,9 @@ export function createApp(): express.Application {
 
   // ---- Compression ----
   app.use(compression());
+
+  // ---- Cookie parsing (required for refresh token HttpOnly cookie) ----
+  app.use(cookieParser());
 
   // ---- Request parsing ----
   app.use(express.json({ limit: "10mb" }));

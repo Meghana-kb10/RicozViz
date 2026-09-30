@@ -1,12 +1,72 @@
-import type { Metadata } from "next";
-import Link from "next/link";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Workspace",
-  description: "Your RicozViz workspace — dashboards, data sources, and charts.",
-};
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "../../contexts/auth-context";
 
 export default function WorkspacePage() {
+  const { auth, isLoading, logout } = useAuth();
+  const router = useRouter();
+
+  // ---- Redirect unauthenticated users ----
+  useEffect(() => {
+    if (!isLoading && !auth) {
+      void router.replace("/login");
+    }
+  }, [auth, isLoading, router]);
+
+  // ---- Loading state ----
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            className="h-8 w-8 animate-spin text-indigo-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-label="Loading"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          <p className="text-sm text-gray-500">Loading workspace…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Not authenticated (redirect in progress) ----
+  if (!auth) return null;
+
+  const userInitials = auth.user.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  async function handleLogout() {
+    try {
+      await logout();
+      router.push("/login");
+    } catch {
+      // Force redirect even on error
+      router.push("/login");
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* ---- Top navigation bar ---- */}
@@ -22,10 +82,27 @@ export default function WorkspacePage() {
             <span className="text-gray-400">/</span>
             <span className="text-sm font-medium text-gray-700">Workspace</span>
           </div>
+
+          {/* ---- User menu ---- */}
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-              <span className="text-xs font-semibold text-indigo-700">U</span>
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-medium text-gray-900">{auth.user.name}</p>
+              <p className="text-xs text-gray-500">
+                {auth.role} · {auth.organization.name}
+              </p>
             </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100">
+              <span className="text-xs font-semibold text-indigo-700">
+                {userInitials}
+              </span>
+            </div>
+            <button
+              id="workspace-logout"
+              onClick={() => { void handleLogout(); }}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </header>
@@ -56,41 +133,55 @@ export default function WorkspacePage() {
             <div className="mb-8">
               <h1 className="text-2xl font-bold text-gray-900">My Workspace</h1>
               <p className="mt-1 text-sm text-gray-500">
-                Your personal space for dashboards, data sources, and analytics.
+                {auth.organization.name} · {auth.role}
               </p>
             </div>
 
-            {/* ---- Status banner ---- */}
+            {/* ---- User info card ---- */}
             <div className="mb-8 rounded-xl border border-indigo-200 bg-indigo-50 p-6">
               <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-indigo-100">
-                  <span className="text-xl">🏗️</span>
+                <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-lg">
+                  {userInitials}
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <h2 className="text-base font-semibold text-indigo-900">
-                    Platform Foundation In Progress
+                    {auth.user.name}
                   </h2>
-                  <p className="mt-1 text-sm text-indigo-700">
-                    The RicozViz workspace is being built. This is the project scaffold
-                    from Day 1, Step 2. Authentication, dashboards, and data connections
-                    are coming in subsequent steps.
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {BUILD_STATUS.map((item) => (
-                      <span
-                        key={item.label}
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                          item.done
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        <span>{item.done ? "✓" : "○"}</span>
-                        {item.label}
-                      </span>
-                    ))}
+                  <p className="text-sm text-indigo-700">{auth.user.email}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-3 py-1 text-xs font-medium text-white">
+                      {auth.role}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white border border-indigo-200 px-3 py-1 text-xs font-medium text-indigo-700">
+                      {auth.organization.name}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white border border-indigo-200 px-3 py-1 text-xs font-medium text-indigo-700">
+                      {auth.permissions.length} permissions
+                    </span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* ---- Build status ---- */}
+            <div className="mb-8 rounded-xl border border-gray-200 bg-white p-6">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">
+                Day 1 Foundation Status
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {BUILD_STATUS.map((item) => (
+                  <span
+                    key={item.label}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+                      item.done
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    <span>{item.done ? "✓" : "○"}</span>
+                    {item.label}
+                  </span>
+                ))}
               </div>
             </div>
 
@@ -128,9 +219,9 @@ const BUILD_STATUS = [
   { label: "Git + Monorepo", done: true },
   { label: "Next.js Frontend", done: true },
   { label: "Express API", done: true },
-  { label: "PostgreSQL", done: true },
-  { label: "Authentication", done: false },
-  { label: "RBAC", done: false },
+  { label: "PostgreSQL + Prisma", done: true },
+  { label: "Authentication", done: true },
+  { label: "RBAC", done: true },
   { label: "Dashboards", done: false },
   { label: "Charts", done: false },
 ];

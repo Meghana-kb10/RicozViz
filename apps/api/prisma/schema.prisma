@@ -114,6 +114,7 @@ model User {
   name         String
   avatarUrl    String?
   status       UserStatus @default(PENDING_VERIFICATION)
+  tokenVersion Int        @default(0) // Increment to invalidate all refresh tokens
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 

@@ -24,5 +24,6 @@
   "env": {
     "node": true,
     "es2022": true
-  }
+  },
+  "ignorePatterns": ["src/tests/**", "**/*.test.ts", "**/*.spec.ts", "vitest.config.ts", "dist/**"]
 }
