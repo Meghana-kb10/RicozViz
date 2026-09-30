@@ -1,71 +1,724 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  BarChart3,
+  LineChart as LineChartIcon,
+  Database,
+  ShieldCheck,
+  Layers,
+  ArrowRight,
+  Filter,
+  Table,
+  Workflow,
+  CheckCircle2,
+  Lock,
+  Activity,
+  FileSpreadsheet,
+  LayoutDashboard,
+  Compass,
+  TrendingUp,
+} from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "RicozViz — Enterprise Data Visualization Platform",
+  title: "RicozViz — Enterprise Data Visualization & Analytics",
   description:
-    "Connect data sources, build interactive dashboards, and share insights across your organization.",
+    "Connect your data, explore insights, build powerful dashboards, and share governed analytics across your organization — all from one intelligent workspace.",
 };
 
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col">
-      {/* ---- Navigation ---- */}
-      <nav className="border-b border-gray-200 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600">
-              <span className="text-sm font-bold text-white">R</span>
-            </div>
-            <span className="text-lg font-semibold text-gray-900">RicozViz</span>
+    <div className="flex min-h-screen flex-col bg-white text-gray-900 selection:bg-indigo-500 selection:text-white antialiased">
+      {/* ============================================================ */}
+      {/* 1. PREMIUM NAVIGATION */}
+      {/* ============================================================ */}
+      <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          {/* Logo */}
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-sm shadow-sm shadow-indigo-200">
+                R
+              </span>
+              <span className="text-lg font-bold tracking-tight text-gray-900">
+                Ricoz<span className="text-indigo-600">Viz</span>
+              </span>
+            </Link>
+
+            {/* Center Navigation Links */}
+            <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-gray-600">
+              <a href="#capabilities" className="hover:text-indigo-600 transition">
+                Platform
+              </a>
+              <a href="#use-cases" className="hover:text-indigo-600 transition">
+                Solutions
+              </a>
+              <a href="#workflow" className="hover:text-indigo-600 transition">
+                Data Sources
+              </a>
+              <a href="#showcase" className="hover:text-indigo-600 transition">
+                Analytics
+              </a>
+              <a href="#governance" className="hover:text-indigo-600 transition">
+                Governance
+              </a>
+            </nav>
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900"
+              className="rounded-lg px-3.5 py-2 text-xs font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition"
             >
-              Sign in
+              Sign In
             </Link>
             <Link
               href="/register"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-500 transition"
             >
-              Get started
+              Get Started
             </Link>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* ---- Hero ---- */}
-      <section className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-white to-indigo-50 px-6 py-24 text-center">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-sm text-indigo-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-            Platform Foundation — Day 1, Step 5 Complete
+      {/* ============================================================ */}
+      {/* 2. HERO SECTION */}
+      {/* ============================================================ */}
+      <section className="relative overflow-hidden pt-16 pb-20 lg:pt-24 lg:pb-32 bg-gradient-to-b from-gray-50/70 via-white to-white">
+        {/* Subtle grid backdrop */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#f3f4f6_1px,transparent_1px),linear-gradient(to_bottom,#f3f4f6_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto">
+            {/* Pill Tag */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/80 px-3.5 py-1 text-xs font-semibold text-indigo-700 mb-6 shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-pulse" />
+              <span>Enterprise Data Visualization & Analytics</span>
+            </div>
+
+            {/* Hero Heading */}
+            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-6xl sm:leading-[1.12]">
+              Turn Enterprise Data <br className="hidden sm:inline" />
+              Into <span className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 bg-clip-text text-transparent">Decisions</span>
+            </h1>
+
+            {/* Supporting Text */}
+            <p className="mt-6 text-base text-gray-600 sm:text-lg sm:leading-relaxed max-w-2xl mx-auto">
+              Connect your data, explore insights, build powerful dashboards, and share governed analytics across your organization — all from one intelligent workspace.
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-500 transition group"
+              >
+                <span>Get Started</span>
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition" />
+              </Link>
+              <a
+                href="#showcase"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-xs transition"
+              >
+                <span>Explore Platform</span>
+              </a>
+            </div>
+
+            <p className="mt-4 text-xs text-gray-400">
+              Role-based governance · Safe analytical querying · Multi-tenant isolation
+            </p>
           </div>
 
-          <h1 className="mb-6 text-5xl font-bold tracking-tight text-gray-900">
-            Enterprise Data
-            <span className="text-indigo-600"> Visualization</span>
-            <br />
-            Made Simple
-          </h1>
+          {/* ============================================================ */}
+          {/* REALISTIC PRODUCT DASHBOARD PREVIEW */}
+          {/* ============================================================ */}
+          <div className="mt-14 relative mx-auto max-w-6xl">
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-gray-200/80 p-2 sm:p-4 overflow-hidden">
+              {/* Mock Window Top Bar */}
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3 px-2 mb-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-green-400/80" />
+                  </div>
+                  <span className="text-gray-300 ml-2">|</span>
+                  <span className="font-semibold text-gray-700">Q3 Global Revenue & Performance</span>
+                  <span className="rounded bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700 border border-green-200">
+                    PUBLISHED
+                  </span>
+                </div>
 
-          <p className="mb-10 text-xl text-gray-600">
-            Connect multiple data sources, build interactive dashboards,
-            and share governed insights across your entire organization.
+                <div className="flex items-center gap-2 text-gray-500 text-[11px]">
+                  <span className="hidden sm:inline">Organization: Acme Corp</span>
+                  <span className="rounded bg-indigo-50 px-2 py-0.5 text-indigo-700 font-semibold text-[10px]">
+                    ANALYST
+                  </span>
+                </div>
+              </div>
+
+              {/* KPI Cards Row */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-indigo-50/40 via-white to-white p-4">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+                    Total Revenue
+                  </span>
+                  <div className="text-2xl font-bold text-gray-900">$4,850,240</div>
+                  <span className="text-[11px] font-semibold text-emerald-600 mt-1 inline-flex items-center gap-1">
+                    ↑ +18.4% <span className="text-gray-400 font-normal">vs last quarter</span>
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-cyan-50/40 via-white to-white p-4">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+                    Active Accounts
+                  </span>
+                  <div className="text-2xl font-bold text-gray-900">1,428</div>
+                  <span className="text-[11px] font-semibold text-emerald-600 mt-1 inline-flex items-center gap-1">
+                    ↑ +12.2% <span className="text-gray-400 font-normal">new clients</span>
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-emerald-50/40 via-white to-white p-4">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+                    Query Throughput
+                  </span>
+                  <div className="text-2xl font-bold text-gray-900">42.8k / day</div>
+                  <span className="text-[11px] font-semibold text-indigo-600 mt-1 inline-flex items-center gap-1">
+                    ⚡ 8ms <span className="text-gray-400 font-normal">avg response</span>
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-amber-50/40 via-white to-white p-4">
+                  <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">
+                    Gross Margin
+                  </span>
+                  <div className="text-2xl font-bold text-gray-900">76.2%</div>
+                  <span className="text-[11px] font-semibold text-emerald-600 mt-1 inline-flex items-center gap-1">
+                    ↑ +2.1% <span className="text-gray-400 font-normal">efficiency</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Charts Mock Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 1. Monthly Revenue Area Trend */}
+                <div className="md:col-span-2 rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-bold text-xs text-gray-900">Monthly Revenue Trajectory</h4>
+                      <p className="text-[10px] text-gray-400">Aggregate SUM(revenue) by Month</p>
+                    </div>
+                    <span className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                      AREA CHART
+                    </span>
+                  </div>
+
+                  {/* SVG Chart Preview */}
+                  <div className="h-44 w-full flex items-end justify-between gap-2 pt-6 pb-2 px-2 bg-gray-50/60 rounded-lg">
+                    <svg viewBox="0 0 500 150" className="w-full h-full overflow-visible">
+                      <defs>
+                        <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M0,130 C80,110 120,70 180,85 C240,100 280,40 360,50 C420,60 460,20 500,25 L500,150 L0,150 Z"
+                        fill="url(#areaGradient)"
+                      />
+                      <path
+                        d="M0,130 C80,110 120,70 180,85 C240,100 280,40 360,50 C420,60 460,20 500,25"
+                        fill="none"
+                        stroke="#4f46e5"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <circle cx="180" cy="85" r="4" fill="#4f46e5" />
+                      <circle cx="360" cy="50" r="4" fill="#4f46e5" />
+                      <circle cx="500" cy="25" r="4" fill="#4f46e5" />
+                    </svg>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-2 px-1 font-mono">
+                    <span>Jan</span>
+                    <span>Feb</span>
+                    <span>Mar</span>
+                    <span>Apr</span>
+                    <span>May</span>
+                    <span>Jun</span>
+                  </div>
+                </div>
+
+                {/* 2. Regional Breakdown Bar Chart */}
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-bold text-xs text-gray-900">Regional Revenue</h4>
+                      <p className="text-[10px] text-gray-400">SUM(sales) by Region</p>
+                    </div>
+                    <span className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                      BAR CHART
+                    </span>
+                  </div>
+
+                  <div className="h-44 flex items-end justify-around gap-2 px-3 pt-4 pb-2 bg-gray-50/60 rounded-lg">
+                    <div className="flex flex-col items-center gap-1 w-1/4">
+                      <div className="w-full bg-indigo-600 rounded-t-md h-32" />
+                      <span className="text-[9px] text-gray-500 font-mono">NA</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 w-1/4">
+                      <div className="w-full bg-cyan-500 rounded-t-md h-24" />
+                      <span className="text-[9px] text-gray-500 font-mono">EMEA</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 w-1/4">
+                      <div className="w-full bg-emerald-500 rounded-t-md h-28" />
+                      <span className="text-[9px] text-gray-500 font-mono">APAC</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1 w-1/4">
+                      <div className="w-full bg-amber-500 rounded-t-md h-16" />
+                      <span className="text-[9px] text-gray-500 font-mono">LATAM</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-2 px-1">
+                    <span>Target: 100%</span>
+                    <span className="font-semibold text-gray-700">Total: $4.85M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 3. PRODUCT CAPABILITIES */}
+      {/* ============================================================ */}
+      <section id="capabilities" className="py-20 bg-gray-50/70 border-t border-gray-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+              Core Platform Capabilities
+            </span>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+              Everything you need to work with enterprise data
+            </h2>
+            <p className="mt-4 text-sm text-gray-600 leading-relaxed">
+              Built from the ground up for speed, multi-tenant security, and interactive visual exploration across your data stack.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {/* 1. Data Connectivity */}
+            <div className="rounded-xl border border-gray-200/90 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 mb-4">
+                <Database className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">1. Data Connectivity</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Connect enterprise data sources including PostgreSQL relational databases, REST APIs, and ingested CSV datasets through secure encrypted connectors.
+              </p>
+            </div>
+
+            {/* 2. Data Exploration */}
+            <div className="rounded-xl border border-gray-200/90 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600 mb-4">
+                <Compass className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">2. Data Exploration</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Inspect auto-discovered schemas, filter records, compute aggregations, and validate column distributions using parameterized, SQL-injection safe queries.
+              </p>
+            </div>
+
+            {/* 3. Visualization Studio */}
+            <div className="rounded-xl border border-gray-200/90 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 mb-4">
+                <BarChart3 className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">3. Visualization Studio</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Construct responsive visual representations: Bar, Line, Area, Pie, Donut, Scatter, Tabular views, and KPI metric cards with live query preview.
+              </p>
+            </div>
+
+            {/* 4. Dashboard Builder */}
+            <div className="rounded-xl border border-gray-200/90 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600 mb-4">
+                <LayoutDashboard className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">4. Dashboard Builder</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Assemble multiple visualizations into unified dashboard canvases with customizable grid layouts, publication statuses, and organizational visibility.
+              </p>
+            </div>
+
+            {/* 5. Governed Analytics */}
+            <div className="rounded-xl border border-gray-200/90 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 text-purple-600 mb-4">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">5. Governed Analytics</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Enforce strict tenant isolation, role-based authorization (ADMIN, ANALYST, BUSINESS_USER), and comprehensive audit trails for every dashboard action.
+              </p>
+            </div>
+
+            {/* 6. Controlled Reporting */}
+            <div className="rounded-xl border border-gray-200/90 bg-white p-6 shadow-xs hover:border-indigo-300 hover:shadow-md transition">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 mb-4">
+                <FileSpreadsheet className="h-5 w-5" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">6. Reporting & Distribution</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Organize analytics into controlled viewports and curated canvases designed for consistent review and organizational data alignment.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 4. DATA WORKFLOW PIPELINE */}
+      {/* ============================================================ */}
+      <section id="workflow" className="py-20 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+              End-to-End Pipeline
+            </span>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+              From raw data to actionable insight
+            </h2>
+            <p className="mt-4 text-sm text-gray-600">
+              An architectural pipeline that transforms fragmented tables into governed decision assets.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 sm:gap-4 relative">
+            {[
+              { phase: "01", name: "Data Sources", desc: "Postgres, CSV, REST APIs", icon: Database },
+              { phase: "02", name: "Datasets", desc: "Schema discovery & typing", icon: Table },
+              { phase: "03", name: "Exploration", desc: "Safe query engine", icon: Filter },
+              { phase: "04", name: "Visualizations", desc: "Interactive chart studio", icon: BarChart3 },
+              { phase: "05", name: "Dashboards", desc: "Multi-chart canvases", icon: LayoutDashboard },
+              { phase: "06", name: "Decisions", desc: "Governed intelligence", icon: TrendingUp },
+            ].map((node) => {
+              const Icon = node.icon;
+              return (
+                <div
+                  key={node.phase}
+                  className="rounded-xl border border-gray-200 bg-white p-4 flex flex-col justify-between hover:border-indigo-400 transition"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-mono text-[10px] font-bold text-indigo-600">
+                        {node.phase}
+                      </span>
+                      <Icon className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <h4 className="font-bold text-xs text-gray-900">{node.name}</h4>
+                    <p className="text-[11px] text-gray-500 mt-1 leading-snug">{node.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 5. PRODUCT SHOWCASE */}
+      {/* ============================================================ */}
+      <section id="showcase" className="py-20 bg-gray-50/70 border-y border-gray-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-5">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+                Interactive Workspace
+              </span>
+              <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                Built for modern data teams
+              </h2>
+              <p className="mt-4 text-sm text-gray-600 leading-relaxed">
+                RicozViz eliminates the complexity between database tables and business stakeholders. Seamlessly move from data source discovery to multi-metric dashboards in minutes.
+              </p>
+
+              <div className="mt-8 space-y-4 text-xs">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-gray-900 block font-semibold">Zero Raw SQL Exposure</strong>
+                    <span className="text-gray-500">
+                      Query execution relies on an allow-listed query engine with parameterized filters and aggregations.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-gray-900 block font-semibold">Interactive 3-Pane Studio</strong>
+                    <span className="text-gray-500">
+                      Quick palette, responsive live canvas, and real-time query preview panel.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-gray-900 block font-semibold">Native Multi-Tenancy</strong>
+                    <span className="text-gray-500">
+                      Every data source, dataset, chart, and audit log is isolated by organization ID.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8">
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 transition"
+                >
+                  <span>Start Exploring Now</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Showcase Visual Card */}
+            <div className="lg:col-span-7">
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xl">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                  <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span>Visualization Studio · Live Preview</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-gray-400">api/v1/datasets/query</span>
+                </div>
+
+                {/* Split layout preview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-gray-100 p-4 bg-gray-50/50">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                      Query Parameters
+                    </span>
+                    <pre className="text-[11px] font-mono text-indigo-900 bg-white p-3 rounded-lg border border-gray-200 overflow-x-auto">
+{`{
+  "dimensions": ["month"],
+  "measures": [{
+    "column": "revenue",
+    "aggregation": "SUM"
+  }],
+  "filters": [{
+    "column": "status",
+    "operator": "=",
+    "value": "completed"
+  }]
+}`}
+                    </pre>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-100 p-4 bg-white flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                        Execution Metrics
+                      </span>
+                      <div className="space-y-2 mt-2 text-xs">
+                        <div className="flex justify-between border-b border-gray-50 pb-1">
+                          <span className="text-gray-500">Latency:</span>
+                          <span className="font-mono font-bold text-emerald-600">6.4ms</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-50 pb-1">
+                          <span className="text-gray-500">Rows Scanned:</span>
+                          <span className="font-mono text-gray-800">12,450</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Aggregation:</span>
+                          <span className="font-mono text-gray-800">SUM (Indexed)</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 rounded bg-indigo-50 p-2 text-center text-[11px] font-semibold text-indigo-700">
+                      ✓ Ready for Canvas Placement
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 6. ENTERPRISE GOVERNANCE & SECURITY */}
+      {/* ============================================================ */}
+      <section id="governance" className="py-20 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+              Enterprise Trust
+            </span>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+              Analytics with governance built in
+            </h2>
+            <p className="mt-4 text-sm text-gray-600">
+              Granular role matrices, tenant boundary enforcement, and immutable audit logs designed for operational integrity.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-gray-200 p-5">
+              <Lock className="h-5 w-5 text-indigo-600 mb-3" />
+              <h4 className="font-bold text-sm text-gray-900 mb-1">Organization Isolation</h4>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Strict multi-tenant partitioning ensures datasets, dashboards, and charts are never accessible across tenant boundaries.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 p-5">
+              <ShieldCheck className="h-5 w-5 text-indigo-600 mb-3" />
+              <h4 className="font-bold text-sm text-gray-900 mb-1">Role-Based Access Control</h4>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Pre-configured roles (ADMIN, ANALYST, BUSINESS_USER) regulate who can configure connections, edit charts, or view insights.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 p-5">
+              <Activity className="h-5 w-5 text-indigo-600 mb-3" />
+              <h4 className="font-bold text-sm text-gray-900 mb-1">Comprehensive Audit Trails</h4>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Every data source linkage, chart configuration change, and dashboard access event is logged with user, IP, and timestamp.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 p-5">
+              <Workflow className="h-5 w-5 text-indigo-600 mb-3" />
+              <h4 className="font-bold text-sm text-gray-900 mb-1">Safe Query Engine</h4>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Strict allow-lists prevent SQL injection. Queries are constructed safely via parameterization without arbitrary text execution.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 p-5">
+              <Layers className="h-5 w-5 text-indigo-600 mb-3" />
+              <h4 className="font-bold text-sm text-gray-900 mb-1">Controlled Publishing</h4>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Workspaces support DRAFT, PUBLISHED, and ARCHIVED lifecycle statuses with organization and private visibility boundaries.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 p-5">
+              <Database className="h-5 w-5 text-indigo-600 mb-3" />
+              <h4 className="font-bold text-sm text-gray-900 mb-1">Secure Credential Handling</h4>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Sensitive connection strings and credentials are encrypted at rest and never exposed in client API responses.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 7. USE CASES */}
+      {/* ============================================================ */}
+      <section id="use-cases" className="py-20 bg-gray-50/70 border-t border-gray-100">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+              Organizational Impact
+            </span>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+              Built for every layer of the organization
+            </h2>
+            <p className="mt-4 text-sm text-gray-600">
+              Empowering leaders, analysts, and operators with tailored views of core operational metrics.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Executive Analytics */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col justify-between shadow-xs">
+              <div>
+                <span className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 uppercase">
+                  Leadership
+                </span>
+                <h3 className="text-lg font-bold text-gray-900 mt-3 mb-2">Executive Analytics</h3>
+                <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                  Monitor high-level organizational KPIs, revenue trajectories, and cross-departmental benchmarks on unified executive canvases.
+                </p>
+                <ul className="text-xs text-gray-500 space-y-2">
+                  <li className="flex items-center gap-2">✓ Real-time KPI summaries</li>
+                  <li className="flex items-center gap-2">✓ Business performance trends</li>
+                  <li className="flex items-center gap-2">✓ Clean boardroom presentations</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Operational Analytics */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col justify-between shadow-xs">
+              <div>
+                <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase">
+                  Operations
+                </span>
+                <h3 className="text-lg font-bold text-gray-900 mt-3 mb-2">Operational Analytics</h3>
+                <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                  Track day-to-day transaction volumes, system throughput, and regional activities with detailed dimensional breakdowns.
+                </p>
+                <ul className="text-xs text-gray-500 space-y-2">
+                  <li className="flex items-center gap-2">✓ Continuous performance tracking</li>
+                  <li className="flex items-center gap-2">✓ Multi-source operational tables</li>
+                  <li className="flex items-center gap-2">✓ Status & lifecycle visibility</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Analytical Exploration */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 flex flex-col justify-between shadow-xs">
+              <div>
+                <span className="rounded bg-cyan-50 px-2 py-0.5 text-[10px] font-bold text-cyan-700 uppercase">
+                  Data Teams
+                </span>
+                <h3 className="text-lg font-bold text-gray-900 mt-3 mb-2">Analytical Exploration</h3>
+                <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                  Dive into raw tables, test hypotheses, discover correlation patterns, and build custom visualizations in the Visualization Studio.
+                </p>
+                <ul className="text-xs text-gray-500 space-y-2">
+                  <li className="flex items-center gap-2">✓ Schema discovery & type inference</li>
+                  <li className="flex items-center gap-2">✓ Parameterized ad-hoc filtering</li>
+                  <li className="flex items-center gap-2">✓ 8 controlled visualization types</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 8. FINAL CALL TO ACTION */}
+      {/* ============================================================ */}
+      <section className="py-20 bg-indigo-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px] opacity-20 pointer-events-none" />
+
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-extrabold sm:text-5xl tracking-tight">
+            Bring your data into focus.
+          </h2>
+          <p className="mt-4 text-base sm:text-lg text-indigo-200 max-w-xl mx-auto">
+            Connect your data, build visualizations, and create dashboards your organization can act on.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/register"
-              className="rounded-xl bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md"
+              className="rounded-lg bg-white px-6 py-3 text-xs font-bold text-indigo-900 shadow-md hover:bg-gray-100 transition"
             >
-              Get Started Free
+              Get Started
             </Link>
             <Link
               href="/login"
-              className="rounded-xl border border-gray-300 bg-white px-6 py-3 text-base font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+              className="rounded-lg border border-indigo-400/50 bg-indigo-800/40 px-6 py-3 text-xs font-bold text-white hover:bg-indigo-800 transition"
             >
               Sign In
             </Link>
@@ -73,82 +726,73 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ---- Features grid ---- */}
-      <section className="bg-white px-6 py-20">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="mb-12 text-center text-3xl font-bold text-gray-900">
-            Everything Your Team Needs
-          </h2>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((feature) => (
-              <div
-                key={feature.title}
-                className="rounded-xl border border-gray-200 p-6 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-xl">
-                  {feature.icon}
-                </div>
-                <h3 className="mb-2 text-base font-semibold text-gray-900">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-gray-600">{feature.description}</p>
-                {!feature.available && (
-                  <span className="mt-3 inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                    Coming soon
-                  </span>
-                )}
+      {/* ============================================================ */}
+      {/* 9. ENTERPRISE FOOTER */}
+      {/* ============================================================ */}
+      <footer className="border-t border-gray-200 bg-white py-12 text-xs text-gray-500">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 pb-12 border-b border-gray-100">
+            {/* Brand column */}
+            <div className="col-span-2">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded bg-indigo-600 text-white font-bold text-xs">
+                  R
+                </span>
+                <span className="text-sm font-bold text-gray-900">RicozViz</span>
               </div>
-            ))}
+              <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
+                Enterprise Data Visualization & Analytics. Turning complex data into clear organizational decisions.
+              </p>
+            </div>
+
+            {/* Product Links */}
+            <div>
+              <h5 className="font-bold text-gray-900 uppercase tracking-wider text-[11px] mb-3">
+                Product
+              </h5>
+              <ul className="space-y-2">
+                <li><Link href="/dashboards" className="hover:text-indigo-600 transition">Dashboards</Link></li>
+                <li><Link href="/dashboards" className="hover:text-indigo-600 transition">Visualizations</Link></li>
+                <li><Link href="/datasets" className="hover:text-indigo-600 transition">Datasets</Link></li>
+                <li><Link href="/data-sources" className="hover:text-indigo-600 transition">Data Sources</Link></li>
+              </ul>
+            </div>
+
+            {/* Platform Links */}
+            <div>
+              <h5 className="font-bold text-gray-900 uppercase tracking-wider text-[11px] mb-3">
+                Platform
+              </h5>
+              <ul className="space-y-2">
+                <li><Link href="/datasets" className="hover:text-indigo-600 transition">Data Exploration</Link></li>
+                <li><Link href="/workspace" className="hover:text-indigo-600 transition">Governance</Link></li>
+                <li><Link href="/dashboards" className="hover:text-indigo-600 transition">Reporting</Link></li>
+              </ul>
+            </div>
+
+            {/* Organization Links */}
+            <div>
+              <h5 className="font-bold text-gray-900 uppercase tracking-wider text-[11px] mb-3">
+                Access
+              </h5>
+              <ul className="space-y-2">
+                <li><Link href="/login" className="hover:text-indigo-600 transition">Sign In</Link></li>
+                <li><Link href="/register" className="hover:text-indigo-600 transition">Get Started</Link></li>
+                <li><Link href="/workspace" className="hover:text-indigo-600 transition">Workspace</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-400 gap-2">
+            <span>© 2026 RicozViz. Enterprise Data Visualization Platform. All rights reserved.</span>
+            <div className="flex items-center gap-4">
+              <span>PostgreSQL & Multi-Tenant Architecture</span>
+              <span>·</span>
+              <span>Next.js 16 + Express</span>
+            </div>
           </div>
         </div>
-      </section>
-
-      {/* ---- Footer ---- */}
-      <footer className="border-t border-gray-200 bg-white px-6 py-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between text-sm text-gray-500">
-          <span>© 2026 RicozViz. Enterprise Data Visualization Platform.</span>
-          <span>v0.1.0 · Foundation</span>
-        </div>
       </footer>
-    </main>
+    </div>
   );
 }
-
-const FEATURES = [
-  {
-    icon: "🔌",
-    title: "Multi-Source Connections",
-    description: "Connect to PostgreSQL, MySQL, MongoDB, REST APIs, and more from a unified interface.",
-    available: false,
-  },
-  {
-    icon: "📊",
-    title: "Interactive Dashboards",
-    description: "Drag-and-drop dashboard builder with real-time data and responsive layouts.",
-    available: false,
-  },
-  {
-    icon: "🔍",
-    title: "Self-Service Exploration",
-    description: "Non-technical users can explore data, apply filters, and drill into details.",
-    available: false,
-  },
-  {
-    icon: "🔐",
-    title: "Role-Based Access Control",
-    description: "Fine-grained permissions for users, teams, and organizations.",
-    available: false,
-  },
-  {
-    icon: "📤",
-    title: "Publishing & Sharing",
-    description: "Publish dashboards with governed access and shareable links.",
-    available: false,
-  },
-  {
-    icon: "📅",
-    title: "Scheduled Reports",
-    description: "Automate report delivery via email or webhook on a recurring schedule.",
-    available: false,
-  },
-];

@@ -111,30 +111,16 @@ export default function WorkspacePage() {
         {/* ---- Sidebar ---- */}
         <aside className="w-60 flex-none border-r border-gray-200 bg-gray-50 p-4">
           <nav className="flex flex-col gap-1">
-            {SIDEBAR_ITEMS.map((item) =>
-              item.href ? (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
-                >
-                  <span>{item.icon}</span>
-                  <span>{item.label}</span>
-                </Link>
-              ) : (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-500 opacity-60 cursor-not-allowed select-none"
-                  title="Coming soon"
-                >
-                  <span>{item.icon}</span>
-                  <span>{item.label}</span>
-                  <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">
-                    Soon
-                  </span>
-                </div>
-              )
-            )}
+            {SIDEBAR_ITEMS.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+              >
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </Link>
+            ))}
           </nav>
         </aside>
 
@@ -174,38 +160,60 @@ export default function WorkspacePage() {
               </div>
             </div>
 
-            {/* ---- Build status ---- */}
-            <div className="mb-8 rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="text-base font-semibold text-gray-900 mb-4">
-                Day 1 Foundation Status
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {BUILD_STATUS.map((item) => (
-                  <span
-                    key={item.label}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                      item.done
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    <span>{item.done ? "✓" : "○"}</span>
-                    {item.label}
-                  </span>
-                ))}
-              </div>
+            {/* ---- Platform Overview Card ---- */}
+            <div className="mb-8 grid gap-4 sm:grid-cols-3">
+              <Link
+                href="/dashboards"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dashboards</span>
+                  <span className="text-indigo-600 font-bold">→</span>
+                </div>
+                <p className="text-xl font-bold text-gray-900">Visualization Canvases</p>
+                <p className="text-xs text-gray-500 mt-1">Multi-chart dashboards & live queries</p>
+              </Link>
+
+              <Link
+                href="/datasets"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Datasets</span>
+                  <span className="text-emerald-600 font-bold">→</span>
+                </div>
+                <p className="text-xl font-bold text-gray-900">Curated Data</p>
+                <p className="text-xs text-gray-500 mt-1">Schema discovery & analytical queries</p>
+              </Link>
+
+              <Link
+                href="/data-sources"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Connectors</span>
+                  <span className="text-blue-600 font-bold">→</span>
+                </div>
+                <p className="text-xl font-bold text-gray-900">Data Sources</p>
+                <p className="text-xs text-gray-500 mt-1">PostgreSQL, CSV files & REST APIs</p>
+              </Link>
             </div>
 
-            {/* ---- Quick actions placeholder grid ---- */}
+            {/* ---- Quick actions grid ---- */}
+            <div className="mb-6">
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">
+                Platform Navigation & Actions
+              </h2>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {QUICK_ACTIONS.map((action) =>
                 action.href ? (
                   <Link
                     key={action.title}
                     href={action.href}
-                    className="rounded-xl border border-indigo-200 bg-white p-5 hover:border-indigo-400 hover:shadow-md transition group"
+                    className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-300 hover:shadow-sm transition group"
                   >
-                    <div className="mb-3 text-2xl group-hover:scale-110 transition transform">
+                    <div className="mb-3 text-2xl group-hover:scale-105 transition transform">
                       {action.icon}
                     </div>
                     <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600">
@@ -216,11 +224,11 @@ export default function WorkspacePage() {
                 ) : (
                   <div
                     key={action.title}
-                    className="rounded-xl border border-gray-200 bg-white p-5 opacity-50 cursor-not-allowed"
+                    className="rounded-xl border border-gray-100 bg-gray-50/50 p-5 text-gray-400"
                   >
-                    <div className="mb-3 text-2xl">{action.icon}</div>
-                    <h3 className="text-sm font-semibold text-gray-900">{action.title}</h3>
-                    <p className="mt-1 text-xs text-gray-500">{action.description}</p>
+                    <div className="mb-3 text-2xl opacity-60">{action.icon}</div>
+                    <h3 className="text-sm font-semibold text-gray-600">{action.title}</h3>
+                    <p className="mt-1 text-xs text-gray-400">{action.description}</p>
                   </div>
                 )
               )}
@@ -234,25 +242,10 @@ export default function WorkspacePage() {
 
 const SIDEBAR_ITEMS = [
   { icon: "📊", label: "Dashboards", href: "/dashboards" },
-  { icon: "📈", label: "Charts" },
-  { icon: "🔌", label: "Data Sources", href: "/data-sources" },
   { icon: "🗃️", label: "Datasets", href: "/datasets" },
-  { icon: "📤", label: "Reports" },
-  { icon: "👥", label: "Team" },
-  { icon: "⚙️", label: "Settings" },
-];
-
-const BUILD_STATUS = [
-  { label: "Git + Monorepo", done: true },
-  { label: "Next.js Frontend", done: true },
-  { label: "Express API", done: true },
-  { label: "PostgreSQL + Prisma", done: true },
-  { label: "Authentication", done: true },
-  { label: "RBAC", done: true },
-  { label: "Data Sources", done: true },
-  { label: "Datasets", done: true },
-  { label: "Dashboards", done: true },
-  { label: "Charts", done: false },
+  { icon: "🔌", label: "Data Sources", href: "/data-sources" },
+  { icon: "👥", label: "Organization", href: "/workspace" },
+  { icon: "⚙️", label: "Settings", href: "/workspace" },
 ];
 
 const QUICK_ACTIONS = [
@@ -265,28 +258,29 @@ const QUICK_ACTIONS = [
   {
     icon: "➕",
     title: "New Dashboard",
-    description: "Create a blank dashboard and add charts.",
+    description: "Create an enterprise canvas and configure visualizations.",
     href: "/dashboards",
   },
   {
     icon: "📋",
-    title: "Explore Dataset",
-    description: "Browse and query your existing datasets.",
+    title: "Explore Datasets",
+    description: "Inspect schema, filter records, and run analytical queries.",
     href: "/datasets",
   },
   {
-    icon: "📤",
-    title: "Schedule Report",
-    description: "Automate dashboard delivery via email.",
+    icon: "📈",
+    title: "Visualization Studio",
+    description: "Build line, bar, area, pie, and metric visualizations.",
+    href: "/dashboards",
   },
   {
-    icon: "👥",
-    title: "Invite Team Member",
-    description: "Share the workspace with your team.",
+    icon: "🛡️",
+    title: "Governance & RBAC",
+    description: "Tenant isolation and role-based access control.",
   },
   {
-    icon: "🔍",
-    title: "Audit Log",
-    description: "Review all actions taken in this workspace.",
+    icon: "📝",
+    title: "Audit Logging",
+    description: "Immutable compliance and access trail.",
   },
 ];
