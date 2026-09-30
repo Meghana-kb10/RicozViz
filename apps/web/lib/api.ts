@@ -156,3 +156,82 @@ export async function apiLogout(): Promise<void> {
     method: "POST",
   });
 }
+
+// ============================================================
+// DATA SOURCE TYPES & API METHODS
+// ============================================================
+
+export type DataSourceType = "POSTGRESQL" | "CSV" | "REST_API";
+export type DataSourceStatus = "CONNECTED" | "PENDING" | "FAILED" | "INACTIVE";
+
+export interface DataSourceData {
+  id: string;
+  name: string;
+  description: string | null;
+  type: DataSourceType;
+  status: DataSourceStatus;
+  connection: Record<string, unknown>;
+  hasCredentials: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConnectionTestResult {
+  success: boolean;
+  status: "CONNECTED" | "FAILED";
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+export async function apiListDataSources(): Promise<DataSourceData[]> {
+  return apiFetch<DataSourceData[]>("/api/v1/data-sources");
+}
+
+export async function apiGetDataSource(id: string): Promise<DataSourceData> {
+  return apiFetch<DataSourceData>(`/api/v1/data-sources/${id}`);
+}
+
+export async function apiCreateDataSource(input: {
+  name: string;
+  description?: string;
+  type: DataSourceType;
+  connection: Record<string, unknown>;
+}): Promise<DataSourceData> {
+  return apiFetch<DataSourceData>("/api/v1/data-sources", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiUpdateDataSource(
+  id: string,
+  input: {
+    name?: string;
+    description?: string | null;
+    connection?: Record<string, unknown>;
+    status?: string;
+  }
+): Promise<DataSourceData> {
+  return apiFetch<DataSourceData>(`/api/v1/data-sources/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiDeleteDataSource(id: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/v1/data-sources/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function apiTestDataSourceConnection(
+  id: string
+): Promise<ConnectionTestResult> {
+  return apiFetch<ConnectionTestResult>(
+    `/api/v1/data-sources/${id}/test-connection`,
+    {
+      method: "POST",
+    }
+  );
+}
+

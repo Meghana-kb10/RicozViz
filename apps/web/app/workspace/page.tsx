@@ -111,19 +111,30 @@ export default function WorkspacePage() {
         {/* ---- Sidebar ---- */}
         <aside className="w-60 flex-none border-r border-gray-200 bg-gray-50 p-4">
           <nav className="flex flex-col gap-1">
-            {SIDEBAR_ITEMS.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-500 opacity-60 cursor-not-allowed select-none"
-                title="Coming soon"
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-                <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">
-                  Soon
-                </span>
-              </div>
-            ))}
+            {SIDEBAR_ITEMS.map((item) =>
+              item.href ? (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition"
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ) : (
+                <div
+                  key={item.label}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-500 opacity-60 cursor-not-allowed select-none"
+                  title="Coming soon"
+                >
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                  <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">
+                    Soon
+                  </span>
+                </div>
+              )
+            )}
           </nav>
         </aside>
 
@@ -187,16 +198,32 @@ export default function WorkspacePage() {
 
             {/* ---- Quick actions placeholder grid ---- */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {QUICK_ACTIONS.map((action) => (
-                <div
-                  key={action.title}
-                  className="rounded-xl border border-gray-200 bg-white p-5 opacity-50 cursor-not-allowed"
-                >
-                  <div className="mb-3 text-2xl">{action.icon}</div>
-                  <h3 className="text-sm font-semibold text-gray-900">{action.title}</h3>
-                  <p className="mt-1 text-xs text-gray-500">{action.description}</p>
-                </div>
-              ))}
+              {QUICK_ACTIONS.map((action) =>
+                action.href ? (
+                  <Link
+                    key={action.title}
+                    href={action.href}
+                    className="rounded-xl border border-indigo-200 bg-white p-5 hover:border-indigo-400 hover:shadow-md transition group"
+                  >
+                    <div className="mb-3 text-2xl group-hover:scale-110 transition transform">
+                      {action.icon}
+                    </div>
+                    <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600">
+                      {action.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-gray-500">{action.description}</p>
+                  </Link>
+                ) : (
+                  <div
+                    key={action.title}
+                    className="rounded-xl border border-gray-200 bg-white p-5 opacity-50 cursor-not-allowed"
+                  >
+                    <div className="mb-3 text-2xl">{action.icon}</div>
+                    <h3 className="text-sm font-semibold text-gray-900">{action.title}</h3>
+                    <p className="mt-1 text-xs text-gray-500">{action.description}</p>
+                  </div>
+                )
+              )}
             </div>
           </div>
         </main>
@@ -208,7 +235,7 @@ export default function WorkspacePage() {
 const SIDEBAR_ITEMS = [
   { icon: "📊", label: "Dashboards" },
   { icon: "📈", label: "Charts" },
-  { icon: "🔌", label: "Data Sources" },
+  { icon: "🔌", label: "Data Sources", href: "/data-sources" },
   { icon: "🗃️", label: "Datasets" },
   { icon: "📤", label: "Reports" },
   { icon: "👥", label: "Team" },
@@ -222,20 +249,22 @@ const BUILD_STATUS = [
   { label: "PostgreSQL + Prisma", done: true },
   { label: "Authentication", done: true },
   { label: "RBAC", done: true },
+  { label: "Data Sources", done: true },
   { label: "Dashboards", done: false },
   { label: "Charts", done: false },
 ];
 
 const QUICK_ACTIONS = [
   {
+    icon: "🔌",
+    title: "Connect Data Source",
+    description: "Link a PostgreSQL database, REST API, or CSV file.",
+    href: "/data-sources",
+  },
+  {
     icon: "➕",
     title: "New Dashboard",
     description: "Create a blank dashboard and add charts.",
-  },
-  {
-    icon: "🔌",
-    title: "Connect Data Source",
-    description: "Link a database, API, or file.",
   },
   {
     icon: "📋",
