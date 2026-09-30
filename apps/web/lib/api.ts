@@ -369,4 +369,70 @@ export async function apiGetSourceTableSchema(
   );
 }
 
+export type FilterOperator =
+  | "="
+  | "!="
+  | ">"
+  | ">="
+  | "<"
+  | "<="
+  | "contains"
+  | "startsWith"
+  | "endsWith"
+  | "isNull"
+  | "isNotNull";
+
+export type AggregationFunction = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX";
+
+export interface DatasetQueryFilter {
+  column: string;
+  operator: FilterOperator;
+  value?: unknown;
+}
+
+export interface DatasetQueryMeasure {
+  column: string;
+  aggregation: AggregationFunction;
+  alias?: string;
+}
+
+export interface DatasetQueryParams {
+  columns?: string[];
+  limit?: number;
+  offset?: number;
+  orderBy?: {
+    column: string;
+    direction: "asc" | "desc" | "ASC" | "DESC";
+  };
+  filters?: DatasetQueryFilter[];
+  filterLogic?: "AND" | "OR";
+  dimensions?: string[];
+  measures?: DatasetQueryMeasure[];
+}
+
+export interface QueryResultColumn {
+  name: string;
+  type: string;
+}
+
+export interface DatasetQueryResult {
+  columns: QueryResultColumn[];
+  rows: Record<string, unknown>[];
+  rowCount: number;
+  total: number;
+  limit: number;
+  offset: number;
+  executionTimeMs: number;
+}
+
+export async function apiQueryDataset(
+  id: string,
+  params: DatasetQueryParams
+): Promise<DatasetQueryResult> {
+  return apiFetch<DatasetQueryResult>(`/api/v1/datasets/${id}/query`, {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
 

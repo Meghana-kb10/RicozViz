@@ -8,9 +8,37 @@ import {
   apiGetDataset,
   apiPreviewDataset,
   apiUpdateDataset,
+  apiQueryDataset,
   type DatasetData,
+  type DatasetQueryFilter,
+  type DatasetQueryMeasure,
+  type DatasetQueryResult,
+  type FilterOperator,
+  type AggregationFunction,
   ApiError,
 } from "../../../lib/api";
+
+const FILTER_OPERATORS: { label: string; value: FilterOperator }[] = [
+  { label: "equals (=)", value: "=" },
+  { label: "not equals (!=)", value: "!=" },
+  { label: "greater than (>)", value: ">" },
+  { label: "greater or equal (>=)", value: ">=" },
+  { label: "less than (<)", value: "<" },
+  { label: "less or equal (<=)", value: "<=" },
+  { label: "contains", value: "contains" },
+  { label: "starts with", value: "startsWith" },
+  { label: "ends with", value: "endsWith" },
+  { label: "is null", value: "isNull" },
+  { label: "is not null", value: "isNotNull" },
+];
+
+const AGGREGATION_OPTIONS: AggregationFunction[] = [
+  "COUNT",
+  "SUM",
+  "AVG",
+  "MIN",
+  "MAX",
+];
 
 export default function DatasetDetailPage({
   params,
@@ -25,7 +53,7 @@ export default function DatasetDetailPage({
 
   const [dataset, setDataset] = useState<DatasetData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"SCHEMA" | "PREVIEW">("SCHEMA");
+  const [activeTab, setActiveTab] = useState<"SCHEMA" | "PREVIEW" | "EXPLORE">("SCHEMA");
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -34,6 +62,25 @@ export default function DatasetDetailPage({
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Explorer State
+  const [queryMode, setQueryMode] = useState<"RAW" | "AGGREGATE">("RAW");
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [selectedDimensions, setSelectedDimensions] = useState<string[]>([]);
+  const [measures, setMeasures] = useState<DatasetQueryMeasure[]>([]);
+  const [newMeasureCol, setNewMeasureCol] = useState<string>("");
+  const [newMeasureAgg, setNewMeasureAgg] = useState<AggregationFunction>("SUM");
+  const [newMeasureAlias, setNewMeasureAlias] = useState<string>("");
+
+  const [filters, setFilters] = useState<DatasetQueryFilter[]>([]);
+  const [filterLogic, setFilterLogic] = useState<"AND" | "OR">("AND");
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("ASC");
+  const [queryLimit, setQueryLimit] = useState<number>(50);
+
+  const [queryResult, setQueryResult] = useState<DatasetQueryResult | null>(null);
+  const [queryRunning, setQueryRunning] = useState<boolean>(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -54,6 +101,12 @@ export default function DatasetDetailPage({
           setDataset(data);
           setEditName(data.name);
           setEditDescription(data.description || "");
+          setSelectedColumns(data.columns.map((c) => c.name));
+          if (data.columns.length > 0) {
+            setSortColumn(data.columns[0]?.name || "");
+            const numCol = data.columns.find((c) => c.type === "number" || c.type === "integer");
+            setNewMeasureCol(numCol ? numCol.name : data.columns[0]?.name || "");
+          }
           setLoading(false);
         }
       })
@@ -102,6 +155,106 @@ export default function DatasetDetailPage({
     }
   }
 
+  // ---- Query Explorer Handlers ----
+  function handleAddFilter() {
+    if (!dataset || dataset.columns.length === 0) return;
+    setFilters((prev) => [
+      ...prev,
+      {
+        column: dataset.columns[0]?.name || "",
+        operator: "=",
+        value: "",
+      },
+    ]);
+  }
+
+  function handleRemoveFilter(index: number) {
+    setFilters((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function handleFilterChange(index: number, patch: Partial<DatasetQueryFilter>) {
+    setFilters((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, ...patch } : f))
+    );
+  }
+
+  function handleAddMeasure() {
+    if (!newMeasureCol) return;
+    const defaultAlias = `${newMeasureAgg.toLowerCase()}_${newMeasureCol}`;
+    setMeasures((prev) => [
+      ...prev,
+      {
+        column: newMeasureCol,
+        aggregation: newMeasureAgg,
+        alias: newMeasureAlias.trim() || defaultAlias,
+      },
+    ]);
+    setNewMeasureAlias("");
+  }
+
+  function handleRemoveMeasure(index: number) {
+    setMeasures((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function toggleColumnSelection(colName: string) {
+    setSelectedColumns((prev) =>
+      prev.includes(colName) ? prev.filter((c) => c !== colName) : [...prev, colName]
+    );
+  }
+
+  function toggleDimensionSelection(colName: string) {
+    setSelectedDimensions((prev) =>
+      prev.includes(colName) ? prev.filter((d) => d !== colName) : [...prev, colName]
+    );
+  }
+
+  async function handleExecuteQuery() {
+    if (!id) return;
+    setQueryRunning(true);
+    setQueryError(null);
+
+    try {
+      const payload: {
+        columns?: string[];
+        dimensions?: string[];
+        measures?: DatasetQueryMeasure[];
+        filters?: DatasetQueryFilter[];
+        filterLogic?: "AND" | "OR";
+        orderBy?: { column: string; direction: "ASC" | "DESC" };
+        limit?: number;
+      } = {
+        limit: queryLimit,
+        filterLogic,
+      };
+
+      if (filters.length > 0) {
+        payload.filters = filters;
+      }
+
+      if (sortColumn) {
+        payload.orderBy = {
+          column: sortColumn,
+          direction: sortDirection,
+        };
+      }
+
+      if (queryMode === "AGGREGATE") {
+        payload.dimensions = selectedDimensions;
+        payload.measures = measures.length > 0 ? measures : [{ column: "*", aggregation: "COUNT", alias: "count" }];
+      } else {
+        payload.columns = selectedColumns.length > 0 ? selectedColumns : undefined;
+      }
+
+      const res = await apiQueryDataset(id, payload);
+      setQueryResult(res);
+    } catch (err) {
+      setQueryError(err instanceof ApiError ? err.message : "Failed to execute query");
+      setQueryResult(null);
+    } finally {
+      setQueryRunning(false);
+    }
+  }
+
   if (isLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -112,17 +265,22 @@ export default function DatasetDetailPage({
 
   if (!dataset) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-        <p className="text-base font-semibold text-gray-700">Dataset not found</p>
-        <Link href="/datasets" className="mt-4 text-xs font-semibold text-indigo-600">
-          ← Back to Datasets
-        </Link>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-base font-semibold text-gray-900">Dataset not found</p>
+          <Link
+            href="/datasets"
+            className="mt-4 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+          >
+            ← Back to Datasets
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Top Header */}
       <header className="border-b border-gray-200 bg-white sticky top-0 z-10">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
@@ -142,57 +300,41 @@ export default function DatasetDetailPage({
               Datasets
             </Link>
             <span className="text-gray-300">/</span>
-            <span className="text-sm font-semibold text-gray-900 truncate max-w-xs">
-              {dataset.name}
-            </span>
+            <span className="text-sm font-semibold text-gray-900">{dataset.name}</span>
           </div>
-
-          <Link
-            href="/datasets"
-            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
-          >
-            ← Back to Datasets
-          </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl w-full px-4 py-8 sm:px-6 flex-1">
-        {/* Alerts */}
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        {/* Breadcrumb back */}
+        <div className="mb-4">
+          <Link
+            href="/datasets"
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 inline-flex items-center gap-1"
+          >
+            ← Back to all Datasets
+          </Link>
+        </div>
+
         {errorMsg && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 flex justify-between items-center">
-            <span>{errorMsg}</span>
-            <button onClick={() => setErrorMsg(null)} className="text-red-500 font-bold">
-              ✕
-            </button>
+          <div className="mb-6 rounded-lg bg-red-50 p-4 text-xs font-medium text-red-700 border border-red-200">
+            {errorMsg}
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex justify-between items-center">
-            <span>{successMsg}</span>
-            <button onClick={() => setSuccessMsg(null)} className="text-green-500 font-bold">
-              ✕
-            </button>
+          <div className="mb-6 rounded-lg bg-green-50 p-4 text-xs font-medium text-green-700 border border-green-200">
+            {successMsg}
           </div>
         )}
 
         {/* Dataset Header Card */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
-                  {dataset.type === "CONNECTED" ? "🔌 Connected Source" : "📄 CSV File"}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                  {dataset.status}
-                </span>
-              </div>
-
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-5">
+            <div className="flex-1">
               {isEditing ? (
-                <form onSubmit={handleSaveEdit} className="space-y-3 mt-2">
+                <form onSubmit={handleSaveEdit} className="space-y-3 max-w-md">
                   <input
                     type="text"
                     required
@@ -245,25 +387,25 @@ export default function DatasetDetailPage({
           </div>
 
           {/* Metadata Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-100 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-xs">
             <div>
-              <span className="text-gray-400 block mb-0.5">Data Source</span>
+              <span className="text-gray-400 block mb-0.5">Source Type</span>
               <span className="font-semibold text-gray-900">
-                {dataset.dataSourceName || "Uploaded File"}
+                {dataset.type === "CONNECTED"
+                  ? `🔌 ${dataset.dataSourceName || "PostgreSQL"}`
+                  : "📄 Uploaded CSV"}
               </span>
             </div>
-            {dataset.tableName && (
-              <div>
-                <span className="text-gray-400 block mb-0.5">Table Name</span>
-                <span className="font-mono font-semibold text-gray-900">
-                  {dataset.tableName}
-                </span>
-              </div>
-            )}
             <div>
-              <span className="text-gray-400 block mb-0.5">Columns</span>
+              <span className="text-gray-400 block mb-0.5">Status</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">
+                {dataset.status}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400 block mb-0.5">Columns / Rows</span>
               <span className="font-semibold text-gray-900">
-                {dataset.columns.length} columns
+                {dataset.columns.length} columns · {dataset.rowCount} rows
               </span>
             </div>
             <div>
@@ -276,7 +418,7 @@ export default function DatasetDetailPage({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 mb-6">
+        <div className="flex border-b border-gray-200 mb-6 gap-2">
           <button
             onClick={() => setActiveTab("SCHEMA")}
             className={`pb-3 px-4 text-xs font-bold transition border-b-2 ${
@@ -301,6 +443,16 @@ export default function DatasetDetailPage({
             }`}
           >
             👁️ Sample Data Preview
+          </button>
+          <button
+            onClick={() => setActiveTab("EXPLORE")}
+            className={`pb-3 px-4 text-xs font-bold transition border-b-2 ${
+              activeTab === "EXPLORE"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            🔍 Explore Data
           </button>
         </div>
 
@@ -403,6 +555,431 @@ export default function DatasetDetailPage({
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Explore Data */}
+        {activeTab === "EXPLORE" && (
+          <div className="space-y-6">
+            {/* Query Builder Card */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Query & Explore Dataset</h2>
+                  <p className="text-xs text-gray-500">
+                    Configure columns, filters, aggregations, and sorting to inspect records safely.
+                  </p>
+                </div>
+                {/* Mode Selector */}
+                <div className="flex bg-gray-100 p-1 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setQueryMode("RAW")}
+                    className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
+                      queryMode === "RAW"
+                        ? "bg-white text-indigo-600 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Raw Records
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQueryMode("AGGREGATE")}
+                    className={`px-3 py-1 text-xs font-semibold rounded-md transition ${
+                      queryMode === "AGGREGATE"
+                        ? "bg-white text-indigo-600 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Group & Aggregate
+                  </button>
+                </div>
+              </div>
+
+              {/* Mode Specific Controls */}
+              {queryMode === "RAW" ? (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-gray-700">
+                      Select Columns ({selectedColumns.length}/{dataset.columns.length})
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedColumns(dataset.columns.map((c) => c.name))}
+                        className="text-[11px] text-indigo-600 hover:underline"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedColumns([])}
+                        className="text-[11px] text-gray-500 hover:underline"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {dataset.columns.map((col) => {
+                      const isSelected = selectedColumns.includes(col.name);
+                      return (
+                        <button
+                          key={col.name}
+                          type="button"
+                          onClick={() => toggleColumnSelection(col.name)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
+                            isSelected
+                              ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+                              : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+                          }`}
+                        >
+                          {isSelected ? "✓ " : "+ "}
+                          {col.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-6 space-y-4">
+                  {/* Dimensions */}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700 block mb-2">
+                      Group By (Dimensions)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {dataset.columns.map((col) => {
+                        const isSelected = selectedDimensions.includes(col.name);
+                        return (
+                          <button
+                            key={col.name}
+                            type="button"
+                            onClick={() => toggleDimensionSelection(col.name)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition ${
+                              isSelected
+                                ? "bg-indigo-50 border-indigo-300 text-indigo-700"
+                                : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            {isSelected ? "✓ " : "+ "}
+                            {col.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Measures */}
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                    <label className="text-xs font-semibold text-gray-700 block mb-2">
+                      Measures ({measures.length})
+                    </label>
+                    {measures.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {measures.map((m, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-gray-200 text-xs font-mono text-gray-800"
+                          >
+                            <span className="font-bold text-indigo-600">{m.aggregation}</span>(
+                            {m.column}) as {m.alias || `${m.aggregation.toLowerCase()}_${m.column}`}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMeasure(idx)}
+                              className="text-red-500 hover:text-red-700 ml-1 font-bold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add Measure Controls */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select
+                        value={newMeasureAgg}
+                        onChange={(e) => setNewMeasureAgg(e.target.value as AggregationFunction)}
+                        className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700"
+                      >
+                        {AGGREGATION_OPTIONS.map((agg) => (
+                          <option key={agg} value={agg}>
+                            {agg}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={newMeasureCol}
+                        onChange={(e) => setNewMeasureCol(e.target.value)}
+                        className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700"
+                      >
+                        {newMeasureAgg === "COUNT" && <option value="*">* (All rows)</option>}
+                        {dataset.columns.map((col) => (
+                          <option key={col.name} value={col.name}>
+                            {col.name} ({col.type})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value={newMeasureAlias}
+                        onChange={(e) => setNewMeasureAlias(e.target.value)}
+                        placeholder="Alias (optional)"
+                        className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 w-36"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddMeasure}
+                        className="rounded-lg bg-gray-200 px-3 py-1 text-xs font-semibold text-gray-800 hover:bg-gray-300"
+                      >
+                        + Add Metric
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Filters Section */}
+              <div className="border-t border-gray-100 pt-4 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-semibold text-gray-700">Filters</label>
+                    <div className="flex rounded-md border border-gray-200 overflow-hidden text-[11px] font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setFilterLogic("AND")}
+                        className={`px-2 py-0.5 ${
+                          filterLogic === "AND"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        AND
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFilterLogic("OR")}
+                        className={`px-2 py-0.5 ${
+                          filterLogic === "OR"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        OR
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddFilter}
+                    className="text-xs font-semibold text-indigo-600 hover:underline"
+                  >
+                    + Add Filter
+                  </button>
+                </div>
+
+                {filters.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">No filters added. All rows will be processed.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {filters.map((filter, idx) => (
+                      <div key={idx} className="flex flex-wrap items-center gap-2 bg-gray-50 p-2 rounded-lg">
+                        <select
+                          value={filter.column}
+                          onChange={(e) => handleFilterChange(idx, { column: e.target.value })}
+                          className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800"
+                        >
+                          {dataset.columns.map((col) => (
+                            <option key={col.name} value={col.name}>
+                              {col.name}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={filter.operator}
+                          onChange={(e) =>
+                            handleFilterChange(idx, { operator: e.target.value as FilterOperator })
+                          }
+                          className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800"
+                        >
+                          {FILTER_OPERATORS.map((op) => (
+                            <option key={op.value} value={op.value}>
+                              {op.label}
+                            </option>
+                          ))}
+                        </select>
+                        {filter.operator !== "isNull" && filter.operator !== "isNotNull" && (
+                          <input
+                            type="text"
+                            value={String(filter.value ?? "")}
+                            onChange={(e) => handleFilterChange(idx, { value: e.target.value })}
+                            placeholder="Value..."
+                            className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 w-44"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFilter(idx)}
+                          className="text-red-500 hover:text-red-700 text-base font-bold ml-auto px-2"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Sorting & Limits Row */}
+              <div className="border-t border-gray-100 pt-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-700">
+                    <span className="font-semibold">Order by:</span>
+                    <select
+                      value={sortColumn}
+                      onChange={(e) => setSortColumn(e.target.value)}
+                      className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800"
+                    >
+                      <option value="">(None)</option>
+                      {queryMode === "AGGREGATE" ? (
+                        <>
+                          {selectedDimensions.map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                          {measures.map((m) => {
+                            const alias = m.alias || `${m.aggregation.toLowerCase()}_${m.column}`;
+                            return (
+                              <option key={alias} value={alias}>
+                                {alias}
+                              </option>
+                            );
+                          })}
+                        </>
+                      ) : (
+                        dataset.columns.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <select
+                      value={sortDirection}
+                      onChange={(e) => setSortDirection(e.target.value as "ASC" | "DESC")}
+                      className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800"
+                    >
+                      <option value="ASC">ASC</option>
+                      <option value="DESC">DESC</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs text-gray-700">
+                    <span className="font-semibold">Limit:</span>
+                    <select
+                      value={queryLimit}
+                      onChange={(e) => setQueryLimit(Number(e.target.value))}
+                      className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800"
+                    >
+                      <option value={25}>25 rows</option>
+                      <option value={50}>50 rows</option>
+                      <option value={100}>100 rows</option>
+                      <option value={250}>250 rows</option>
+                      <option value={500}>500 rows</option>
+                      <option value={1000}>1000 rows</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExecuteQuery}
+                  disabled={queryRunning}
+                  className="rounded-lg bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {queryRunning ? (
+                    <>
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent inline-block" />
+                      Executing...
+                    </>
+                  ) : (
+                    <>⚡ Execute Query</>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Query Error */}
+            {queryError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
+                ❌ Query Error: {queryError}
+              </div>
+            )}
+
+            {/* Query Results */}
+            {queryResult && (
+              <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+                <div className="flex items-center justify-between bg-gray-50 border-b border-gray-200 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-gray-900">Query Results</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700">
+                      ⚡ {queryResult.executionTimeMs} ms
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {queryResult.rowCount} rows · {queryResult.columns.length} columns
+                    </span>
+                  </div>
+                </div>
+
+                {queryResult.rows.length === 0 ? (
+                  <div className="p-12 text-center text-sm text-gray-500">
+                    No rows match the query criteria.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto max-h-[500px]">
+                    <table className="min-w-full divide-y divide-gray-200 text-xs">
+                      <thead className="bg-gray-100 sticky top-0 z-10">
+                        <tr>
+                          {queryResult.columns.map((col) => (
+                            <th
+                              key={col.name}
+                              className="px-4 py-2.5 text-left font-semibold text-gray-800 uppercase whitespace-nowrap"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span>{col.name}</span>
+                                <span className="font-normal text-[10px] text-gray-500">
+                                  ({col.type})
+                                </span>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white font-mono">
+                        {queryResult.rows.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            {queryResult.columns.map((col) => (
+                              <td
+                                key={col.name}
+                                className="px-4 py-2 text-gray-700 whitespace-nowrap"
+                              >
+                                {row[col.name] !== undefined && row[col.name] !== null
+                                  ? String(row[col.name])
+                                  : "-"}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>

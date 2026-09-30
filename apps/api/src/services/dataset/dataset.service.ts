@@ -14,7 +14,12 @@ import { sendSuccess } from "../../utils/response.js";
 import { logAuditEvent } from "../audit.service.js";
 import { parseCsvText, discoverCsvSchema } from "./type-inference.js";
 import { schemaDiscoveryService } from "./schema-discovery.service.js";
-import { datasetQueryEngine } from "./query-engine.js";
+import {
+  datasetQueryEngine,
+  ALLOWED_FILTER_OPERATORS,
+  ALLOWED_AGGREGATIONS,
+  QUERY_LIMITS,
+} from "./query-engine.js";
 
 // ============================================================
 // ZOD VALIDATION SCHEMAS
@@ -51,14 +56,37 @@ export const previewCsvSchema = z.object({
 });
 
 export const datasetQueryParamsSchema = z.object({
-  columns: z.array(z.string()).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
-  offset: z.coerce.number().int().min(0).default(0),
+  columns: z.array(z.string().min(1)).max(QUERY_LIMITS.MAX_COLUMNS).optional(),
+  limit: z.coerce.number().int().min(1).max(QUERY_LIMITS.MAX_ROW_LIMIT).default(QUERY_LIMITS.DEFAULT_ROW_LIMIT),
+  offset: z.coerce.number().int().min(0).max(QUERY_LIMITS.MAX_OFFSET).default(0),
   orderBy: z
     .object({
-      column: z.string(),
-      direction: z.enum(["asc", "desc"]).default("asc"),
+      column: z.string().min(1),
+      direction: z.enum(["asc", "desc", "ASC", "DESC"]).default("asc"),
     })
+    .optional(),
+  filters: z
+    .array(
+      z.object({
+        column: z.string().min(1),
+        operator: z.enum(ALLOWED_FILTER_OPERATORS),
+        value: z.unknown().optional(),
+      })
+    )
+    .max(QUERY_LIMITS.MAX_FILTERS)
+    .optional(),
+  filterLogic: z.enum(["AND", "OR"]).default("AND").optional(),
+  logic: z.enum(["AND", "OR"]).optional(),
+  dimensions: z.array(z.string().min(1)).max(QUERY_LIMITS.MAX_DIMENSIONS).optional(),
+  measures: z
+    .array(
+      z.object({
+        column: z.string().min(1),
+        aggregation: z.enum(ALLOWED_AGGREGATIONS),
+        alias: z.string().max(63).optional(),
+      })
+    )
+    .max(QUERY_LIMITS.MAX_MEASURES)
     .optional(),
 });
 
@@ -378,10 +406,10 @@ export async function previewDataset(req: Request, res: Response): Promise<void>
 
 /**
  * POST /api/v1/datasets/:id/query
- * Safe query execution foundation.
+ * Safe query execution foundation supporting filtering, sorting, pagination, and aggregation.
  */
 export async function queryDataset(req: Request, res: Response): Promise<void> {
-  const { organizationId } = req.user!;
+  const { organizationId, userId } = req.user!;
   const { id } = req.params;
   const queryParams = datasetQueryParamsSchema.parse(req.body);
 
@@ -397,7 +425,39 @@ export async function queryDataset(req: Request, res: Response): Promise<void> {
     throw AppError.forbidden("Access denied: resource belongs to a different organization");
   }
 
+  // Cross-tenant check for connected DataSource
+  if (dataset.dataSourceId) {
+    const ds = await prisma.dataSource.findUnique({
+      where: { id: dataset.dataSourceId },
+    });
+    if (!ds || ds.organizationId !== organizationId) {
+      throw AppError.forbidden("Access denied: data source belongs to a different organization");
+    }
+  }
+
   const result = await datasetQueryEngine.executeQuery(dataset, queryParams);
+
+  const isAggregate =
+    (queryParams.dimensions && queryParams.dimensions.length > 0) ||
+    (queryParams.measures && queryParams.measures.length > 0);
+
+  await logAuditEvent({
+    organizationId,
+    userId,
+    action: "DATASET_QUERIED",
+    resourceType: "Dataset",
+    resourceId: id,
+    metadata: {
+      queryMode: isAggregate ? "AGGREGATE" : "RAW",
+      selectedColumnCount: result.columns.length,
+      filterCount: (queryParams.filters || []).length,
+      rowCount: result.rowCount,
+      executionTimeMs: result.executionTimeMs,
+    },
+    ipAddress: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
   sendSuccess(res, result);
 }
 

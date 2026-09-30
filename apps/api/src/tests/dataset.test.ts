@@ -186,37 +186,49 @@ describe("Dataset Query Engine", () => {
       columns: [
         { name: "id", type: "integer", nullable: false },
         { name: "product", type: "string", nullable: false },
+        { name: "category", type: "string", nullable: false },
         { name: "amount", type: "number", nullable: false },
+        { name: "quantity", type: "integer", nullable: false },
+        { name: "is_active", type: "boolean", nullable: false },
+        { name: "notes", type: "string", nullable: true },
       ],
       sampleData: [
-        { id: 1, product: "Widget A", amount: 100 },
-        { id: 2, product: "Widget B", amount: 250 },
-        { id: 3, product: "Widget C", amount: 75 },
+        { id: 1, product: "Widget A", category: "Hardware", amount: 100, quantity: 5, is_active: true, notes: "Popular" },
+        { id: 2, product: "Widget B", category: "Hardware", amount: 250, quantity: 2, is_active: true, notes: null },
+        { id: 3, product: "SaaS Pro", category: "Software", amount: 75, quantity: 10, is_active: false, notes: "Discounted" },
+        { id: 4, product: "SaaS Enterprise", category: "Software", amount: 500, quantity: 1, is_active: true, notes: "Annual" },
       ],
     },
   };
 
-  it("projects requested columns accurately", async () => {
+  // ---- Basic Querying ----
+  it("projects requested columns accurately with column metadata", async () => {
     const result = await datasetQueryEngine.executeQuery(mockDataset, {
       columns: ["product", "amount"],
     });
 
-    expect(result.columns).toEqual(["product", "amount"]);
-    expect(result.rows.length).toBe(3);
+    expect(result.columns).toEqual([
+      { name: "product", type: "string" },
+      { name: "amount", type: "number" },
+    ]);
+    expect(result.rows.length).toBe(4);
     expect(result.rows[0]).toEqual({ product: "Widget A", amount: 100 });
     expect(result.rows[0]?.id).toBeUndefined();
+    expect(result.executionTimeMs).toBeGreaterThanOrEqual(0);
   });
 
-  it("enforces default limit and bounds maximum limit to 100", async () => {
-    const result = await datasetQueryEngine.executeQuery(mockDataset, {
-      limit: 500, // Should be clamped to 100
-    });
-    expect(result.limit).toBe(100);
+  it("enforces default limit and bounds maximum limit to 1000", async () => {
+    const defaultRes = await datasetQueryEngine.executeQuery(mockDataset);
+    expect(defaultRes.limit).toBe(100);
 
-    const minResult = await datasetQueryEngine.executeQuery(mockDataset, {
-      limit: -5, // Should be clamped to 1
+    const boundedRes = await datasetQueryEngine.executeQuery(mockDataset, {
+      limit: 500,
     });
-    expect(minResult.limit).toBe(1);
+    expect(boundedRes.limit).toBe(500);
+
+    await expect(
+      datasetQueryEngine.executeQuery(mockDataset, { limit: 1500 })
+    ).rejects.toThrowError("exceeds maximum allowable limit");
   });
 
   it("sorts rows ascending and descending cleanly", async () => {
@@ -228,9 +240,147 @@ describe("Dataset Query Engine", () => {
     const descResult = await datasetQueryEngine.executeQuery(mockDataset, {
       orderBy: { column: "amount", direction: "desc" },
     });
-    expect(descResult.rows[0]?.amount).toBe(250);
+    expect(descResult.rows[0]?.amount).toBe(500);
   });
 
+  it("paginates rows using offset and limit", async () => {
+    const paged = await datasetQueryEngine.executeQuery(mockDataset, {
+      offset: 1,
+      limit: 2,
+    });
+    expect(paged.rows.length).toBe(2);
+    expect(paged.offset).toBe(1);
+    expect(paged.limit).toBe(2);
+    expect(paged.total).toBe(4);
+  });
+
+  // ---- Filtering Tests ----
+  it("filters with equality (=) and inequality (!=)", async () => {
+    const eqResult = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "category", operator: "=", value: "Hardware" }],
+    });
+    expect(eqResult.rows.length).toBe(2);
+    expect(eqResult.rows.every((r) => r.category === "Hardware")).toBe(true);
+
+    const neqResult = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "category", operator: "!=", value: "Hardware" }],
+    });
+    expect(neqResult.rows.length).toBe(2);
+    expect(neqResult.rows.every((r) => r.category === "Software")).toBe(true);
+  });
+
+  it("filters with greater than (>) and less than (<)", async () => {
+    const gtResult = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "amount", operator: ">", value: 100 }],
+    });
+    expect(gtResult.rows.length).toBe(2); // 250, 500
+
+    const ltResult = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "amount", operator: "<", value: 100 }],
+    });
+    expect(ltResult.rows.length).toBe(1); // 75
+  });
+
+  it("filters with text matching (contains, startsWith, endsWith)", async () => {
+    const containsRes = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "product", operator: "contains", value: "SaaS" }],
+    });
+    expect(containsRes.rows.length).toBe(2);
+
+    const startsRes = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "product", operator: "startsWith", value: "Widget" }],
+    });
+    expect(startsRes.rows.length).toBe(2);
+
+    const endsRes = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "product", operator: "endsWith", value: "Pro" }],
+    });
+    expect(endsRes.rows.length).toBe(1);
+    expect(endsRes.rows[0]?.product).toBe("SaaS Pro");
+  });
+
+  it("filters with isNull and isNotNull", async () => {
+    const isNullRes = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "notes", operator: "isNull" }],
+    });
+    expect(isNullRes.rows.length).toBe(1);
+    expect(isNullRes.rows[0]?.product).toBe("Widget B");
+
+    const isNotNullRes = await datasetQueryEngine.executeQuery(mockDataset, {
+      filters: [{ column: "notes", operator: "isNotNull" }],
+    });
+    expect(isNotNullRes.rows.length).toBe(3);
+  });
+
+  it("combines filters with AND logic and OR logic", async () => {
+    const andRes = await datasetQueryEngine.executeQuery(mockDataset, {
+      filterLogic: "AND",
+      filters: [
+        { column: "category", operator: "=", value: "Hardware" },
+        { column: "amount", operator: ">", value: 150 },
+      ],
+    });
+    expect(andRes.rows.length).toBe(1);
+    expect(andRes.rows[0]?.product).toBe("Widget B");
+
+    const orRes = await datasetQueryEngine.executeQuery(mockDataset, {
+      filterLogic: "OR",
+      filters: [
+        { column: "product", operator: "=", value: "Widget A" },
+        { column: "category", operator: "=", value: "Software" },
+      ],
+    });
+    expect(orRes.rows.length).toBe(3);
+  });
+
+  // ---- Aggregation & Group By Tests ----
+  it("aggregates data using COUNT, SUM, AVG, MIN, MAX grouped by dimension", async () => {
+    const aggResult = await datasetQueryEngine.executeQuery(mockDataset, {
+      dimensions: ["category"],
+      measures: [
+        { column: "amount", aggregation: "SUM", alias: "total_amount" },
+        { column: "amount", aggregation: "AVG", alias: "avg_amount" },
+        { column: "quantity", aggregation: "COUNT", alias: "count_orders" },
+        { column: "amount", aggregation: "MIN", alias: "min_amount" },
+        { column: "amount", aggregation: "MAX", alias: "max_amount" },
+      ],
+    });
+
+    expect(aggResult.columns.map((c) => c.name)).toEqual([
+      "category",
+      "total_amount",
+      "avg_amount",
+      "count_orders",
+      "min_amount",
+      "max_amount",
+    ]);
+    expect(aggResult.rows.length).toBe(2);
+
+    const hardware = aggResult.rows.find((r) => r.category === "Hardware")!;
+    expect(hardware.total_amount).toBe(350); // 100 + 250
+    expect(hardware.avg_amount).toBe(175);
+    expect(hardware.count_orders).toBe(2);
+    expect(hardware.min_amount).toBe(100);
+    expect(hardware.max_amount).toBe(250);
+
+    const software = aggResult.rows.find((r) => r.category === "Software")!;
+    expect(software.total_amount).toBe(575); // 75 + 500
+  });
+
+  it("supports overall grand total aggregation without dimensions", async () => {
+    const totalResult = await datasetQueryEngine.executeQuery(mockDataset, {
+      measures: [
+        { column: "amount", aggregation: "SUM", alias: "grand_total" },
+        { column: "*", aggregation: "COUNT", alias: "total_items" },
+      ],
+    });
+
+    expect(totalResult.rows.length).toBe(1);
+    expect(totalResult.rows[0]?.grand_total).toBe(925);
+    expect(totalResult.rows[0]?.total_items).toBe(4);
+  });
+
+  // ---- Security & Validation Tests ----
   it("rejects non-existent columns in projection or sorting", async () => {
     await expect(
       datasetQueryEngine.executeQuery(mockDataset, {
@@ -243,6 +393,48 @@ describe("Dataset Query Engine", () => {
         orderBy: { column: "fake_col", direction: "asc" },
       })
     ).rejects.toThrowError("does not exist");
+  });
+
+  it("rejects invalid SQL injection identifiers in column names", async () => {
+    await expect(
+      datasetQueryEngine.executeQuery(mockDataset, {
+        columns: ["id; DROP TABLE users;--"],
+      })
+    ).rejects.toThrowError();
+  });
+
+  it("rejects invalid filter values for typed columns", async () => {
+    await expect(
+      datasetQueryEngine.executeQuery(mockDataset, {
+        filters: [{ column: "quantity", operator: "=", value: "not-an-integer" }],
+      })
+    ).rejects.toThrowError("must be a valid integer");
+
+    await expect(
+      datasetQueryEngine.executeQuery(mockDataset, {
+        filters: [{ column: "amount", operator: "=", value: "abc" }],
+      })
+    ).rejects.toThrowError("must be a valid number");
+  });
+
+  it("rejects SUM or AVG aggregations on non-numeric columns", async () => {
+    await expect(
+      datasetQueryEngine.executeQuery(mockDataset, {
+        measures: [{ column: "product", aggregation: "SUM" }],
+      })
+    ).rejects.toThrowError("cannot be applied to non-numeric column");
+  });
+
+  it("rejects excessive filters exceeding limit", async () => {
+    const manyFilters: any[] = [];
+    for (let i = 0; i < 25; i++) {
+      manyFilters.push({ column: "product", operator: "=", value: "Widget" });
+    }
+    await expect(
+      datasetQueryEngine.executeQuery(mockDataset, {
+        filters: manyFilters,
+      })
+    ).rejects.toThrowError("exceeds maximum allowable");
   });
 });
 
