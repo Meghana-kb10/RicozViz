@@ -54,6 +54,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        run: npx prisma generate
+
       - name: Lint — api
         working-directory: apps/api
         run: npm run lint
@@ -61,6 +65,10 @@ jobs:
       - name: Type check — api
         working-directory: apps/api
         run: npm run typecheck
+
+      - name: Test — api
+        working-directory: apps/api
+        run: npm test
 
       - name: Build — api
         working-directory: apps/api

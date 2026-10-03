@@ -13,6 +13,11 @@ const PROTECTED_ROUTES = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Allow public shared dashboards to be viewed without authentication
+  if (pathname.startsWith("/dashboards/shared")) {
+    return NextResponse.next();
+  }
+
   const isProtected = PROTECTED_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
