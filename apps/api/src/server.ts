@@ -10,6 +10,7 @@ import { config } from "./config/env.js";
 import { createApp } from "./app.js";
 import { logger } from "./utils/logger.js";
 import { scheduledReportWorker } from "./services/report/report-worker.service.js";
+import { ensureSystemRolesAndPermissions } from "./services/system-seed.service.js";
 
 const app = createApp();
 
@@ -18,6 +19,13 @@ const server = app.listen(config.PORT, () => {
     port: config.PORT,
     env: config.NODE_ENV,
     health: `http://localhost:${config.PORT}/api/v1/health`,
+  });
+
+  // Automatically initialize system roles and permissions if database is fresh/unseeded
+  void ensureSystemRolesAndPermissions().catch((err) => {
+    logger.error("Failed to initialize system roles and permissions at boot", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   });
 
   // Start background scheduled report worker

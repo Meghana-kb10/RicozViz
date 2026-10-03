@@ -8,7 +8,7 @@
 
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { type Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import {
   signAccessToken,
@@ -21,6 +21,7 @@ import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 import type { Request, Response } from "express";
 import { sendSuccess } from "../utils/response.js";
+import { ensureSystemRolesAndPermissions } from "./system-seed.service.js";
 
 // ---- Validation schemas ----
 
@@ -135,12 +136,13 @@ function issueTokens(
 
 // ---- Helper: generate slug from org name ----
 function generateSlug(name: string): string {
-  return name
+  const slug = name
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 50);
+  return slug || "org";
 }
 
 // ---- Helper: ensure unique slug ----
@@ -178,8 +180,8 @@ export async function register(req: Request, res: Response): Promise<void> {
   // ---- Hash password ----
   const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
 
-  // ---- Find ADMIN role ----
-  const adminRole = await prisma.role.findUnique({
+  // ---- Find ADMIN role (with self-healing auto-initialization) ----
+  let adminRole = await prisma.role.findUnique({
     where: { name: "ADMIN" },
     include: {
       permissions: {
@@ -187,82 +189,139 @@ export async function register(req: Request, res: Response): Promise<void> {
       },
     },
   });
+
+  if (!adminRole || adminRole.permissions.length === 0) {
+    logger.warn("ADMIN role or permissions missing — auto-initializing system roles");
+    await ensureSystemRolesAndPermissions();
+    adminRole = await prisma.role.findUnique({
+      where: { name: "ADMIN" },
+      include: {
+        permissions: {
+          include: { permission: { select: { key: true } } },
+        },
+      },
+    });
+  }
+
   if (!adminRole) {
-    logger.error("ADMIN role missing — database may not be seeded");
+    logger.error("ADMIN role could not be loaded or initialized");
     throw AppError.internal("System configuration error: roles not initialized");
   }
 
-  // ---- Create user, organization, and membership in a transaction ----
+  // ---- Create user, organization, default workspace, and membership in a transaction ----
   const baseSlug = generateSlug(input.organizationName);
   const slug = await ensureUniqueSlug(baseSlug);
 
-  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const user = await tx.user.create({
-      data: {
-        email: input.email.toLowerCase(),
-        passwordHash,
-        name: input.name,
-        status: "ACTIVE",
-        tokenVersion: 0,
-      },
+  try {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const user = await tx.user.create({
+        data: {
+          email: input.email.toLowerCase(),
+          passwordHash,
+          name: input.name,
+          status: "ACTIVE",
+          tokenVersion: 0,
+        },
+      });
+
+      const organization = await tx.organization.create({
+        data: {
+          name: input.organizationName,
+          slug,
+          status: "ACTIVE",
+        },
+      });
+
+      const membership = await tx.organizationMember.create({
+        data: {
+          userId: user.id,
+          organizationId: organization.id,
+          roleId: adminRole.id,
+          status: "ACTIVE",
+        },
+      });
+
+      // Automatically create a default workspace for the organization
+      const workspace = await tx.workspace.create({
+        data: {
+          name: `${input.organizationName} Workspace`,
+          slug: "default",
+          description: `Default workspace for ${input.organizationName}`,
+          organizationId: organization.id,
+        },
+      });
+
+      // Designate the registering user as OWNER of the default workspace
+      await tx.workspaceMember.create({
+        data: {
+          workspaceId: workspace.id,
+          userId: user.id,
+          role: "OWNER",
+        },
+      });
+
+      return { user, organization, membership, workspace };
     });
 
-    const organization = await tx.organization.create({
-      data: {
-        name: input.organizationName,
-        slug,
-        status: "ACTIVE",
-      },
+    logger.info("User registered successfully", {
+      userId: result.user.id,
+      organizationId: result.organization.id,
+      workspaceId: result.workspace.id,
     });
 
-    const membership = await tx.organizationMember.create({
-      data: {
-        userId: user.id,
-        organizationId: organization.id,
-        roleId: adminRole.id,
-        status: "ACTIVE",
+    // ---- Issue tokens ----
+    const membershipWithDetails = {
+      organization: { id: result.organization.id },
+      role: adminRole,
+    };
+
+    const { accessToken, permissions } = issueTokens(
+      res,
+      result.user,
+      membershipWithDetails,
+      0 // initial token version
+    );
+
+    sendSuccess(
+      res,
+      {
+        user: buildSafeUser({
+          ...result.user,
+          organizationId: result.organization.id,
+        }),
+        organization: {
+          id: result.organization.id,
+          name: result.organization.name,
+          slug: result.organization.slug,
+        },
+        workspace: {
+          id: result.workspace.id,
+          name: result.workspace.name,
+          slug: result.workspace.slug,
+        },
+        role: adminRole.name,
+        permissions,
+        accessToken,
       },
-    });
-
-    return { user, organization, membership };
-  });
-
-  logger.info("User registered", {
-    userId: result.user.id,
-    organizationId: result.organization.id,
-  });
-
-  // ---- Issue tokens ----
-  const membershipWithDetails = {
-    organization: { id: result.organization.id },
-    role: adminRole,
-  };
-
-  const { accessToken, permissions } = issueTokens(
-    res,
-    result.user,
-    membershipWithDetails,
-    0 // initial token version
-  );
-
-  sendSuccess(
-    res,
-    {
-      user: buildSafeUser({
-        ...result.user,
-        organizationId: result.organization.id,
-      }),
-      organization: {
-        id: result.organization.id,
-        name: result.organization.name,
-        slug: result.organization.slug,
-      },
-      role: adminRole.name,
-      permissions,
-      accessToken,
-    },
-    201
-  );
+      201
+    );
+  } catch (err: unknown) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      const target = Array.isArray(err.meta?.target)
+        ? (err.meta.target as string[]).join(", ")
+        : String(err.meta?.target || "");
+      if (target.includes("email")) {
+        throw AppError.conflict("An account with this email already exists");
+      }
+      throw AppError.conflict(
+        `An account or organization with these details already exists (${target})`
+      );
+    }
+    throw err;
+  }
 }
 
 // ============================================================
