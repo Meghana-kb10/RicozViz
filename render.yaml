@@ -42,7 +42,7 @@ services:
     region: oregon
     rootDir: .
     buildCommand: npm install --include=dev && npm run build:web
-    startCommand: npm run start:web
+    startCommand: npm run start --workspace=apps/web
     autoDeploy: true
     envVars:
       - key: NODE_ENV
