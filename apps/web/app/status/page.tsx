@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getApiBaseUrl } from "../../lib/api";
 
 interface SystemStatus {
   apiStatus: "checking" | "online" | "offline";
@@ -17,7 +18,7 @@ export default function StatusPage() {
   });
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+    const apiUrl = getApiBaseUrl();
     fetch(`${apiUrl}/api/v1/health`)
       .then((res) => res.json())
       .then((data: { success?: boolean; data?: { status?: string } }) => {

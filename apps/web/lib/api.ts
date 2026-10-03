@@ -6,15 +6,26 @@
 // Handles refresh token flow on 401.
 // ========================================
 export function getApiBaseUrl(): string {
-  if (process.env["NEXT_PUBLIC_API_URL"] && !process.env["NEXT_PUBLIC_API_URL"].includes("localhost:4000")) {
-    return process.env["NEXT_PUBLIC_API_URL"];
+  const envUrl = process.env["NEXT_PUBLIC_API_URL"]?.trim();
+
+  // 1. If a valid absolute URL with a domain or port is provided (e.g. https://ricozviz-api.onrender.com or http://localhost:4000)
+  if (envUrl && envUrl.startsWith("http") && (envUrl.includes(".") || envUrl.includes(":4000"))) {
+    return envUrl.replace(/\/+$/, "");
   }
+
+  // 2. If running in browser on Render (*-web.onrender.com), dynamically route directly to *-api.onrender.com
   if (typeof window !== "undefined") {
     if (window.location.origin.includes("-web.onrender.com")) {
       return window.location.origin.replace("-web.onrender.com", "-api.onrender.com");
     }
   }
-  return process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000";
+
+  // 3. Fallback to envUrl if valid or default local development backend
+  if (envUrl && envUrl.startsWith("http")) {
+    return envUrl.replace(/\/+$/, "");
+  }
+
+  return "http://localhost:4000";
 }
 
 const API_BASE = getApiBaseUrl();

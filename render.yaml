@@ -50,11 +50,7 @@ services:
       - key: PORT
         value: 10000
       - key: NEXT_PUBLIC_API_URL
-        fromService:
-          type: web
-          name: ricozviz-api
-          property: host
-          transformation: https://{value}
+        value: https://ricozviz-api.onrender.com
 
 databases:
   # ============================================================
