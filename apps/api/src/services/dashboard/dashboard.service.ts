@@ -520,7 +520,7 @@ export async function disableShareLink(req: Request, res: Response): Promise<voi
     throw AppError.forbidden("Access denied: dashboard belongs to a different organization");
   }
 
-  const updated = await prisma.dashboard.update({
+  await prisma.dashboard.update({
     where: { id },
     data: {
       shareTokenActive: false,

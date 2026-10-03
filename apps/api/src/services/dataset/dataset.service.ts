@@ -31,7 +31,6 @@ import {
 import { schemaDiscoveryService } from "./schema-discovery.service.js";
 import {
   datasetQueryEngine,
-  ALLOWED_FILTER_OPERATORS,
   ALLOWED_AGGREGATIONS,
   QUERY_LIMITS,
   type DatasetQueryParams,

@@ -18,6 +18,7 @@ export interface UploadedFile {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       file?: UploadedFile;
@@ -32,17 +33,18 @@ export const DEFAULT_MAX_UPLOAD_SIZE_BYTES =
  * Express middleware to parse multipart/form-data streams.
  */
 export function multipartUpload(maxBytes = DEFAULT_MAX_UPLOAD_SIZE_BYTES) {
-  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-    const contentType = req.headers["content-type"] || "";
-    if (!contentType.includes("multipart/form-data")) {
-      return next();
-    }
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    void (async () => {
+      const contentType = req.headers["content-type"] || "";
+      if (!contentType.includes("multipart/form-data")) {
+        return next();
+      }
 
-    const match = contentType.match(/boundary=(?:["']([^"']+)["']|([^;\s]+))/i);
-    const boundary = match ? match[1] || match[2] : null;
-    if (!boundary) {
-      return next(AppError.badRequest("Invalid multipart payload: missing boundary delimiter"));
-    }
+      const match = contentType.match(/boundary=(?:["']([^"']+)["']|([^;\s]+))/i);
+      const boundary = match ? match[1] || match[2] : null;
+      if (!boundary) {
+        return next(AppError.badRequest("Invalid multipart payload: missing boundary delimiter"));
+      }
 
     try {
       const chunks: Buffer[] = [];
@@ -121,5 +123,6 @@ export function multipartUpload(maxBytes = DEFAULT_MAX_UPLOAD_SIZE_BYTES) {
     } catch (err) {
       next(err);
     }
+    })().catch(next);
   };
 }

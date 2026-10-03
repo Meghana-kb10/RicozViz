@@ -189,7 +189,7 @@ export async function createWorkspace(req: Request, res: Response): Promise<void
     return { workspace, member };
   });
 
-  logAuditEvent({
+  void logAuditEvent({
     userId,
     organizationId,
     action: "WORKSPACE_CREATE",
@@ -364,7 +364,7 @@ export async function updateWorkspace(req: Request, res: Response): Promise<void
     },
   });
 
-  logAuditEvent({
+  void logAuditEvent({
     userId,
     organizationId,
     action: "WORKSPACE_UPDATE",
@@ -413,7 +413,7 @@ export async function deleteWorkspace(req: Request, res: Response): Promise<void
     where: { id: workspaceId },
   });
 
-  logAuditEvent({
+  void logAuditEvent({
     userId,
     organizationId,
     action: "WORKSPACE_DELETE",
@@ -548,7 +548,7 @@ export async function addWorkspaceMember(req: Request, res: Response): Promise<v
     },
   });
 
-  logAuditEvent({
+  void logAuditEvent({
     userId,
     organizationId,
     action: "WORKSPACE_MEMBER_ADD",
@@ -644,7 +644,7 @@ export async function removeWorkspaceMember(req: Request, res: Response): Promis
     },
   });
 
-  logAuditEvent({
+  void logAuditEvent({
     userId: currentUserId,
     organizationId,
     action: "WORKSPACE_MEMBER_REMOVE",

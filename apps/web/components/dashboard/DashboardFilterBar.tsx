@@ -141,7 +141,7 @@ export function DashboardFilterBar({
 
     const now = new Date();
     let startDateIso = "";
-    let label = `${targetField}: ${preset}`;
+    const label = `${targetField}: ${preset}`;
 
     if (preset === "Today") {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -161,7 +161,7 @@ export function DashboardFilterBar({
     }
 
     onAddFilter({
-      id: `filter-date-${Date.now()}`,
+      id: `filter-date-${now.getTime()}`,
       field: targetField,
       operator: ">=",
       value: startDateIso,

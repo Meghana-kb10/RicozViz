@@ -16,11 +16,8 @@ import { logAuditEvent } from "../audit.service.js";
 import {
   datasetQueryEngine,
   ALLOWED_AGGREGATIONS,
-  ALLOWED_FILTER_OPERATORS,
-  FILTER_OPERATOR_ALIASES,
   type AggregationFunction,
   type DatasetQueryParams,
-  type FilterOperator,
 } from "../dataset/query-engine.js";
 import { verifyResourceWorkspaceAccess } from "../workspace/workspace-auth.helper.js";
 
