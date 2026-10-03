@@ -25,10 +25,27 @@ export function createApp(): express.Application {
   // ---- CORS ----
   app.use(
     cors({
-      origin:
-        config.NODE_ENV === "production"
-          ? config.ALLOWED_ORIGIN ?? "https://ricozviz.com"
-          : ["http://localhost:3000", "http://127.0.0.1:3000"],
+      origin: (requestOrigin, callback) => {
+        // Allow non-browser requests (health checks, server-to-server, curl)
+        if (!requestOrigin) return callback(null, true);
+
+        if (config.NODE_ENV !== "production") {
+          const devOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+          return callback(null, devOrigins.includes(requestOrigin));
+        }
+
+        // Production configuration
+        if (!config.ALLOWED_ORIGIN || config.ALLOWED_ORIGIN === "*") {
+          return callback(null, true);
+        }
+
+        const allowedOrigins = config.ALLOWED_ORIGIN.split(",").map((s) => s.trim());
+        if (allowedOrigins.includes(requestOrigin) || allowedOrigins.includes("*")) {
+          return callback(null, true);
+        }
+
+        return callback(null, false);
+      },
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
