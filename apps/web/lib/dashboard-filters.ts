@@ -21,6 +21,7 @@ export interface DashboardFilter {
   datasetId?: string; // Optional: restrict to specific dataset, or apply globally across matching field names
   sourceChartId?: string; // Populated if created via cross-filtering
   isCrossFilter?: boolean;
+  label?: string; // Optional human-readable description for UI chip
 }
 
 export interface DrillDownState {

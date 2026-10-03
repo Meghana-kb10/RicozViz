@@ -10,6 +10,10 @@ import type { Dataset } from "@prisma/client";
 import { validateSqlIdentifier } from "./schema-discovery.service.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../utils/errors.js";
+import {
+  compileCalculatedField,
+  evaluateExpression,
+} from "./calculated-field.engine.js";
 
 // ============================================================
 // CONSTANTS & SAFETY LIMITS
@@ -37,9 +41,49 @@ export const ALLOWED_FILTER_OPERATORS = [
   "endsWith",
   "isNull",
   "isNotNull",
+  "in",
 ] as const;
 
 export type FilterOperator = (typeof ALLOWED_FILTER_OPERATORS)[number];
+
+export const FILTER_OPERATOR_ALIASES: Record<string, FilterOperator> = {
+  "in": "in",
+  "IN": "in",
+  "=": "=",
+  "==": "=",
+  "equals": "=",
+  "equal": "=",
+  "!=": "!=",
+  "<>": "!=",
+  "not equals": "!=",
+  "not equal": "!=",
+  "notEquals": "!=",
+  ">": ">",
+  "greater than": ">",
+  "greaterThan": ">",
+  "gt": ">",
+  ">=": ">=",
+  "greater than or equal": ">=",
+  "greaterThanOrEqual": ">=",
+  "gte": ">=",
+  "<": "<",
+  "less than": "<",
+  "lessThan": "<",
+  "lt": "<",
+  "<=": "<=",
+  "less than or equal": "<=",
+  "lessThanOrEqual": "<=",
+  "lte": "<=",
+  "contains": "contains",
+  "startsWith": "startsWith",
+  "endsWith": "endsWith",
+  "isNull": "isNull",
+  "is empty": "isNull",
+  "isEmpty": "isNull",
+  "isNotNull": "isNotNull",
+  "is not empty": "isNotNull",
+  "isNotEmpty": "isNotNull",
+};
 
 export const ALLOWED_AGGREGATIONS = [
   "COUNT",
@@ -53,7 +97,7 @@ export type AggregationFunction = (typeof ALLOWED_AGGREGATIONS)[number];
 
 export interface DatasetQueryFilter {
   column: string;
-  operator: FilterOperator;
+  operator: FilterOperator | string;
   value?: unknown;
 }
 
@@ -71,11 +115,31 @@ export interface DatasetQueryParams {
     column: string;
     direction: "asc" | "desc" | "ASC" | "DESC";
   };
+  sort?: {
+    column: string;
+    direction: "asc" | "desc" | "ASC" | "DESC";
+  };
+  sorting?:
+    | {
+        column: string;
+        direction: "asc" | "desc" | "ASC" | "DESC";
+      }
+    | Array<{
+        column: string;
+        direction: "asc" | "desc" | "ASC" | "DESC";
+      }>;
   filters?: DatasetQueryFilter[];
   filterLogic?: "AND" | "OR";
   logic?: "AND" | "OR"; // Alias for filterLogic
   dimensions?: string[];
+  groupBy?: string[]; // Alias for dimensions
   measures?: DatasetQueryMeasure[];
+  aggregations?: Array<{
+    column: string;
+    function?: string;
+    aggregation?: AggregationFunction | string;
+    alias?: string;
+  }>;
 }
 
 export interface QueryResultColumn {
@@ -83,14 +147,26 @@ export interface QueryResultColumn {
   type: string;
 }
 
-export interface DatasetQueryResult {
-  columns: QueryResultColumn[];
-  rows: Record<string, unknown>[];
+export interface QueryResultMetadata {
   rowCount: number;
   total: number;
   limit: number;
   offset: number;
   executionTimeMs: number;
+  queryMode: "RAW" | "AGGREGATE";
+}
+
+export interface DatasetQueryResult {
+  columns: QueryResultColumn[];
+  rows: Record<string, unknown>[];
+  processedColumns: QueryResultColumn[];
+  processedRows: Record<string, unknown>[];
+  rowCount: number;
+  total: number;
+  limit: number;
+  offset: number;
+  executionTimeMs: number;
+  metadata: QueryResultMetadata;
 }
 
 // ============================================================
@@ -116,12 +192,75 @@ export class DatasetQueryEngine {
     }>);
 
     const columnTypeMap = new Map<string, string>();
-    for (const c of knownColumnsList) {
-      columnTypeMap.set(c.name, c.type);
+    if (Array.isArray((dataset as any).columns) && (dataset as any).columns.length > 0) {
+      for (const c of (dataset as any).columns) {
+        columnTypeMap.set(c.name, (c.dataType || "STRING").toLowerCase());
+      }
     }
+    for (const c of knownColumnsList) {
+      if (!columnTypeMap.has(c.name)) {
+        columnTypeMap.set(c.name, (c.type || "string").toLowerCase());
+      }
+    }
+
+    // Register calculated fields in columnTypeMap so dimensions/measures/filters accept them
+    const calculatedFields: Array<{
+      name: string;
+      expression: string;
+      dataType?: string;
+    }> = Array.isArray(meta.calculatedFields) ? (meta.calculatedFields as any[]) : [];
+
+    for (const cf of calculatedFields) {
+      if (!columnTypeMap.has(cf.name)) {
+        columnTypeMap.set(cf.name, (cf.dataType || "NUMBER").toLowerCase());
+      }
+    }
+
     const knownColumnNames = Array.from(columnTypeMap.keys());
 
-    // 2. Validate row limits & offset
+    // 2. Normalize aliases for dimensions, measures, sorting
+    const rawDimensions = (
+      params.dimensions ||
+      params.groupBy ||
+      []
+    ).filter(Boolean);
+
+    let rawMeasures: DatasetQueryMeasure[] = [];
+    if (Array.isArray(params.measures) && params.measures.length > 0) {
+      rawMeasures = params.measures;
+    } else if (Array.isArray(params.aggregations) && params.aggregations.length > 0) {
+      rawMeasures = params.aggregations.map((a: any) => {
+        const rawFn = String(a.function || a.aggregation || "COUNT").toUpperCase();
+        const fn = ALLOWED_AGGREGATIONS.includes(rawFn as AggregationFunction)
+          ? (rawFn as AggregationFunction)
+          : ("COUNT" as AggregationFunction);
+        const col = a.column ?? "*";
+        return {
+          column: col,
+          aggregation: fn,
+          alias:
+            a.alias ||
+            (col === "*"
+              ? `${fn.toLowerCase()}_count`
+              : `${fn.toLowerCase()}_${col}`),
+        };
+      });
+    }
+
+    let rawOrderBy = params.orderBy;
+    if (!rawOrderBy) {
+      if (params.sort) {
+        rawOrderBy = params.sort;
+      } else if (params.sorting) {
+        if (Array.isArray(params.sorting) && params.sorting.length > 0) {
+          rawOrderBy = params.sorting[0];
+        } else if (typeof params.sorting === "object") {
+          rawOrderBy = params.sorting as any;
+        }
+      }
+    }
+
+    // 3. Validate row limits & offset
     const requestedLimit = params.limit ?? QUERY_LIMITS.DEFAULT_ROW_LIMIT;
     if (requestedLimit > QUERY_LIMITS.MAX_ROW_LIMIT) {
       throw AppError.badRequest(
@@ -138,12 +277,12 @@ export class DatasetQueryEngine {
     }
     const offset = requestedOffset;
 
-    // 3. Determine Query Mode (Raw vs Aggregate)
-    const hasDimensions = Array.isArray(params.dimensions) && params.dimensions.length > 0;
-    const hasMeasures = Array.isArray(params.measures) && params.measures.length > 0;
+    // 4. Determine Query Mode (Raw vs Aggregate)
+    const hasDimensions = rawDimensions.length > 0;
+    const hasMeasures = rawMeasures.length > 0;
     const isAggregate = hasDimensions || hasMeasures;
 
-    // 4. Validate Dimensions & Measures (if aggregate) or Columns (if raw)
+    // 5. Validate Dimensions & Measures (if aggregate) or Columns (if raw)
     const validatedDimensions: string[] = [];
     const validatedMeasures: Array<{
       column: string;
@@ -156,69 +295,65 @@ export class DatasetQueryEngine {
 
     if (isAggregate) {
       // Validate dimensions
-      if (params.dimensions) {
-        if (params.dimensions.length > QUERY_LIMITS.MAX_DIMENSIONS) {
-          throw AppError.badRequest(
-            `Dimensions count (${params.dimensions.length}) exceeds maximum allowable (${QUERY_LIMITS.MAX_DIMENSIONS})`
-          );
+      if (rawDimensions.length > QUERY_LIMITS.MAX_DIMENSIONS) {
+        throw AppError.badRequest(
+          `Dimensions count (${rawDimensions.length}) exceeds maximum allowable (${QUERY_LIMITS.MAX_DIMENSIONS})`
+        );
+      }
+      for (const dim of rawDimensions) {
+        if (!knownColumnNames.includes(dim)) {
+          throw AppError.badRequest(`Dimension column "${dim}" does not exist in dataset schema`);
         }
-        for (const dim of params.dimensions) {
-          if (!knownColumnNames.includes(dim)) {
-            throw AppError.badRequest(`Dimension column "${dim}" does not exist in dataset schema`);
-          }
-          validateSqlIdentifier(dim);
-          validatedDimensions.push(dim);
-        }
+        validateSqlIdentifier(dim);
+        validatedDimensions.push(dim);
       }
 
       // Validate measures
-      if (params.measures) {
-        if (params.measures.length > QUERY_LIMITS.MAX_MEASURES) {
-          throw AppError.badRequest(
-            `Measures count (${params.measures.length}) exceeds maximum allowable (${QUERY_LIMITS.MAX_MEASURES})`
-          );
+      if (rawMeasures.length > QUERY_LIMITS.MAX_MEASURES) {
+        throw AppError.badRequest(
+          `Measures count (${rawMeasures.length}) exceeds maximum allowable (${QUERY_LIMITS.MAX_MEASURES})`
+        );
+      }
+      for (const m of rawMeasures) {
+        if (m.column !== "*" && !knownColumnNames.includes(m.column)) {
+          throw AppError.badRequest(`Measure column "${m.column}" does not exist in dataset schema`);
         }
-        for (const m of params.measures) {
-          if (m.column !== "*" && !knownColumnNames.includes(m.column)) {
-            throw AppError.badRequest(`Measure column "${m.column}" does not exist in dataset schema`);
-          }
-          if (m.column !== "*") {
-            validateSqlIdentifier(m.column);
-          }
-
-          if (!ALLOWED_AGGREGATIONS.includes(m.aggregation)) {
-            throw AppError.badRequest(`Unsupported aggregation function "${m.aggregation}"`);
-          }
-
-          // Check type compatibility for SUM and AVG
-          if (m.column !== "*") {
-            const colType = columnTypeMap.get(m.column) || "string";
-            if ((m.aggregation === "SUM" || m.aggregation === "AVG") && colType !== "number" && colType !== "integer") {
-              throw AppError.badRequest(
-                `Aggregation "${m.aggregation}" cannot be applied to non-numeric column "${m.column}" (type: ${colType})`
-              );
-            }
-          }
-
-          // Alias handling & validation
-          const defaultAlias = `${m.aggregation.toLowerCase()}_${m.column === "*" ? "count" : m.column}`;
-          const finalAlias = m.alias ? validateSqlIdentifier(m.alias) : defaultAlias;
-
-          // Compute result type
-          let resultType = "number";
-          if (m.aggregation === "COUNT") {
-            resultType = "integer";
-          } else if (m.aggregation === "MIN" || m.aggregation === "MAX") {
-            resultType = columnTypeMap.get(m.column) || "string";
-          }
-
-          validatedMeasures.push({
-            column: m.column,
-            aggregation: m.aggregation,
-            alias: finalAlias,
-            resultType,
-          });
+        if (m.column !== "*") {
+          validateSqlIdentifier(m.column);
         }
+
+        if (!ALLOWED_AGGREGATIONS.includes(m.aggregation)) {
+          throw AppError.badRequest(`Unsupported aggregation function "${m.aggregation}"`);
+        }
+
+        // Check type compatibility for SUM and AVG
+        if (m.column !== "*") {
+          const colType = columnTypeMap.get(m.column) || "string";
+          if ((m.aggregation === "SUM" || m.aggregation === "AVG") && colType !== "number" && colType !== "integer") {
+            throw AppError.badRequest(
+              `Aggregation "${m.aggregation}" cannot be applied to non-numeric column "${m.column}" (type: ${colType})`
+            );
+          }
+        }
+
+        // Alias handling & validation
+        const defaultAlias = `${m.aggregation.toLowerCase()}_${m.column === "*" ? "count" : m.column}`;
+        const finalAlias = m.alias ? validateSqlIdentifier(m.alias) : defaultAlias;
+
+        // Compute result type
+        let resultType = "number";
+        if (m.aggregation === "COUNT") {
+          resultType = "integer";
+        } else if (m.aggregation === "MIN" || m.aggregation === "MAX") {
+          resultType = columnTypeMap.get(m.column) || "string";
+        }
+
+        validatedMeasures.push({
+          column: m.column,
+          aggregation: m.aggregation,
+          alias: finalAlias,
+          resultType,
+        });
       }
     } else {
       // Raw Mode: Validate requested columns
@@ -240,7 +375,7 @@ export class DatasetQueryEngine {
       }
     }
 
-    // 5. Validate Filters
+    // 6. Validate Filters
     const validatedFilters: DatasetQueryFilter[] = [];
     if (params.filters && params.filters.length > 0) {
       if (params.filters.length > QUERY_LIMITS.MAX_FILTERS) {
@@ -253,18 +388,20 @@ export class DatasetQueryEngine {
         if (!knownColumnNames.includes(filter.column)) {
           throw AppError.badRequest(`Filter column "${filter.column}" does not exist in dataset schema`);
         }
-        validateSqlIdentifier(filter.column);
+        const rawOp = filter.operator;
+        const alias = typeof rawOp === "string" ? FILTER_OPERATOR_ALIASES[rawOp] : undefined;
+        const op: FilterOperator | string = alias || rawOp;
 
-        if (!ALLOWED_FILTER_OPERATORS.includes(filter.operator)) {
+        if (!ALLOWED_FILTER_OPERATORS.includes(op as FilterOperator)) {
           throw AppError.badRequest(`Unsupported filter operator: "${filter.operator}"`);
         }
 
         const colType = columnTypeMap.get(filter.column) || "string";
-        const validatedValue = this.validateAndCoerceFilterValue(colType, filter.operator, filter.value, filter.column);
+        const validatedValue = this.validateAndCoerceFilterValue(colType, op as FilterOperator, filter.value, filter.column);
 
         validatedFilters.push({
           column: filter.column,
-          operator: filter.operator,
+          operator: op as FilterOperator,
           value: validatedValue,
         });
       }
@@ -272,11 +409,11 @@ export class DatasetQueryEngine {
 
     const filterLogic: "AND" | "OR" = (params.filterLogic || params.logic || "AND").toUpperCase() === "OR" ? "OR" : "AND";
 
-    // 6. Validate Ordering
+    // 7. Validate Ordering
     let validatedOrderBy: { column: string; direction: "asc" | "desc" } | undefined;
-    if (params.orderBy) {
-      const orderCol = params.orderBy.column;
-      const orderDir = params.orderBy.direction.toLowerCase() === "desc" ? "desc" : "asc";
+    if (rawOrderBy) {
+      const orderCol = rawOrderBy.column;
+      const orderDir = String(rawOrderBy.direction).toLowerCase() === "desc" ? "desc" : "asc";
 
       if (isAggregate) {
         const validOrderCols = [
@@ -299,7 +436,7 @@ export class DatasetQueryEngine {
       validatedOrderBy = { column: orderCol, direction: orderDir };
     }
 
-    // 7. Choose Execution Backend: Live PostgreSQL vs. In-Memory / CSV
+    // 8. Choose Execution Backend: Live PostgreSQL vs. In-Memory / CSV
     const isPostgresConnected = dataset.type === "CONNECTED" && dataset.dataSourceId;
     const tableName = (meta.tableName as string) || null;
 
@@ -442,6 +579,10 @@ export class DatasetQueryEngine {
         } else if (f.operator === "endsWith") {
           sqlParams.push(`%${String(f.value)}`);
           filterConditions.push(`${quotedCol}::text ILIKE $${sqlParams.length}`);
+        } else if (f.operator === "in") {
+          const rawItems = Array.isArray(f.value) ? f.value : [f.value];
+          sqlParams.push(rawItems.map((v) => String(v)));
+          filterConditions.push(`${quotedCol}::text = ANY($${sqlParams.length}::text[])`);
         }
       }
       whereClause = ` WHERE ${filterConditions.join(` ${opts.filterLogic} `)}`;
@@ -468,15 +609,27 @@ export class DatasetQueryEngine {
     const sql = `SELECT ${selectClause} FROM "${safeTable}"${whereClause}${groupByClause}${orderByClause} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}`;
 
     const rows = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(sql, ...sqlParams);
+    const count = rows ? rows.length : 0;
+    const executionTimeMs = Date.now() - opts.startTime;
 
     return {
       columns: resultColumns,
       rows: rows || [],
-      rowCount: rows ? rows.length : 0,
-      total: rows ? rows.length : 0,
+      processedColumns: resultColumns,
+      processedRows: rows || [],
+      rowCount: count,
+      total: count,
       limit: opts.limit,
       offset: opts.offset,
-      executionTimeMs: Date.now() - opts.startTime,
+      executionTimeMs,
+      metadata: {
+        rowCount: count,
+        total: count,
+        limit: opts.limit,
+        offset: opts.offset,
+        executionTimeMs,
+        queryMode: opts.isAggregate ? "AGGREGATE" : "RAW",
+      },
     };
   }
 
@@ -503,10 +656,45 @@ export class DatasetQueryEngine {
     columnTypeMap: Map<string, string>;
     startTime: number;
   }): Promise<DatasetQueryResult> {
-    const rawRows = ((opts.meta.sampleData || []) as Record<string, unknown>[]) || [];
+    const rawRows =
+      ((opts.meta.sampleData ||
+        opts.meta.previewRows ||
+        opts.meta.rows ||
+        []) as Record<string, unknown>[]) || [];
+
+    // Evaluate calculated fields on raw rows before filtering and grouping
+    const calculatedFields: Array<{
+      name: string;
+      expression: string;
+      dataType?: string;
+    }> = Array.isArray(opts.meta.calculatedFields) ? (opts.meta.calculatedFields as any[]) : [];
+
+    let processedSourceRows = rawRows;
+    if (calculatedFields.length > 0 && rawRows.length > 0) {
+      const knownCols = Array.from(opts.columnTypeMap.entries()).map(([k, v]) => ({ name: k, type: v }));
+      const compiledFields: Array<{ name: string; ast: any }> = [];
+      for (const cf of calculatedFields) {
+        try {
+          const compiled = compileCalculatedField(cf.expression, knownCols);
+          compiledFields.push({ name: cf.name, ast: compiled.ast });
+        } catch {
+          // If compile fails on a legacy expression, continue safely
+        }
+      }
+
+      if (compiledFields.length > 0) {
+        processedSourceRows = rawRows.map((r) => {
+          const copy = { ...r };
+          for (const cf of compiledFields) {
+            copy[cf.name] = evaluateExpression(cf.ast, copy);
+          }
+          return copy;
+        });
+      }
+    }
 
     // 1. Filter rows
-    const filteredRows = rawRows.filter((row) => {
+    const filteredRows = processedSourceRows.filter((row) => {
       if (opts.filters.length === 0) return true;
 
       const evalFilter = (f: DatasetQueryFilter): boolean => {
@@ -566,6 +754,15 @@ export class DatasetQueryEngine {
         if (f.operator === "contains") return strVal.includes(filterStr);
         if (f.operator === "startsWith") return strVal.startsWith(filterStr);
         if (f.operator === "endsWith") return strVal.endsWith(filterStr);
+        if (f.operator === "in") {
+          const rawList = Array.isArray(f.value) ? f.value : [f.value];
+          if (colType === "number" || colType === "integer") {
+            const numList = rawList.map((v) => Number(v));
+            return numList.includes(Number(val));
+          }
+          const strList = rawList.map((v) => String(v).toLowerCase());
+          return strList.includes(String(val).toLowerCase());
+        }
 
         return false;
       };
@@ -683,6 +880,9 @@ export class DatasetQueryEngine {
         if (valA === valB) return 0;
         if (valA === null || valA === undefined) return 1;
         if (valB === null || valB === undefined) return -1;
+        if (typeof valA === "number" && typeof valB === "number") {
+          return (valA - valB) * factor;
+        }
         return valA > valB ? factor : -factor;
       });
     }
@@ -691,15 +891,26 @@ export class DatasetQueryEngine {
 
     // 4. Paginate
     const sliced = processedRows.slice(opts.offset, opts.offset + opts.limit);
+    const executionTimeMs = Date.now() - opts.startTime;
 
     return Promise.resolve({
       columns: resultColumns,
       rows: sliced,
+      processedColumns: resultColumns,
+      processedRows: sliced,
       rowCount: sliced.length,
       total,
       limit: opts.limit,
       offset: opts.offset,
-      executionTimeMs: Date.now() - opts.startTime,
+      executionTimeMs,
+      metadata: {
+        rowCount: sliced.length,
+        total,
+        limit: opts.limit,
+        offset: opts.offset,
+        executionTimeMs,
+        queryMode: opts.isAggregate ? "AGGREGATE" : "RAW",
+      },
     });
   }
 
@@ -719,6 +930,33 @@ export class DatasetQueryEngine {
 
     if (value === undefined || value === null) {
       throw AppError.badRequest(`Filter value is required for operator "${operator}" on column "${colName}"`);
+    }
+
+    if (operator === "in") {
+      let items: unknown[] = [];
+      if (Array.isArray(value)) {
+        items = value;
+      } else if (typeof value === "string") {
+        try {
+          const parsed = JSON.parse(value);
+          items = Array.isArray(parsed) ? parsed : [value];
+        } catch {
+          items = value.split(",").map((s) => s.trim()).filter(Boolean);
+        }
+      } else {
+        items = [value];
+      }
+
+      if (colType === "number" || colType === "integer") {
+        return items.map((v) => {
+          const num = Number(v);
+          if (Number.isNaN(num)) {
+            throw AppError.badRequest(`Filter value contains non-numeric element for column "${colName}"`);
+          }
+          return colType === "integer" ? Math.round(num) : num;
+        });
+      }
+      return items.map((v) => String(v));
     }
 
     if (colType === "integer") {

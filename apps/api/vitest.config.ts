@@ -29,7 +29,8 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
-    // No separate setupFiles needed — env is set above at config load time
+    setupFiles: ["src/tests/setup.ts"],
+    fileParallelism: false,
     sequence: {
       concurrent: false,
     },

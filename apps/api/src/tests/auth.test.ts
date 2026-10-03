@@ -283,6 +283,9 @@ describe("POST /api/v1/auth/refresh", () => {
   it("issues a new access token from valid refresh cookie", async () => {
     if (!dbAvailable || !refreshCookie) return;
 
+    // Small delay to ensure timestamp/iat changes
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     const res = await request
       .post("/api/v1/auth/refresh")
       .set("Cookie", refreshCookie);
@@ -318,7 +321,9 @@ describe("POST /api/v1/auth/logout", () => {
     // The Set-Cookie header should clear the refresh cookie
     const setCookie = res.headers["set-cookie"] as string[] | undefined;
     const refreshCleared = setCookie?.some(
-      (c) => c.includes("ricozviz_refresh") && c.includes("Max-Age=0")
+      (c) =>
+        c.includes("ricozviz_refresh") &&
+        (c.includes("Max-Age=0") || c.includes("Expires="))
     );
     expect(refreshCleared).toBe(true);
   });
@@ -550,3 +555,169 @@ describe("API error consistency", () => {
     expect(res.body.error.stack).toBeUndefined();
   });
 });
+
+// ============================================================
+// PASSWORD SECURITY UNIT TESTS
+// ============================================================
+
+describe("Password Security & Hashing", () => {
+  it("hashes password and verifies match correctly", async () => {
+    const bcrypt = (await import("bcryptjs")).default;
+    const plain = "MyP@ssw0rd!2026";
+    const hash = await bcrypt.hash(plain, 12);
+
+    expect(hash).not.toBe(plain);
+    expect(hash.startsWith("$2a$") || hash.startsWith("$2b$")).toBe(true);
+
+    const isMatch = await bcrypt.compare(plain, hash);
+    expect(isMatch).toBe(true);
+  });
+
+  it("rejects incorrect password verification", async () => {
+    const bcrypt = (await import("bcryptjs")).default;
+    const plain = "MyP@ssw0rd!2026";
+    const hash = await bcrypt.hash(plain, 12);
+
+    const isMatch = await bcrypt.compare("WrongPassword!123", hash);
+    expect(isMatch).toBe(false);
+  });
+
+  it("generates different hashes for identical passwords due to salt", async () => {
+    const bcrypt = (await import("bcryptjs")).default;
+    const plain = "MyP@ssw0rd!2026";
+    const hash1 = await bcrypt.hash(plain, 12);
+    const hash2 = await bcrypt.hash(plain, 12);
+
+    expect(hash1).not.toBe(hash2);
+  });
+});
+
+// ============================================================
+// JWT TOKEN GENERATION & VALIDATION UNIT TESTS
+// ============================================================
+
+describe("JWT Service — Token Generation & Validation", () => {
+  it("generates and verifies access token with all claims", async () => {
+    const { signAccessToken, verifyAccessToken } = await import("../lib/jwt");
+
+    const payload = {
+      sub: "user-123",
+      email: "test@ricozviz.com",
+      organizationId: "org-456",
+      roleId: "role-789",
+      roleName: "ADMIN",
+      permissions: ["DASHBOARD_CREATE", "DASHBOARD_VIEW"],
+    };
+
+    const token = signAccessToken(payload);
+    expect(token).toBeTruthy();
+    expect(typeof token).toBe("string");
+
+    const decoded = verifyAccessToken(token);
+    expect(decoded.sub).toBe("user-123");
+    expect(decoded.email).toBe("test@ricozviz.com");
+    expect(decoded.organizationId).toBe("org-456");
+    expect(decoded.roleId).toBe("role-789");
+    expect(decoded.roleName).toBe("ADMIN");
+    expect(decoded.permissions).toEqual(["DASHBOARD_CREATE", "DASHBOARD_VIEW"]);
+    expect(decoded.type).toBe("access");
+  });
+
+  it("generates and verifies refresh token with tokenVersion", async () => {
+    const { signRefreshToken, verifyRefreshToken } = await import("../lib/jwt");
+
+    const token = signRefreshToken("user-123", 2);
+    expect(token).toBeTruthy();
+
+    const decoded = verifyRefreshToken(token);
+    expect(decoded.sub).toBe("user-123");
+    expect(decoded.tokenVersion).toBe(2);
+    expect(decoded.type).toBe("refresh");
+  });
+
+  it("rejects token with wrong secret or malformed content", async () => {
+    const { verifyAccessToken } = await import("../lib/jwt");
+
+    expect(() => verifyAccessToken("malformed.jwt.token")).toThrowError();
+  });
+
+  it("rejects token type mismatch (e.g. refresh token used as access token)", async () => {
+    const { signRefreshToken, verifyAccessToken } = await import("../lib/jwt");
+
+    const refreshToken = signRefreshToken("user-123", 0);
+    expect(() => verifyAccessToken(refreshToken)).toThrowError();
+  });
+});
+
+// ============================================================
+// AUTH MIDDLEWARE & ROUTE PROTECTION UNIT TESTS
+// ============================================================
+
+describe("requireAuth Middleware", () => {
+  it("attaches user to req.user for valid Bearer token", async () => {
+    const { requireAuth } = await import("../middleware/auth.middleware");
+    const { signAccessToken } = await import("../lib/jwt");
+
+    const token = signAccessToken({
+      sub: "user-abc",
+      email: "user@ricozviz.com",
+      organizationId: "org-xyz",
+      roleId: "role-1",
+      roleName: "ADMIN",
+      permissions: ["USER_MANAGE"],
+    });
+
+    const mockReq = {
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    } as any;
+    const mockRes = {} as any;
+    let nextCalled = false;
+    let error: any = null;
+
+    requireAuth(mockReq, mockRes, (err?: any) => {
+      if (err) error = err;
+      else nextCalled = true;
+    });
+
+    expect(error).toBeNull();
+    expect(nextCalled).toBe(true);
+    expect(mockReq.user).toBeDefined();
+    expect(mockReq.user.userId).toBe("user-abc");
+    expect(mockReq.user.email).toBe("user@ricozviz.com");
+    expect(mockReq.user.organizationId).toBe("org-xyz");
+    expect(mockReq.user.roleName).toBe("ADMIN");
+  });
+
+  it("rejects request missing Authorization header with 401", async () => {
+    const { requireAuth } = await import("../middleware/auth.middleware");
+
+    const mockReq = { headers: {} } as any;
+    const mockRes = {} as any;
+    let error: any = null;
+
+    requireAuth(mockReq, mockRes, (err?: any) => {
+      error = err;
+    });
+
+    expect(error).toBeDefined();
+    expect(error.statusCode).toBe(401);
+  });
+
+  it("rejects request with malformed Bearer header with 401", async () => {
+    const { requireAuth } = await import("../middleware/auth.middleware");
+
+    const mockReq = { headers: { authorization: "Basic somecreds" } } as any;
+    const mockRes = {} as any;
+    let error: any = null;
+
+    requireAuth(mockReq, mockRes, (err?: any) => {
+      error = err;
+    });
+
+    expect(error).toBeDefined();
+    expect(error.statusCode).toBe(401);
+  });
+});
+

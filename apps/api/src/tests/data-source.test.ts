@@ -14,6 +14,8 @@ import { credentialService } from "../services/data-source/credential.service.js
 import {
   PostgresConnector,
   CsvConnector,
+  XlsxConnector,
+  JsonConnector,
   RestApiConnector,
   getConnector,
 } from "../services/data-source/connectors/index.js";
@@ -115,6 +117,8 @@ describe("Data Source Connectors", () => {
     expect(getConnector("POSTGRESQL")).toBeInstanceOf(PostgresConnector);
     expect(getConnector("CSV")).toBeInstanceOf(CsvConnector);
     expect(getConnector("CSV_UPLOAD")).toBeInstanceOf(CsvConnector);
+    expect(getConnector("XLSX")).toBeInstanceOf(XlsxConnector);
+    expect(getConnector("JSON")).toBeInstanceOf(JsonConnector);
     expect(getConnector("REST_API")).toBeInstanceOf(RestApiConnector);
     expect(getConnector("UNKNOWN")).toBeNull();
   });
@@ -177,6 +181,58 @@ describe("Data Source Connectors", () => {
 
     it("tests CSV source successfully", async () => {
       const result = await connector.testConnection({ fileName: "data.csv" });
+      expect(result.success).toBe(true);
+      expect(result.status).toBe("CONNECTED");
+    });
+  });
+
+  describe("XlsxConnector", () => {
+    const connector = new XlsxConnector();
+
+    it("validates XLSX file name and sheet name", () => {
+      expect(
+        connector.validateConfiguration({ fileName: "financials.xlsx", sheetName: "Q3" }).valid
+      ).toBe(true);
+
+      expect(
+        connector.validateConfiguration({ fileName: "report.xls" }).valid
+      ).toBe(true);
+
+      expect(
+        connector.validateConfiguration({ fileName: "financials.pdf" }).valid
+      ).toBe(false);
+
+      expect(
+        connector.validateConfiguration({ fileName: "" }).valid
+      ).toBe(false);
+    });
+
+    it("tests XLSX source successfully", async () => {
+      const result = await connector.testConnection({ fileName: "budget.xlsx", sheetName: "Summary" });
+      expect(result.success).toBe(true);
+      expect(result.status).toBe("CONNECTED");
+    });
+  });
+
+  describe("JsonConnector", () => {
+    const connector = new JsonConnector();
+
+    it("validates JSON file name and data path", () => {
+      expect(
+        connector.validateConfiguration({ fileName: "events.json", dataPath: "items" }).valid
+      ).toBe(true);
+
+      expect(
+        connector.validateConfiguration({ fileName: "events.xml" }).valid
+      ).toBe(false);
+
+      expect(
+        connector.validateConfiguration({ fileName: "" }).valid
+      ).toBe(false);
+    });
+
+    it("tests JSON source successfully", async () => {
+      const result = await connector.testConnection({ fileName: "users.json" });
       expect(result.success).toBe(true);
       expect(result.status).toBe("CONNECTED");
     });

@@ -59,6 +59,7 @@ function buildSafeUser(user: {
   avatarUrl: string | null;
   status: string;
   createdAt: Date;
+  organizationId?: string;
 }) {
   return {
     id: user.id,
@@ -66,6 +67,7 @@ function buildSafeUser(user: {
     name: user.name,
     avatarUrl: user.avatarUrl,
     status: user.status,
+    organizationId: user.organizationId,
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -246,7 +248,10 @@ export async function register(req: Request, res: Response): Promise<void> {
   sendSuccess(
     res,
     {
-      user: buildSafeUser(result.user),
+      user: buildSafeUser({
+        ...result.user,
+        organizationId: result.organization.id,
+      }),
       organization: {
         id: result.organization.id,
         name: result.organization.name,

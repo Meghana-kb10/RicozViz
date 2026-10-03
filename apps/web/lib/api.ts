@@ -1,4 +1,4 @@
-// ========================================
+ // ========================================
 // API Client — typed fetch wrapper
 // ========================================
 // Communicates with the RicozViz backend API.
@@ -31,11 +31,13 @@ export function getAccessToken(): string | null {
 export function setAccessToken(token: string): void {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+  document.cookie = "ricozviz_auth=true; path=/; max-age=86400; SameSite=Lax";
 }
 
 export function clearAccessToken(): void {
   if (typeof window === "undefined") return;
   sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  document.cookie = "ricozviz_auth=; path=/; max-age=0; SameSite=Lax";
 }
 
 // ---- Core fetch wrapper ----
@@ -46,7 +48,7 @@ async function apiFetch<T>(
 ): Promise<T> {
   const headers = new Headers(options.headers);
 
-  if (!headers.has("Content-Type") && options.method !== "GET") {
+  if (!headers.has("Content-Type") && options.method !== "GET" && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -158,14 +160,107 @@ export async function apiLogout(): Promise<void> {
 }
 
 // ============================================================
+// WORKSPACE TYPES & API METHODS
+// ============================================================
+
+export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER";
+
+export interface WorkspaceData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  organizationId: string;
+  role: WorkspaceRole;
+  memberCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkspaceMemberData {
+  id: string;
+  workspaceId: string;
+  role: WorkspaceRole;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+    status: string;
+  };
+}
+
+export async function apiListWorkspaces(): Promise<WorkspaceData[]> {
+  return apiFetch<WorkspaceData[]>("/api/v1/workspaces");
+}
+
+export async function apiGetWorkspace(id: string): Promise<WorkspaceData> {
+  return apiFetch<WorkspaceData>(`/api/v1/workspaces/${id}`);
+}
+
+export async function apiCreateWorkspace(input: {
+  name: string;
+  description?: string;
+}): Promise<WorkspaceData> {
+  return apiFetch<WorkspaceData>("/api/v1/workspaces", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiUpdateWorkspace(
+  id: string,
+  input: { name?: string; description?: string | null }
+): Promise<WorkspaceData> {
+  return apiFetch<WorkspaceData>(`/api/v1/workspaces/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiDeleteWorkspace(id: string): Promise<{ message: string; id: string }> {
+  return apiFetch<{ message: string; id: string }>(`/api/v1/workspaces/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function apiListWorkspaceMembers(workspaceId: string): Promise<WorkspaceMemberData[]> {
+  return apiFetch<WorkspaceMemberData[]>(`/api/v1/workspaces/${workspaceId}/members`);
+}
+
+export async function apiAddWorkspaceMember(
+  workspaceId: string,
+  input: { userId: string; role?: "ADMIN" | "MEMBER" }
+): Promise<WorkspaceMemberData> {
+  return apiFetch<WorkspaceMemberData>(`/api/v1/workspaces/${workspaceId}/members`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiRemoveWorkspaceMember(
+  workspaceId: string,
+  userId: string
+): Promise<{ message: string; workspaceId: string; userId: string }> {
+  return apiFetch<{ message: string; workspaceId: string; userId: string }>(
+    `/api/v1/workspaces/${workspaceId}/members/${userId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+// ============================================================
 // DATA SOURCE TYPES & API METHODS
 // ============================================================
 
-export type DataSourceType = "POSTGRESQL" | "CSV" | "REST_API";
+export type DataSourceType = "POSTGRESQL" | "CSV" | "REST_API" | "XLSX" | "JSON";
 export type DataSourceStatus = "CONNECTED" | "PENDING" | "FAILED" | "INACTIVE";
 
 export interface DataSourceData {
   id: string;
+  workspaceId?: string | null;
   name: string;
   description: string | null;
   type: DataSourceType;
@@ -183,8 +278,11 @@ export interface ConnectionTestResult {
   details?: Record<string, unknown>;
 }
 
-export async function apiListDataSources(): Promise<DataSourceData[]> {
-  return apiFetch<DataSourceData[]>("/api/v1/data-sources");
+export async function apiListDataSources(params?: { workspaceId?: string }): Promise<DataSourceData[]> {
+  const query = new URLSearchParams();
+  if (params?.workspaceId) query.set("workspaceId", params.workspaceId);
+  const qs = query.toString();
+  return apiFetch<DataSourceData[]>(`/api/v1/data-sources${qs ? `?${qs}` : ""}`);
 }
 
 export async function apiGetDataSource(id: string): Promise<DataSourceData> {
@@ -192,6 +290,7 @@ export async function apiGetDataSource(id: string): Promise<DataSourceData> {
 }
 
 export async function apiCreateDataSource(input: {
+  workspaceId?: string | null;
   name: string;
   description?: string;
   type: DataSourceType;
@@ -240,26 +339,52 @@ export async function apiTestDataSourceConnection(
 // ============================================================
 
 export type DatasetType = "CONNECTED" | "UPLOADED" | "DERIVED";
-export type DatasetStatus = "READY" | "DRAFT" | "FAILED" | "ARCHIVED";
+export type DatasetStatus = "READY" | "PROCESSING" | "FAILED" | "ACTIVE" | "DRAFT" | "ARCHIVED" | "ERROR";
+export type DatasetSourceType = "CSV" | "XLSX" | "JSON";
 
 export interface DatasetColumn {
   name: string;
-  type: "string" | "number" | "integer" | "boolean" | "date";
+  type: "string" | "number" | "integer" | "decimal" | "boolean" | "date" | "datetime" | string;
   nullable: boolean;
+  ordinalPosition?: number;
+  isCalculated?: boolean;
+  expression?: string;
 }
 
 export interface DatasetData {
   id: string;
+  workspaceId?: string | null;
   name: string;
   description: string | null;
+  sourceType?: DatasetSourceType;
+  fileName?: string | null;
+  fileSize?: number | null;
+  rowCount: number;
+  columnCount?: number;
   type: DatasetType;
   status: DatasetStatus;
   dataSourceId: string | null;
   dataSourceName: string | null;
   dataSourceType: string | null;
+  dataSource?: {
+    id: string;
+    name: string;
+    type: string;
+  } | null;
+  blendConfig?: {
+    datasetAId: string;
+    datasetAName: string;
+    datasetBId: string;
+    datasetBName: string;
+    joinColumnA: string;
+    joinColumnB: string;
+    joinType: "INNER" | "LEFT";
+    createdAt: string;
+  } | null;
   columns: DatasetColumn[];
+  calculatedFields?: CalculatedFieldConfig[];
   tableName: string | null;
-  rowCount: number;
+  metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -267,9 +392,18 @@ export interface DatasetData {
 export interface DatasetPreviewResult {
   columns: string[];
   rows: Record<string, unknown>[];
-  total: number;
+  total?: number;
   limit: number;
-  offset: number;
+  offset?: number;
+  dataset?: DatasetData;
+  datasetId?: string;
+  columnNames?: string[];
+  columnTypes?: Array<{ name: string; type: string; dataType?: string }>;
+  totalRowCount?: number;
+  totalColumnCount?: number;
+  previewRows?: Record<string, unknown>[];
+  previewLimit?: number;
+  columnDefinitions?: DatasetColumn[];
 }
 
 export interface CsvPreviewSchemaResult {
@@ -284,12 +418,14 @@ export interface SourceTable {
 }
 
 export async function apiListDatasets(params?: {
+  workspaceId?: string;
   search?: string;
   type?: string;
   page?: number;
   limit?: number;
 }): Promise<DatasetData[]> {
   const query = new URLSearchParams();
+  if (params?.workspaceId) query.set("workspaceId", params.workspaceId);
   if (params?.search) query.set("search", params.search);
   if (params?.type) query.set("type", params.type);
   if (params?.page) query.set("page", String(params.page));
@@ -304,6 +440,7 @@ export async function apiGetDataset(id: string): Promise<DatasetData> {
 }
 
 export async function apiCreateDataset(input: {
+  workspaceId?: string | null;
   name: string;
   description?: string;
   type?: DatasetType;
@@ -316,6 +453,13 @@ export async function apiCreateDataset(input: {
   return apiFetch<DatasetData>("/api/v1/datasets", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+export async function apiUploadDataset(formData: FormData): Promise<DatasetData> {
+  return apiFetch<DatasetData>("/api/v1/datasets/upload", {
+    method: "POST",
+    body: formData,
   });
 }
 
@@ -369,6 +513,195 @@ export async function apiGetSourceTableSchema(
   );
 }
 
+// ============================================================
+// DATASET BLENDING TYPES & API METHODS
+// ============================================================
+
+export type BlendJoinType = "INNER" | "LEFT";
+
+export interface DatasetBlendPreviewRequest {
+  datasetAId: string;
+  datasetBId: string;
+  joinColumnA: string;
+  joinColumnB: string;
+  joinType: BlendJoinType;
+  limit?: number;
+}
+
+export interface DatasetBlendPreviewResult {
+  datasetA: {
+    id: string;
+    name: string;
+    rowCount: number;
+    columnCount: number;
+  };
+  datasetB: {
+    id: string;
+    name: string;
+    rowCount: number;
+    columnCount: number;
+  };
+  joinColumnA: string;
+  joinColumnB: string;
+  joinType: BlendJoinType;
+  resultingColumns: Array<{
+    name: string;
+    type: string;
+    origin: "A" | "B";
+  }>;
+  rowCount: number;
+  previewRowCount: number;
+  rows: Record<string, unknown>[];
+}
+
+export interface CreateDatasetBlendRequest {
+  name: string;
+  description?: string;
+  datasetAId: string;
+  datasetBId: string;
+  joinColumnA: string;
+  joinColumnB: string;
+  joinType: BlendJoinType;
+}
+
+export async function apiPreviewDatasetBlend(
+  input: DatasetBlendPreviewRequest
+): Promise<DatasetBlendPreviewResult> {
+  return apiFetch<DatasetBlendPreviewResult>("/api/v1/datasets/blends/preview", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiCreateDatasetBlend(
+  input: CreateDatasetBlendRequest
+): Promise<DatasetData> {
+  return apiFetch<DatasetData>("/api/v1/datasets/blends", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiListDatasetBlends(params?: {
+  workspaceId?: string;
+}): Promise<DatasetData[]> {
+  const query = new URLSearchParams();
+  if (params?.workspaceId) query.set("workspaceId", params.workspaceId);
+  const qs = query.toString();
+  return apiFetch<DatasetData[]>(`/api/v1/datasets/blends${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetDatasetBlend(id: string): Promise<DatasetData> {
+  return apiFetch<DatasetData>(`/api/v1/datasets/blends/${id}`);
+}
+
+export async function apiDeleteDatasetBlend(
+  id: string
+): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>(`/api/v1/datasets/blends/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// ============================================================
+// CALCULATED FIELDS TYPES & API METHODS
+// ============================================================
+
+export interface CalculatedFieldConfig {
+  id: string;
+  name: string;
+  expression: string;
+  dataType: "NUMBER" | "STRING" | "BOOLEAN";
+  datasetId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PreviewCalculatedFieldRequest {
+  name: string;
+  expression: string;
+  limit?: number;
+}
+
+export interface PreviewCalculatedFieldResult {
+  name: string;
+  expression: string;
+  dataType: "NUMBER" | "STRING" | "BOOLEAN";
+  referencedColumns: string[];
+  previewRowCount: number;
+  rows: Record<string, unknown>[];
+}
+
+export interface CreateCalculatedFieldRequest {
+  name: string;
+  expression: string;
+}
+
+export interface UpdateCalculatedFieldRequest {
+  name?: string;
+  expression?: string;
+}
+
+export async function apiPreviewCalculatedField(
+  datasetId: string,
+  input: PreviewCalculatedFieldRequest
+): Promise<PreviewCalculatedFieldResult> {
+  return apiFetch<PreviewCalculatedFieldResult>(
+    `/api/v1/datasets/${datasetId}/calculated-fields/preview`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function apiCreateCalculatedField(
+  datasetId: string,
+  input: CreateCalculatedFieldRequest
+): Promise<{ field: CalculatedFieldConfig; dataset: DatasetData }> {
+  return apiFetch<{ field: CalculatedFieldConfig; dataset: DatasetData }>(
+    `/api/v1/datasets/${datasetId}/calculated-fields`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function apiListCalculatedFields(
+  datasetId: string
+): Promise<CalculatedFieldConfig[]> {
+  return apiFetch<CalculatedFieldConfig[]>(
+    `/api/v1/datasets/${datasetId}/calculated-fields`
+  );
+}
+
+export async function apiUpdateCalculatedField(
+  datasetId: string,
+  fieldId: string,
+  input: UpdateCalculatedFieldRequest
+): Promise<{ field: CalculatedFieldConfig; dataset: DatasetData }> {
+  return apiFetch<{ field: CalculatedFieldConfig; dataset: DatasetData }>(
+    `/api/v1/datasets/${datasetId}/calculated-fields/${fieldId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+export async function apiDeleteCalculatedField(
+  datasetId: string,
+  fieldId: string
+): Promise<{ message: string; dataset: DatasetData }> {
+  return apiFetch<{ message: string; dataset: DatasetData }>(
+    `/api/v1/datasets/${datasetId}/calculated-fields/${fieldId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
 export type FilterOperator =
   | "="
   | "!="
@@ -380,7 +713,8 @@ export type FilterOperator =
   | "startsWith"
   | "endsWith"
   | "isNull"
-  | "isNotNull";
+  | "isNotNull"
+  | "in";
 
 export type AggregationFunction = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX";
 
@@ -404,10 +738,31 @@ export interface DatasetQueryParams {
     column: string;
     direction: "asc" | "desc" | "ASC" | "DESC";
   };
+  sort?: {
+    column: string;
+    direction: "asc" | "desc" | "ASC" | "DESC";
+  };
+  sorting?:
+    | {
+        column: string;
+        direction: "asc" | "desc" | "ASC" | "DESC";
+      }
+    | Array<{
+        column: string;
+        direction: "asc" | "desc" | "ASC" | "DESC";
+      }>;
   filters?: DatasetQueryFilter[];
   filterLogic?: "AND" | "OR";
+  logic?: "AND" | "OR";
   dimensions?: string[];
+  groupBy?: string[];
   measures?: DatasetQueryMeasure[];
+  aggregations?: Array<{
+    column: string;
+    function?: string;
+    aggregation?: AggregationFunction | string;
+    alias?: string;
+  }>;
 }
 
 export interface QueryResultColumn {
@@ -418,11 +773,21 @@ export interface QueryResultColumn {
 export interface DatasetQueryResult {
   columns: QueryResultColumn[];
   rows: Record<string, unknown>[];
+  processedColumns?: QueryResultColumn[];
+  processedRows?: Record<string, unknown>[];
   rowCount: number;
   total: number;
   limit: number;
   offset: number;
   executionTimeMs: number;
+  metadata?: {
+    rowCount: number;
+    total: number;
+    limit: number;
+    offset: number;
+    executionTimeMs: number;
+    queryMode: "RAW" | "AGGREGATE" | string;
+  };
 }
 
 export async function apiQueryDataset(
@@ -466,6 +831,9 @@ export interface DashboardData {
   layoutConfig: Record<string, unknown>;
   chartCount: number;
   charts: DashboardChart[];
+  shareToken?: string | null;
+  shareTokenActive?: boolean;
+  sharedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -536,6 +904,73 @@ export async function apiUpdateDashboard(
 export async function apiDeleteDashboard(id: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/api/v1/dashboards/${id}`, {
     method: "DELETE",
+  });
+}
+
+// ============================================================
+// Dashboard Sharing API
+// ============================================================
+
+export interface SharedDashboardChart {
+  id: string;
+  title: string;
+  description: string | null;
+  chartType: ChartType;
+  config: ChartConfig;
+  position: ChartPosition;
+  sortOrder: number;
+  datasetId: string | null;
+  datasetName: string | null;
+  datasetColumns?: DatasetColumn[];
+}
+
+export interface SharedDashboardData {
+  id: string;
+  name: string;
+  description: string | null;
+  layoutConfig: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  charts: SharedDashboardChart[];
+}
+
+export interface ShareLinkStatusResponse {
+  shareToken: string | null;
+  shareTokenActive: boolean;
+  sharedAt: string | null;
+  active?: boolean;
+  token?: string | null;
+  shareUrl?: string | null;
+}
+
+export async function apiCreateShareLink(dashboardId: string): Promise<ShareLinkStatusResponse> {
+  return apiFetch<ShareLinkStatusResponse>(`/api/v1/dashboards/${dashboardId}/share`, {
+    method: "POST",
+  });
+}
+
+export async function apiGetShareLinkStatus(dashboardId: string): Promise<ShareLinkStatusResponse> {
+  return apiFetch<ShareLinkStatusResponse>(`/api/v1/dashboards/${dashboardId}/share`);
+}
+
+export async function apiDisableShareLink(dashboardId: string): Promise<ShareLinkStatusResponse> {
+  return apiFetch<ShareLinkStatusResponse>(`/api/v1/dashboards/${dashboardId}/share`, {
+    method: "DELETE",
+  });
+}
+
+export async function apiGetSharedDashboard(shareToken: string): Promise<SharedDashboardData> {
+  return apiFetch<SharedDashboardData>(`/api/v1/dashboards/shared/${shareToken}`);
+}
+
+export async function apiGetSharedChartData(
+  shareToken: string,
+  chartId: string,
+  filters?: unknown[]
+): Promise<DatasetQueryResult> {
+  return apiFetch<DatasetQueryResult>(`/api/v1/dashboards/shared/${shareToken}/charts/${chartId}/data`, {
+    method: "POST",
+    body: JSON.stringify({ filters }),
   });
 }
 
@@ -669,6 +1104,204 @@ export async function apiDeleteChart(
     }
   );
 }
+
+// ============================================================
+// STANDALONE VISUALIZATION API METHODS
+// ============================================================
+
+export interface VisualizationData {
+  id: string;
+  dashboardId: string;
+  datasetId: string | null;
+  datasetName: string | null;
+  datasetType: string | null;
+  workspaceId: string | null;
+  title: string;
+  description: string | null;
+  chartType: ChartType;
+  config: ChartConfig & {
+    xAxis?: string;
+    category?: string;
+    yAxis?: string | string[];
+    value?: string | string[];
+    aggregation?: string;
+    series?: string;
+    group?: string;
+    groupBy?: string[];
+    aggregations?: Array<{ column: string; function?: string; aggregation?: string; alias?: string }>;
+    columns?: string[];
+  };
+  position: ChartPosition;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  data?: Record<string, unknown>[];
+  columns?: QueryResultColumn[];
+  rowCount?: number;
+  total?: number;
+}
+
+export interface CreateVisualizationInput {
+  title: string;
+  description?: string | null;
+  chartType: ChartType;
+  datasetId?: string | null;
+  dashboardId?: string | null;
+  config?: ChartConfig & Record<string, unknown>;
+  position?: Partial<ChartPosition>;
+  sortOrder?: number;
+}
+
+export interface UpdateVisualizationInput {
+  title?: string;
+  description?: string | null;
+  chartType?: ChartType;
+  datasetId?: string | null;
+  config?: ChartConfig & Record<string, unknown>;
+  position?: Partial<ChartPosition>;
+  sortOrder?: number;
+}
+
+export async function apiListVisualizations(params?: {
+  workspaceId?: string;
+  includeData?: boolean;
+}): Promise<VisualizationData[]> {
+  const query = new URLSearchParams();
+  if (params?.workspaceId) query.set("workspaceId", params.workspaceId);
+  if (params?.includeData) query.set("includeData", "true");
+  const qs = query.toString();
+  return apiFetch<VisualizationData[]>(`/api/v1/visualizations${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetVisualization(
+  id: string,
+  includeData?: boolean
+): Promise<VisualizationData> {
+  const qs = includeData ? "?includeData=true" : "";
+  return apiFetch<VisualizationData>(`/api/v1/visualizations/${id}${qs}`);
+}
+
+export async function apiGetVisualizationData(
+  id: string
+): Promise<{ visualization: VisualizationData } & DatasetQueryResult> {
+  return apiFetch<{ visualization: VisualizationData } & DatasetQueryResult>(
+    `/api/v1/visualizations/${id}/data`
+  );
+}
+
+export async function apiCreateVisualization(
+  input: CreateVisualizationInput
+): Promise<VisualizationData> {
+  return apiFetch<VisualizationData>("/api/v1/visualizations", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiUpdateVisualization(
+  id: string,
+  input: UpdateVisualizationInput
+): Promise<VisualizationData> {
+  return apiFetch<VisualizationData>(`/api/v1/visualizations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function apiDeleteVisualization(
+  id: string
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/v1/visualizations/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// ============================================================
+// DASHBOARD REPORT SCHEDULE & SNAPSHOT
+// ============================================================
+
+export type ReportFrequency = "DAILY" | "WEEKLY";
+
+export interface DashboardScheduleData {
+  id: string;
+  dashboardId: string;
+  frequency: ReportFrequency;
+  enabled: boolean;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  recipients?: string[];
+  webhookUrl?: string | null;
+  deliveryType?: "EMAIL" | "WEBHOOK" | "BOTH";
+  lastDeliveryStatus?: "SUCCESS" | "FAILED" | null;
+  lastDeliveryAt?: string | null;
+  lastDeliveryError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DashboardReportSnapshot {
+  reportId: string;
+  dashboardId: string;
+  dashboardName: string;
+  generatedAt: string;
+  chartCount: number;
+  charts: Array<{
+    chartId: string;
+    title: string;
+    chartType: string;
+    rowCount: number;
+    columns: Array<{ name: string; type: string }>;
+    data: Record<string, unknown>[];
+  }>;
+  summary: {
+    totalCharts: number;
+    totalRecords: number;
+    executionTimeMs: number;
+  };
+}
+
+export async function apiGetDashboardSchedule(
+  dashboardId: string
+): Promise<DashboardScheduleData | null> {
+  return apiFetch<DashboardScheduleData | null>(`/api/v1/dashboards/${dashboardId}/schedule`);
+}
+
+export async function apiSaveDashboardSchedule(
+  dashboardId: string,
+  payload: {
+    frequency: ReportFrequency;
+    enabled?: boolean;
+    recipients?: string[];
+    webhookUrl?: string;
+    deliveryType?: "EMAIL" | "WEBHOOK" | "BOTH";
+  }
+): Promise<DashboardScheduleData> {
+  return apiFetch<DashboardScheduleData>(`/api/v1/dashboards/${dashboardId}/schedule`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiDeleteDashboardSchedule(
+  dashboardId: string
+): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>(
+    `/api/v1/dashboards/${dashboardId}/schedule`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+export async function apiGenerateDashboardReport(
+  dashboardId: string
+): Promise<DashboardReportSnapshot> {
+  return apiFetch<DashboardReportSnapshot>(`/api/v1/dashboards/${dashboardId}/reports/generate`, {
+    method: "POST",
+  });
+}
+
+
 
 
 

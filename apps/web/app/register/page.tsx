@@ -55,10 +55,18 @@ export default function RegisterPage() {
         if (err.details) {
           setFieldErrors(err.details);
         } else {
-          setError(err.message);
+          const raw = err.message || "";
+          const isInternal =
+            err.status >= 500 ||
+            /prisma|database|localhost|connection|failed to connect|syntax error|sql/i.test(raw);
+          if (isInternal) {
+            setError("Unable to create account right now. Please try again.");
+          } else {
+            setError(raw);
+          }
         }
       } else {
-        setError("An unexpected error occurred. Please try again.");
+        setError("Unable to create account right now. Please try again.");
       }
     } finally {
       setIsLoading(false);

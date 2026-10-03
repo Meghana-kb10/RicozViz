@@ -38,6 +38,12 @@ enum MembershipStatus {
   INVITED
 }
 
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 enum DataSourceType {
   POSTGRESQL
   MYSQL
@@ -50,6 +56,14 @@ enum DataSourceType {
   SNOWFLAKE
   REDSHIFT
   OTHER
+}
+
+enum DatasetColumnType {
+  STRING
+  NUMBER
+  BOOLEAN
+  DATE
+  DATETIME
 }
 
 enum DataSourceStatus {
@@ -65,11 +79,20 @@ enum DatasetType {
   DERIVED // Computed from other datasets (future)
 }
 
+enum DatasetSourceType {
+  CSV
+  XLSX
+  JSON
+}
+
 enum DatasetStatus {
   ACTIVE
   DRAFT
   ARCHIVED
   ERROR
+  PROCESSING
+  READY
+  FAILED
 }
 
 enum DashboardStatus {
@@ -119,13 +142,14 @@ model User {
   updatedAt    DateTime   @updatedAt
 
   // ---- Relationships ----
-  memberships        OrganizationMember[]
-  ownedDashboards    Dashboard[]          @relation("DashboardOwner")
-  createdDataSources DataSource[]         @relation("DataSourceCreator")
-  createdDatasets    Dataset[]            @relation("DatasetCreator")
-  createdReports     Report[]             @relation("ReportCreator")
-  dashboardAccess    DashboardAccess[]
-  auditLogs          AuditLog[]
+  memberships          OrganizationMember[]
+  workspaceMemberships WorkspaceMember[]
+  ownedDashboards      Dashboard[]          @relation("DashboardOwner")
+  createdDataSources   DataSource[]         @relation("DataSourceCreator")
+  createdDatasets      Dataset[]            @relation("DatasetCreator")
+  createdReports       Report[]             @relation("ReportCreator")
+  dashboardAccess      DashboardAccess[]
+  auditLogs            AuditLog[]
 
   @@map("users")
 }
@@ -145,6 +169,7 @@ model Organization {
 
   // ---- Relationships ----
   members     OrganizationMember[]
+  workspaces  Workspace[]
   dataSources DataSource[]
   datasets    Dataset[]
   dashboards  Dashboard[]
@@ -239,6 +264,50 @@ model OrganizationMember {
 }
 
 // ============================================================
+// WORKSPACE
+// ============================================================
+
+model Workspace {
+  id             String            @id @default(uuid())
+  name           String
+  slug           String
+  description    String?
+  organizationId String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        WorkspaceMember[]
+  dataSources    DataSource[]
+  datasets       Dataset[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("workspaces")
+}
+
+// ============================================================
+// WORKSPACE MEMBER
+// ============================================================
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+// ============================================================
 // DATA SOURCE
 // ============================================================
 // Represents a configured enterprise data connection.
@@ -256,6 +325,7 @@ model OrganizationMember {
 model DataSource {
   id             String           @id @default(uuid())
   organizationId String
+  workspaceId    String?
   name           String
   description    String?
   type           DataSourceType
@@ -273,11 +343,13 @@ model DataSource {
   updatedAt   DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy    User         @relation("DataSourceCreator", fields: [createdById], references: [id])
 
   datasets Dataset[]
 
   @@index([organizationId])
+  @@index([workspaceId])
   @@index([createdById])
   @@map("data_sources")
 }
@@ -287,13 +359,19 @@ model DataSource {
 // ============================================================
 
 model Dataset {
-  id             String        @id @default(uuid())
+  id             String             @id @default(uuid())
   organizationId String
+  workspaceId    String?
   dataSourceId   String? // NULL for uploaded/file-based datasets
   name           String
   description    String?
-  type           DatasetType
-  status         DatasetStatus @default(DRAFT)
+  sourceType     DatasetSourceType? @default(CSV)
+  fileName       String?
+  fileSize       Int?
+  rowCount       Int                @default(0)
+  columnCount    Int                @default(0)
+  type           DatasetType        @default(UPLOADED)
+  status         DatasetStatus      @default(DRAFT)
 
   // Stores column definitions, inferred types, row count snapshot, etc.
   schemaMeta Json @default("{}")
@@ -302,16 +380,39 @@ model Dataset {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  dataSource   DataSource?  @relation(fields: [dataSourceId], references: [id], onDelete: SetNull)
-  createdBy    User         @relation("DatasetCreator", fields: [createdById], references: [id])
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  dataSource   DataSource?     @relation(fields: [dataSourceId], references: [id], onDelete: SetNull)
+  createdBy    User            @relation("DatasetCreator", fields: [createdById], references: [id])
 
-  charts Chart[]
+  columns DatasetColumn[]
+  charts  Chart[]
 
   @@index([organizationId])
+  @@index([workspaceId])
   @@index([dataSourceId])
   @@index([createdById])
   @@map("datasets")
+}
+
+// ============================================================
+// DATASET COLUMN
+// ============================================================
+
+model DatasetColumn {
+  id              String            @id @default(uuid())
+  datasetId       String
+  name            String
+  dataType        DatasetColumnType @default(STRING)
+  nullable        Boolean           @default(true)
+  ordinalPosition Int               @default(0)
+  createdAt       DateTime          @default(now())
+
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@index([datasetId])
+  @@index([datasetId, ordinalPosition])
+  @@map("dataset_columns")
 }
 
 // ============================================================
@@ -329,6 +430,11 @@ model Dashboard {
 
   // Stores grid layout configuration (column count, row height, etc.)
   layoutConfig Json @default("{}")
+
+  // Public read-only share link token and state
+  shareToken       String?   @unique
+  shareTokenActive Boolean   @default(false)
+  sharedAt         DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -382,18 +488,19 @@ model Chart {
 // ============================================================
 // DASHBOARD ACCESS
 // ============================================================
-// Supports both user-level and role-level access grants.
-// Either userId or roleId must be non-null (not both null).
+// Supports user-level, role-level, and organization-level access grants.
+// Exactly one of userId, roleId, or organizationId must be non-null.
 // Application layer enforces this invariant.
 
 model DashboardAccess {
-  id          String               @id @default(uuid())
-  dashboardId String
-  userId      String? // Grant to a specific user
-  roleId      String? // Grant to all members of a role
-  accessLevel DashboardAccessLevel @default(VIEW)
-  grantedAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id             String               @id @default(uuid())
+  dashboardId    String
+  userId         String? // Grant to a specific user
+  roleId         String? // Grant to all members of a role
+  organizationId String? // Grant to all members of an organization
+  accessLevel    DashboardAccessLevel @default(VIEW)
+  grantedAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
   dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
   user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -401,6 +508,7 @@ model DashboardAccess {
   @@index([dashboardId])
   @@index([userId])
   @@index([roleId])
+  @@index([organizationId])
   @@map("dashboard_access")
 }
 

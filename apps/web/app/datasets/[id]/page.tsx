@@ -9,12 +9,17 @@ import {
   apiPreviewDataset,
   apiUpdateDataset,
   apiQueryDataset,
+  apiPreviewCalculatedField,
+  apiCreateCalculatedField,
+  apiDeleteCalculatedField,
   type DatasetData,
   type DatasetQueryFilter,
   type DatasetQueryMeasure,
   type DatasetQueryResult,
   type FilterOperator,
   type AggregationFunction,
+  type CalculatedFieldConfig,
+  type PreviewCalculatedFieldResult,
   ApiError,
 } from "../../../lib/api";
 
@@ -53,9 +58,18 @@ export default function DatasetDetailPage({
 
   const [dataset, setDataset] = useState<DatasetData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"SCHEMA" | "PREVIEW" | "EXPLORE">("SCHEMA");
+  const [activeTab, setActiveTab] = useState<"SCHEMA" | "PREVIEW" | "EXPLORE" | "CALCULATED">("SCHEMA");
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // Calculated Fields State
+  const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
+  const [calcName, setCalcName] = useState("");
+  const [calcExpression, setCalcExpression] = useState("");
+  const [calcPreviewResult, setCalcPreviewResult] = useState<PreviewCalculatedFieldResult | null>(null);
+  const [previewingCalc, setPreviewingCalc] = useState(false);
+  const [savingCalc, setSavingCalc] = useState(false);
+  const [calcModalError, setCalcModalError] = useState<string | null>(null);
 
   // Edit State
   const [isEditing, setIsEditing] = useState(false);
@@ -454,6 +468,16 @@ export default function DatasetDetailPage({
           >
             🔍 Explore Data
           </button>
+          <button
+            onClick={() => setActiveTab("CALCULATED")}
+            className={`pb-3 px-4 text-xs font-bold transition border-b-2 ${
+              activeTab === "CALCULATED"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            ⚡ Calculated Fields ({dataset.calculatedFields?.length || dataset.columns.filter((c) => c.isCalculated).length})
+          </button>
         </div>
 
         {/* Tab 1: Schema Table */}
@@ -463,18 +487,21 @@ export default function DatasetDetailPage({
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">
-                    Column Name
+                    Column
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">
-                    Data Type
+                    Type
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">
                     Nullable
                   </th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">
+                    Position
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
-                {dataset.columns.map((col) => (
+                {dataset.columns.map((col, idx) => (
                   <tr key={col.name} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono font-medium text-gray-900">
                       {col.name}
@@ -504,6 +531,9 @@ export default function DatasetDetailPage({
                       >
                         {col.nullable ? "Nullable" : "Required"}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-gray-500">
+                      {col.ordinalPosition ?? idx + 1}
                     </td>
                   </tr>
                 ))}
@@ -982,6 +1012,306 @@ export default function DatasetDetailPage({
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab 4: Calculated Fields */}
+        {activeTab === "CALCULATED" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Calculated Fields (Formula Columns)</h3>
+                <p className="text-xs text-gray-500">
+                  Combine or transform existing columns using mathematical and string expressions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCalcName("");
+                  setCalcExpression("");
+                  setCalcPreviewResult(null);
+                  setCalcModalError(null);
+                  setIsCalcModalOpen(true);
+                }}
+                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition cursor-pointer"
+              >
+                + Add Calculated Field
+              </button>
+            </div>
+
+            {(!dataset.calculatedFields || dataset.calculatedFields.length === 0) &&
+            dataset.columns.filter((c) => c.isCalculated).length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center bg-gray-50">
+                <span className="text-2xl mb-2 block">⚡</span>
+                <p className="text-xs font-semibold text-gray-700">No calculated fields defined yet</p>
+                <p className="text-[11px] text-gray-400 mt-1 max-w-sm mx-auto">
+                  Create formulas like <code className="bg-gray-200 px-1 rounded">revenue - cost</code> or <code className="bg-gray-200 px-1 rounded">UPPER(region)</code> to compute custom values across rows.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsCalcModalOpen(true)}
+                  className="mt-4 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition"
+                >
+                  Create First Calculated Field
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">Field Name</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">Expression</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">Data Type</th>
+                      <th className="px-4 py-3 text-right font-semibold text-gray-600 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {(dataset.calculatedFields || []).map((cf) => (
+                      <tr key={cf.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-semibold text-gray-900 flex items-center gap-1.5">
+                          <span className="inline-block rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-bold text-indigo-700">fx</span>
+                          {cf.name}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-gray-700 bg-gray-50 rounded">
+                          {cf.expression}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex rounded bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 border border-blue-200">
+                            {cf.dataType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm(`Delete calculated field "${cf.name}"?`)) return;
+                              try {
+                                const res = await apiDeleteCalculatedField(dataset.id, cf.id);
+                                setDataset(res.dataset);
+                                setSuccessMsg(`Calculated field "${cf.name}" deleted.`);
+                              } catch (err: any) {
+                                setErrorMsg(err.message || "Failed to delete calculated field");
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 text-xs font-semibold cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modal: Create Calculated Field */}
+        {isCalcModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-lg bg-indigo-100 p-1.5 text-indigo-700 font-bold text-xs">fx</span>
+                  <h2 className="text-base font-bold text-gray-900">Create Calculated Field</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCalcModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 text-sm font-bold cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {calcModalError && (
+                <div className="mt-4 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+                  {calcModalError}
+                </div>
+              )}
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Field Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={calcName}
+                    onChange={(e) => setCalcName(e.target.value)}
+                    placeholder="e.g. profit, revenue_per_unit"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Formula Expression <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={calcExpression}
+                    onChange={(e) => setCalcExpression(e.target.value)}
+                    placeholder="e.g. revenue - cost, revenue / quantity * 100, UPPER(region)"
+                    className="w-full font-mono rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 bg-gray-50 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Helper chips: Columns */}
+                <div>
+                  <span className="block text-[11px] font-semibold text-gray-500 mb-1">Available Columns (Click to insert):</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {dataset.columns.map((c) => (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => setCalcExpression((prev) => (prev ? `${prev} ${c.name}` : c.name))}
+                        className="rounded border border-gray-200 bg-white px-2 py-0.5 text-[11px] text-gray-700 hover:bg-gray-100 font-mono"
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Helper chips: Functions & Operators */}
+                <div>
+                  <span className="block text-[11px] font-semibold text-gray-500 mb-1">Functions & Operators:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["+", "-", "*", "/", "%", "ROUND()", "ABS()", "UPPER()", "LOWER()", "TRIM()"].map((fn) => (
+                      <button
+                        key={fn}
+                        type="button"
+                        onClick={() => {
+                          if (fn.endsWith("()")) {
+                            const nameOnly = fn.slice(0, -2);
+                            setCalcExpression((prev) => (prev ? `${nameOnly}(${prev})` : `${nameOnly}()`));
+                          } else {
+                            setCalcExpression((prev) => (prev ? `${prev} ${fn} ` : `${fn} `));
+                          }
+                        }}
+                        className="rounded border border-indigo-100 bg-indigo-50/50 px-2 py-0.5 text-[11px] text-indigo-700 hover:bg-indigo-100 font-mono font-medium"
+                      >
+                        {fn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preview Button */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    disabled={previewingCalc || !calcName.trim() || !calcExpression.trim()}
+                    onClick={async () => {
+                      setPreviewingCalc(true);
+                      setCalcModalError(null);
+                      try {
+                        const res = await apiPreviewCalculatedField(dataset.id, {
+                          name: calcName.trim(),
+                          expression: calcExpression.trim(),
+                          limit: 5,
+                        });
+                        setCalcPreviewResult(res);
+                      } catch (err: any) {
+                        setCalcModalError(err.message || "Failed to evaluate expression");
+                        setCalcPreviewResult(null);
+                      } finally {
+                        setPreviewingCalc(false);
+                      }
+                    }}
+                    className="w-full rounded-lg border border-indigo-600 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition cursor-pointer disabled:opacity-50"
+                  >
+                    {previewingCalc ? "Evaluating..." : "👁️ Preview Formula Output"}
+                  </button>
+                </div>
+
+                {/* Preview Result Box */}
+                {calcPreviewResult && (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-gray-800">
+                        Inferred Type: <span className="text-indigo-600 font-bold">{calcPreviewResult.dataType}</span>
+                      </span>
+                      <span className="text-gray-500">
+                        Referenced: {calcPreviewResult.referencedColumns.join(", ") || "None"}
+                      </span>
+                    </div>
+
+                    <div className="max-h-40 overflow-x-auto rounded border border-gray-200 bg-white">
+                      <table className="min-w-full divide-y divide-gray-200 text-[11px]">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            {calcPreviewResult.referencedColumns.map((col) => (
+                              <th key={col} className="px-2.5 py-1.5 text-left font-semibold text-gray-600">
+                                {col}
+                              </th>
+                            ))}
+                            <th className="px-2.5 py-1.5 text-left font-bold text-indigo-700 bg-indigo-50">
+                              ⚡ {calcPreviewResult.name}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 font-mono">
+                          {calcPreviewResult.rows.map((row, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50">
+                              {calcPreviewResult.referencedColumns.map((col) => (
+                                <td key={col} className="px-2.5 py-1 text-gray-600 whitespace-nowrap">
+                                  {row[col] !== undefined && row[col] !== null ? String(row[col]) : "-"}
+                                </td>
+                              ))}
+                              <td className="px-2.5 py-1 font-bold text-indigo-800 bg-indigo-50/50 whitespace-nowrap">
+                                {row[calcPreviewResult.name] !== undefined && row[calcPreviewResult.name] !== null
+                                  ? String(row[calcPreviewResult.name])
+                                  : "null"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="mt-6 flex justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCalcModalOpen(false)}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={savingCalc || !calcName.trim() || !calcExpression.trim()}
+                  onClick={async () => {
+                    setSavingCalc(true);
+                    setCalcModalError(null);
+                    try {
+                      const res = await apiCreateCalculatedField(dataset.id, {
+                        name: calcName.trim(),
+                        expression: calcExpression.trim(),
+                      });
+                      setDataset(res.dataset);
+                      setIsCalcModalOpen(false);
+                      setSuccessMsg(`Calculated field "${res.field.name}" created successfully!`);
+                    } catch (err: any) {
+                      setCalcModalError(err.message || "Failed to create calculated field");
+                    } finally {
+                      setSavingCalc(false);
+                    }
+                  }}
+                  className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition disabled:opacity-50"
+                >
+                  {savingCalc ? "Saving..." : "Save Calculated Field"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

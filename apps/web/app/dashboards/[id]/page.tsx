@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useCallback, useRef } from "react";
+import { useEffect, useState, use, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../contexts/auth-context";
@@ -9,17 +9,32 @@ import {
   apiUpdateDashboard,
   apiDeleteDashboard,
   apiListCharts,
+  apiCreateChart,
+  apiUpdateChart,
   apiDeleteChart,
   apiListDatasets,
   apiQueryDataset,
+  apiListVisualizations,
+  apiCreateShareLink,
+  apiGetShareLinkStatus,
+  apiDisableShareLink,
+  apiGetDashboardSchedule,
+  apiSaveDashboardSchedule,
+  apiDeleteDashboardSchedule,
+  apiGenerateDashboardReport,
+  type DashboardScheduleData,
+  type DashboardReportSnapshot,
+  type ReportFrequency,
   type DashboardData,
   type DashboardStatus,
   type DashboardVisibility,
   type ChartData,
   type ChartType,
+  type VisualizationData,
   type DatasetData,
   type DatasetColumn,
   type DatasetQueryResult,
+  type ShareLinkStatusResponse,
   ApiError,
 } from "../../../lib/api";
 import { buildChartQueryParams } from "../../../lib/chart-query-mapper";
@@ -37,6 +52,7 @@ import {
   encodeFiltersToUrl,
   parseFiltersFromUrl,
 } from "../../../lib/dashboard-filters";
+import { exportChartDataToCsv } from "../../../lib/export-csv";
 import {
   BarChart3,
   LineChart as LineChartIcon,
@@ -55,6 +71,23 @@ import {
   Layers,
   CheckCircle2,
   AlertCircle,
+  FolderPlus,
+  Save,
+  Search,
+  LayoutGrid,
+  Maximize2,
+  Minimize2,
+  ExternalLink,
+  Share2,
+  Printer,
+  Copy,
+  Check,
+  Globe,
+  Lock,
+  X,
+  Download,
+  Filter,
+  Clock,
 } from "lucide-react";
 
 const QUICK_CHART_TYPES: { value: ChartType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -106,6 +139,12 @@ export default function DashboardDetailPage({
   // Deleting State
   const [deletingChartId, setDeletingChartId] = useState<string | null>(null);
 
+  // Auto-Refresh & Last Updated State
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0); // 0 = Off, 30, 60, 300
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date>(new Date());
+  const [isRefreshingCharts, setIsRefreshingCharts] = useState(false);
+  const isRefreshingRef = useRef(false);
+
   // Dashboard Meta Edit State
   const [isEditingDash, setIsEditingDash] = useState(false);
   const [editName, setEditName] = useState("");
@@ -114,6 +153,37 @@ export default function DashboardDetailPage({
   const [editVisibility, setEditVisibility] = useState<DashboardVisibility>("ORGANIZATION");
   const [savingDashEdit, setSavingDashEdit] = useState(false);
   const [showDeleteDashModal, setShowDeleteDashModal] = useState(false);
+
+  // Saved Visualizations Library & Add Saved Modal State
+  const [isAddSavedModalOpen, setIsAddSavedModalOpen] = useState(false);
+  const [savedVisualizations, setSavedVisualizations] = useState<VisualizationData[]>([]);
+  const [loadingSavedViz, setLoadingSavedViz] = useState(false);
+  const [savedVizSearch, setSavedVizSearch] = useState("");
+  const [addingVizId, setAddingVizId] = useState<string | null>(null);
+
+  // Dashboard Save & Reload State
+  const [savingDashboard, setSavingDashboard] = useState(false);
+  const [reloadingDashboard, setReloadingDashboard] = useState(false);
+
+  // Dashboard Share State
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareStatus, setShareStatus] = useState<ShareLinkStatusResponse | null>(null);
+  const [loadingShareStatus, setLoadingShareStatus] = useState(false);
+  const [updatingShare, setUpdatingShare] = useState(false);
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
+
+  // Dashboard Report Schedule & Snapshot State
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleData, setScheduleData] = useState<DashboardScheduleData | null>(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [deletingSchedule, setDeletingSchedule] = useState(false);
+  const [scheduleFrequency, setScheduleFrequency] = useState<ReportFrequency>("DAILY");
+  const [scheduleEnabled, setScheduleEnabled] = useState(true);
+  const [scheduleRecipients, setScheduleRecipients] = useState("");
+  const [scheduleWebhookUrl, setScheduleWebhookUrl] = useState("");
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [lastGeneratedReport, setLastGeneratedReport] = useState<DashboardReportSnapshot | null>(null);
 
   useEffect(() => {
     if (!isLoading && !auth) {
@@ -144,23 +214,29 @@ export default function DashboardDetailPage({
     if (!auth || !id) return;
     let ignore = false;
 
-    Promise.all([
-      apiGetDashboard(id),
-      apiListCharts(id),
-      apiListDatasets().catch(() => [] as DatasetData[]),
-    ])
-      .then(([dashData, chartsData, datasetsData]) => {
-        if (!ignore) {
-          setDashboard(dashData);
-          setCharts(chartsData);
-          setDatasets(datasetsData);
-          setEditName(dashData.name);
-          setEditDescription(dashData.description || "");
-          setEditStatus(dashData.status);
-          setEditVisibility(dashData.visibility);
-          setLoading(false);
-        }
-      })
+      Promise.all([
+        apiGetDashboard(id),
+        apiListCharts(id),
+        apiListDatasets().catch(() => [] as DatasetData[]),
+        apiGetDashboardSchedule(id).catch(() => null),
+      ])
+        .then(([dashData, chartsData, datasetsData, scheduleRes]) => {
+          if (!ignore) {
+            setDashboard(dashData);
+            setCharts(chartsData);
+            setDatasets(datasetsData);
+            setScheduleData(scheduleRes);
+            if (scheduleRes) {
+              setScheduleFrequency(scheduleRes.frequency);
+              setScheduleEnabled(scheduleRes.enabled);
+            }
+            setEditName(dashData.name);
+            setEditDescription(dashData.description || "");
+            setEditStatus(dashData.status);
+            setEditVisibility(dashData.visibility);
+            setLoading(false);
+          }
+        })
       .catch((err) => {
         if (!ignore) {
           setErrorMsg(err instanceof ApiError ? err.message : "Failed to load dashboard");
@@ -309,6 +385,59 @@ export default function DashboardDetailPage({
     setDashboardFilters([]);
   };
 
+  // Lightweight Refresh of All Visualizations without page reload
+  const handleManualRefresh = useCallback(async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+    setIsRefreshingCharts(true);
+    try {
+      await Promise.allSettled(
+        charts.map((chart) =>
+          executeChartQuery(chart, dashboardFilters, drillDownStates[chart.id] || null, true)
+        )
+      );
+      setLastUpdatedAt(new Date());
+    } catch {
+      // Gracefully handle any query execution error
+    } finally {
+      isRefreshingRef.current = false;
+      setIsRefreshingCharts(false);
+    }
+  }, [charts, dashboardFilters, drillDownStates, executeChartQuery]);
+
+  // Auto-refresh interval timer (stops polling when unmounted)
+  useEffect(() => {
+    if (autoRefreshInterval <= 0) return;
+    const intervalId = setInterval(() => {
+      void handleManualRefresh();
+    }, autoRefreshInterval * 1000);
+    return () => clearInterval(intervalId);
+  }, [autoRefreshInterval, handleManualRefresh]);
+
+  // Distinct column values for multi-select category filter
+  const columnValues = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const res of Object.values(chartQueryResults)) {
+      if (res.data?.rows) {
+        for (const row of res.data.rows) {
+          for (const [key, val] of Object.entries(row)) {
+            if (val !== null && val !== undefined) {
+              if (!map[key]) map[key] = new Set<string>();
+              if (map[key].size < 50) {
+                map[key].add(String(val));
+              }
+            }
+          }
+        }
+      }
+    }
+    const result: Record<string, string[]> = {};
+    for (const [k, v] of Object.entries(map)) {
+      result[k] = Array.from(v);
+    }
+    return result;
+  }, [chartQueryResults]);
+
   // Reset entire dashboard to default state
   const handleResetDashboard = () => {
     setDashboardFilters([]);
@@ -395,6 +524,295 @@ export default function DashboardDetailPage({
     }
   };
 
+  // Fetch saved visualizations from the library
+  const loadSavedVisualizations = useCallback(async () => {
+    setLoadingSavedViz(true);
+    try {
+      const vizs = await apiListVisualizations();
+      setSavedVisualizations(vizs);
+    } catch {
+      // Non-blocking library load failure
+    } finally {
+      setLoadingSavedViz(false);
+    }
+  }, []);
+
+  // Initial load of saved visualizations library
+  useEffect(() => {
+    if (!auth) return;
+    void loadSavedVisualizations();
+  }, [auth, loadSavedVisualizations]);
+
+  // Open Add Saved Modal
+  const handleOpenAddSavedModal = () => {
+    setIsAddSavedModalOpen(true);
+    void loadSavedVisualizations();
+  };
+
+  // Add saved visualization directly to this dashboard
+  const handleAddSavedVisualization = async (viz: VisualizationData) => {
+    if (!dashboard) return;
+    setAddingVizId(viz.id);
+    setErrorMsg(null);
+    try {
+      const nextOrder = charts.length;
+      const newChart = await apiCreateChart(dashboard.id, {
+        title: viz.title,
+        description: viz.description || null,
+        chartType: viz.chartType,
+        datasetId: viz.datasetId,
+        config: viz.config as any,
+        position: {
+          x: (nextOrder % 2) * 6,
+          y: Math.floor(nextOrder / 2) * 4,
+          w: 6,
+          h: 4,
+        },
+        sortOrder: nextOrder,
+      });
+
+      setCharts((prev) => [...prev, newChart]);
+      void executeChartQuery(newChart, dashboardFilters, null, true);
+      setIsAddSavedModalOpen(false);
+      setSuccessMsg(`Visualization "${viz.title}" added to dashboard.`);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to add saved visualization");
+    } finally {
+      setAddingVizId(null);
+    }
+  };
+
+  // Resize chart width on the grid (w: 4, 6, 12)
+  const handleUpdateChartWidth = async (chartId: string, w: number) => {
+    if (!dashboard) return;
+    const chart = charts.find((c) => c.id === chartId);
+    if (!chart) return;
+
+    const newPos = { ...(chart.position || { x: 0, y: 0, w: 6, h: 4 }), w };
+    setCharts((prev) =>
+      prev.map((c) => (c.id === chartId ? { ...c, position: newPos } : c))
+    );
+
+    try {
+      await apiUpdateChart(dashboard.id, chartId, { position: newPos });
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to update layout");
+    }
+  };
+
+  // Resize chart height on the grid (h: 4 = 250px, h: 6 = 380px)
+  const handleUpdateChartHeight = async (chartId: string, h: number) => {
+    if (!dashboard) return;
+    const chart = charts.find((c) => c.id === chartId);
+    if (!chart) return;
+
+    const newPos = { ...(chart.position || { x: 0, y: 0, w: 6, h: 4 }), h };
+    setCharts((prev) =>
+      prev.map((c) => (c.id === chartId ? { ...c, position: newPos } : c))
+    );
+
+    try {
+      await apiUpdateChart(dashboard.id, chartId, { position: newPos });
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to update height");
+    }
+  };
+
+  // Save Dashboard Layout & Chart Configurations
+  const handleSaveDashboard = async () => {
+    if (!dashboard) return;
+    setSavingDashboard(true);
+    setErrorMsg(null);
+    try {
+      const updated = await apiUpdateDashboard(dashboard.id, {
+        layoutConfig: {
+          chartCount: charts.length,
+          chartOrder: charts.map((c) => c.id),
+          lastSavedAt: new Date().toISOString(),
+        },
+      });
+      setDashboard(updated);
+
+      // Persist all charts' positions
+      await Promise.all(
+        charts.map((c) =>
+          apiUpdateChart(dashboard.id, c.id, {
+            position: c.position,
+            sortOrder: c.sortOrder,
+          }).catch(() => null)
+        )
+      );
+
+      setSuccessMsg("Dashboard layout and visualizations saved successfully.");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to save dashboard");
+    } finally {
+      setSavingDashboard(false);
+    }
+  };
+
+  // Reload Dashboard with Fresh Data from Database
+  const handleReloadDashboard = async () => {
+    if (!dashboard) return;
+    setReloadingDashboard(true);
+    setErrorMsg(null);
+    lastQueryParamsRef.current = {};
+    try {
+      const [dashData, chartsData] = await Promise.all([
+        apiGetDashboard(id),
+        apiListCharts(id),
+      ]);
+      setDashboard(dashData);
+      setCharts(chartsData);
+      setEditName(dashData.name);
+      setEditDescription(dashData.description || "");
+      setEditStatus(dashData.status);
+      setEditVisibility(dashData.visibility);
+
+      for (const c of chartsData) {
+        void executeChartQuery(c, dashboardFilters, null, true);
+      }
+      setSuccessMsg("Dashboard reloaded with latest database records.");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to reload dashboard");
+    } finally {
+      setReloadingDashboard(false);
+    }
+  };
+
+  // Share Management Handlers
+  const handleOpenShareModal = async () => {
+    setIsShareModalOpen(true);
+    setLoadingShareStatus(true);
+    try {
+      const res = await apiGetShareLinkStatus(id);
+      setShareStatus(res);
+    } catch (err) {
+      console.error("Failed to load share status", err);
+    } finally {
+      setLoadingShareStatus(false);
+    }
+  };
+
+  const handleCreateShareLink = async () => {
+    setUpdatingShare(true);
+    try {
+      const res = await apiCreateShareLink(id);
+      setShareStatus(res);
+      setSuccessMsg("Public share link created successfully!");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to create share link");
+    } finally {
+      setUpdatingShare(false);
+    }
+  };
+
+  const handleDisableShareLink = async () => {
+    setUpdatingShare(true);
+    try {
+      const res = await apiDisableShareLink(id);
+      setShareStatus(res);
+      setSuccessMsg("Share link disabled. Public access has been revoked.");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to disable share link");
+    } finally {
+      setUpdatingShare(false);
+    }
+  };
+
+  // Schedule Management Handlers
+  const handleOpenScheduleModal = async () => {
+    setIsScheduleModalOpen(true);
+    setLoadingSchedule(true);
+    try {
+      const res = await apiGetDashboardSchedule(id);
+      setScheduleData(res);
+      if (res) {
+        setScheduleFrequency(res.frequency);
+        setScheduleEnabled(res.enabled);
+        setScheduleRecipients(res.recipients?.join(", ") || "");
+        setScheduleWebhookUrl(res.webhookUrl || "");
+      } else {
+        setScheduleRecipients("");
+        setScheduleWebhookUrl("");
+      }
+    } catch {
+      // Gracefully handle error
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
+
+  const handleSaveSchedule = async () => {
+    setSavingSchedule(true);
+    setErrorMsg(null);
+    try {
+      const recipientsList = scheduleRecipients
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
+
+      const res = await apiSaveDashboardSchedule(id, {
+        frequency: scheduleFrequency,
+        enabled: scheduleEnabled,
+        recipients: recipientsList.length > 0 ? recipientsList : undefined,
+        webhookUrl: scheduleWebhookUrl.trim() || undefined,
+        deliveryType:
+          recipientsList.length > 0 && scheduleWebhookUrl.trim()
+            ? "BOTH"
+            : scheduleWebhookUrl.trim()
+            ? "WEBHOOK"
+            : "EMAIL",
+      });
+      setScheduleData(res);
+      setSuccessMsg(`Report schedule saved (${scheduleFrequency}, ${scheduleEnabled ? "Active" : "Paused"}).`);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to save report schedule");
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const handleDeleteSchedule = async () => {
+    setDeletingSchedule(true);
+    setErrorMsg(null);
+    try {
+      await apiDeleteDashboardSchedule(id);
+      setScheduleData(null);
+      setSuccessMsg("Dashboard report schedule deleted.");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to delete report schedule");
+    } finally {
+      setDeletingSchedule(false);
+    }
+  };
+
+  const handleGenerateReportNow = async () => {
+    setGeneratingReport(true);
+    setErrorMsg(null);
+    try {
+      const snapshot = await apiGenerateDashboardReport(id);
+      setLastGeneratedReport(snapshot);
+      setSuccessMsg(`Report generated for ${snapshot.chartCount} charts (${snapshot.summary.totalRecords} records).`);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to generate report snapshot");
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    if (!shareStatus?.shareUrl) return;
+    void navigator.clipboard.writeText(shareStatus.shareUrl);
+    setCopiedShareLink(true);
+    setTimeout(() => setCopiedShareLink(false), 2000);
+  };
+
+  // Export / Print Dashboard Handler
+  const handlePrintDashboard = () => {
+    window.print();
+  };
+
   if (isLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -473,7 +891,7 @@ export default function DashboardDetailPage({
       {/* ============================================================ */}
       {/* 1. TOP BAR — Enterprise Dashboard Studio Header */}
       {/* ============================================================ */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-20">
+      <header className="border-b border-gray-200 bg-white sticky top-0 z-20 no-print">
         <div className="mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 font-bold text-gray-900">
@@ -509,7 +927,7 @@ export default function DashboardDetailPage({
           </div>
 
           {/* Right Controls: Mode Toggle, Add Visualization, Profile */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {/* View Mode Switch */}
             <div className="flex rounded-lg bg-gray-100 p-0.5 text-xs font-medium">
               <button
@@ -542,15 +960,132 @@ export default function DashboardDetailPage({
               </button>
             </div>
 
-            {canEdit && (
+            {/* Reload Dashboard Button */}
+            <button
+              type="button"
+              onClick={handleReloadDashboard}
+              disabled={reloadingDashboard}
+              title="Reload Dashboard from Database"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${reloadingDashboard ? "animate-spin text-indigo-600" : "text-gray-500"}`} />
+              <span className="hidden sm:inline">{reloadingDashboard ? "Reloading..." : "Reload"}</span>
+            </button>
+
+            {/* Auto-Refresh & Manual Visualizations Refresh Controls */}
+            <div className="flex items-center gap-1 bg-gray-100/90 border border-gray-200 rounded-lg p-1 text-xs">
               <button
                 type="button"
-                onClick={() => handleOpenNewStudio()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
+                onClick={handleManualRefresh}
+                disabled={isRefreshingCharts}
+                title="Refresh Visualizations Now"
+                className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 transition disabled:opacity-50"
               >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Add Visualization</span>
+                <RefreshCw className={`h-3 w-3 ${isRefreshingCharts ? "animate-spin text-indigo-600" : "text-gray-500"}`} />
+                <span className="hidden md:inline">Refresh</span>
               </button>
+              <select
+                value={autoRefreshInterval}
+                onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
+                title="Auto-refresh interval"
+                className="bg-transparent text-[11px] font-medium text-gray-600 focus:outline-none cursor-pointer py-0.5"
+              >
+                <option value={0}>Auto: Off</option>
+                <option value={30}>Auto: 30s</option>
+                <option value={60}>Auto: 1m</option>
+                <option value={300}>Auto: 5m</option>
+              </select>
+              <span className="text-[10px] text-gray-400 pl-1 border-l border-gray-300 hidden xl:inline" title="Last updated time">
+                Updated {lastUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </span>
+            </div>
+
+            {/* Save Status Indicator */}
+            <div className="hidden lg:flex items-center">
+              {savingDashboard ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 font-medium">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" />
+                  Saving...
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-medium">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                  Saved
+                </span>
+              )}
+            </div>
+
+            {/* Filter Count Badge */}
+            {dashboardFilters.length > 0 && (
+              <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                <Filter className="h-3 w-3" />
+                {dashboardFilters.length} active
+              </span>
+            )}
+
+            {/* Export / Print Dashboard Button */}
+            <button
+              type="button"
+              onClick={handlePrintDashboard}
+              title="Export / Print Dashboard as PDF"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+            >
+              <Printer className="h-3.5 w-3.5 text-gray-500" />
+              <span className="hidden sm:inline">Export / Print</span>
+            </button>
+
+            {/* Share Dashboard Button */}
+            <button
+              type="button"
+              onClick={handleOpenShareModal}
+              title="Share Dashboard via Secure Link"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/60 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition shadow-2xs"
+            >
+              <Share2 className="h-3.5 w-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">Share</span>
+            </button>
+
+            {/* Schedule Report Button */}
+            <button
+              type="button"
+              onClick={handleOpenScheduleModal}
+              title="Configure Automated Report Schedule"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50/60 px-2.5 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition shadow-2xs"
+            >
+              <Clock className="h-3.5 w-3.5 text-purple-600" />
+              <span className="hidden sm:inline">Schedule</span>
+            </button>
+
+            {canEdit && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleOpenAddSavedModal}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-2xs hover:bg-indigo-100 transition"
+                >
+                  <FolderPlus className="h-3.5 w-3.5" />
+                  <span>Add Saved Chart</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenNewStudio()}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>New Chart</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveDashboard}
+                  disabled={savingDashboard}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition disabled:opacity-70"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  <span>{savingDashboard ? "Saving..." : "Save Dashboard"}</span>
+                </button>
+              </>
             )}
 
             <div className="h-5 w-px bg-gray-200" />
@@ -582,6 +1117,7 @@ export default function DashboardDetailPage({
         onRemoveFilter={handleRemoveFilter}
         onClearAll={handleClearAllFilters}
         onResetDashboard={handleResetDashboard}
+        columnValues={columnValues}
       />
 
       {/* Global Alerts */}
@@ -610,7 +1146,7 @@ export default function DashboardDetailPage({
       <div className="flex-1 flex overflow-hidden">
         {/* Left Quick Palette (Hidden in Preview Mode) */}
         {!previewMode && (
-          <aside className="w-64 border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto hidden md:flex">
+          <aside className="w-64 border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto hidden md:flex no-print">
             <div className="p-4 border-b border-gray-100">
               <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
                 Visualizations
@@ -641,6 +1177,41 @@ export default function DashboardDetailPage({
                   </button>
                 );
               })}
+            </div>
+
+            {/* Saved Visualizations Library Section */}
+            <div className="p-4 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <FolderPlus className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>Saved Library</span>
+                </h3>
+                <span className="text-[10px] text-gray-400 font-mono">
+                  {savedVisualizations.length}
+                </span>
+              </div>
+              <div className="space-y-1.5 mt-2 max-h-44 overflow-y-auto">
+                {savedVisualizations.length === 0 ? (
+                  <p className="text-[11px] text-gray-400 italic">No saved charts.</p>
+                ) : (
+                  savedVisualizations.slice(0, 10).map((viz) => (
+                    <div
+                      key={viz.id}
+                      onClick={() => void handleAddSavedVisualization(viz)}
+                      className="rounded-lg border border-gray-100 p-2 hover:border-indigo-300 hover:bg-indigo-50/50 transition cursor-pointer text-xs flex items-center justify-between group"
+                      title="Click to add to dashboard"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="font-semibold text-gray-800 truncate">{viz.title}</p>
+                        <span className="text-[10px] text-indigo-600 font-mono font-bold uppercase">{viz.chartType}</span>
+                      </div>
+                      <span className="text-indigo-600 text-xs font-bold opacity-0 group-hover:opacity-100 transition">
+                        +
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             {/* Available Datasets Section */}
@@ -700,9 +1271,26 @@ export default function DashboardDetailPage({
         )}
 
         {/* Center Canvas */}
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50 flex flex-col">
+        <main className="flex-1 overflow-y-auto p-6 bg-gray-50 flex flex-col print:p-0 print:bg-white print:overflow-visible">
+          {/* Printable Report Header (Visible only when printing) */}
+          <div className="hidden print:block mb-6 border-b-2 border-gray-900 pb-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{dashboard.name}</h1>
+                {dashboard.description && (
+                  <p className="text-sm text-gray-600 mt-1">{dashboard.description}</p>
+                )}
+              </div>
+              <div className="text-right text-xs text-gray-500">
+                <p className="font-bold text-indigo-700 uppercase tracking-wider text-sm">RicozViz Report</p>
+                <p className="mt-1">Generated: {new Date().toLocaleDateString()}</p>
+                <p>Status: {dashboard.status}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Dashboard Meta Bar */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
             <div>
               {isEditingDash ? (
                 <form onSubmit={handleSaveDashEdit} className="flex flex-wrap items-center gap-2">
@@ -789,28 +1377,48 @@ export default function DashboardDetailPage({
                 No visualizations on this dashboard
               </h3>
               <p className="mt-1 text-xs text-gray-500 max-w-sm">
-                Open the Visualization Studio to select a dataset, configure measures and dimensions, and save interactive charts.
+                Add an existing visualization from your saved library, or create a brand new chart from your datasets.
               </p>
               {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenNewStudio()}
-                  className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Create First Visualization</span>
-                </button>
+                <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+                  <button
+                    type="button"
+                    onClick={handleOpenAddSavedModal}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-700 shadow-2xs hover:bg-indigo-100 transition"
+                  >
+                    <FolderPlus className="h-4 w-4" />
+                    <span>Add Saved Visualization</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenNewStudio()}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create New Visualization</span>
+                  </button>
+                </div>
               )}
             </div>
           ) : (
-            /* Dashboard Grid Canvas */
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            /* Dashboard Grid Canvas — 12-Column Responsive Layout */
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {charts.map((chart) => {
                 const queryState = chartQueryResults[chart.id];
                 const dims = chart.config?.dimensions || [];
                 const measures = chart.config?.measures || [];
                 const dataset = datasets.find((d) => d.id === chart.datasetId);
                 const datasetColumns = dataset?.columns;
+
+                const width = chart.position?.w || 6;
+                const heightUnit = chart.position?.h || 4;
+                const chartHeight = heightUnit === 6 ? 380 : 250;
+                const colSpanClass =
+                  width >= 12
+                    ? "col-span-12"
+                    : width <= 4
+                      ? "col-span-12 md:col-span-6 xl:col-span-4"
+                      : "col-span-12 md:col-span-6 xl:col-span-6";
 
                 const applicableFilters = dashboardFilters.filter((df) => {
                   if (df.isCrossFilter && df.sourceChartId === chart.id) return false;
@@ -828,7 +1436,7 @@ export default function DashboardDetailPage({
                 return (
                   <div
                     key={chart.id}
-                    className="rounded-xl border border-gray-200 bg-white shadow-xs flex flex-col justify-between overflow-hidden group hover:shadow-md transition"
+                    className={`rounded-xl border border-gray-200 bg-white shadow-xs flex flex-col justify-between overflow-hidden group hover:shadow-md transition ${colSpanClass} break-inside-avoid print:shadow-none print:border-gray-300 print:mb-6`}
                   >
                     {/* Card Header */}
                     <div className="p-4 border-b border-gray-100 flex items-start justify-between gap-2">
@@ -848,8 +1456,52 @@ export default function DashboardDetailPage({
                         )}
                       </div>
 
-                      {/* Card Actions: Refresh, Edit, Delete */}
-                      <div className="flex items-center gap-1 shrink-0">
+                      {/* Card Actions: Width, Height, Refresh, Edit, Delete */}
+                      <div className="flex items-center gap-1 shrink-0 no-print">
+                        {canEdit && (
+                          <div className="hidden sm:flex items-center gap-0.5 bg-gray-100 rounded p-0.5 text-[10px] mr-1">
+                            <button
+                              type="button"
+                              onClick={() => void handleUpdateChartWidth(chart.id, 6)}
+                              title="Half Width (6 columns)"
+                              className={`px-1.5 py-0.5 rounded font-mono transition ${width === 6 ? "bg-white font-bold text-indigo-700 shadow-2xs" : "text-gray-500 hover:text-gray-900"}`}
+                            >
+                              1/2
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleUpdateChartWidth(chart.id, 12)}
+                              title="Full Width (12 columns)"
+                              className={`px-1.5 py-0.5 rounded font-mono transition ${width >= 12 ? "bg-white font-bold text-indigo-700 shadow-2xs" : "text-gray-500 hover:text-gray-900"}`}
+                            >
+                              Full
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleUpdateChartHeight(chart.id, heightUnit === 6 ? 4 : 6)}
+                              title={heightUnit === 6 ? "Make Compact Height" : "Make Tall Height"}
+                              className={`px-1.5 py-0.5 rounded font-mono transition ${heightUnit === 6 ? "bg-white font-bold text-indigo-700 shadow-2xs" : "text-gray-500 hover:text-gray-900"}`}
+                            >
+                              {heightUnit === 6 ? "Tall" : "Def"}
+                            </button>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const ok = exportChartDataToCsv(chart.title, queryState?.data);
+                            if (!ok) {
+                              setErrorMsg("No query data available to export for this chart.");
+                            } else {
+                              setSuccessMsg(`Exported data for "${chart.title}" as CSV.`);
+                            }
+                          }}
+                          title="Export Current Chart Data (CSV)"
+                          disabled={!queryState?.data?.rows || queryState?.data?.rows.length === 0}
+                          className="rounded p-1 text-gray-400 hover:text-emerald-600 hover:bg-gray-100 text-xs transition disabled:opacity-30 disabled:hover:text-gray-400"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => void executeChartQuery(chart, dashboardFilters, activeDrill, true)}
@@ -930,14 +1582,14 @@ export default function DashboardDetailPage({
                     )}
 
                     {/* Card Visualization Body */}
-                    <div className="p-4 flex-1 flex flex-col justify-center min-h-[260px]">
+                    <div className="p-4 flex-1 flex flex-col justify-center" style={{ minHeight: chartHeight + 20 }}>
                       <ChartRenderer
                         chartType={chart.chartType}
                         config={chart.config}
                         queryResult={queryState?.data || null}
                         isLoading={queryState?.loading || false}
                         error={queryState?.error || null}
-                        height={250}
+                        height={chartHeight}
                         onDataPointClick={(field, value) => handleChartDataPointClick(chart, field, value)}
                         selectedFilterValue={
                           dashboardFilters.find(
@@ -1039,6 +1691,571 @@ export default function DashboardDetailPage({
           </div>
         </div>
       )}
+
+      {/* Add Saved Visualization Modal */}
+      {isAddSavedModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-2xs p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                  <FolderPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Add Saved Visualization</h3>
+                  <p className="text-xs text-gray-500">
+                    Select a visualization from your library to add to this dashboard.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddSavedModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="p-4 border-b border-gray-100 bg-white">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Filter saved visualizations by title, chart type, or dataset..."
+                  value={savedVizSearch}
+                  onChange={(e) => setSavedVizSearch(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 pl-9 pr-4 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-indigo-500 focus:bg-white focus:outline-hidden transition"
+                />
+              </div>
+            </div>
+
+            {/* Visualizations List */}
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-2.5 bg-gray-50/30">
+              {loadingSavedViz ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs text-gray-500">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                  <span>Loading saved visualizations library...</span>
+                </div>
+              ) : savedVisualizations.length === 0 ? (
+                <div className="py-12 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 mx-auto mb-3">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-gray-900">No saved visualizations yet</h4>
+                  <p className="mt-1 text-xs text-gray-500 max-w-sm mx-auto">
+                    Create and save charts in the Visualization Studio first, then add them to your dashboards.
+                  </p>
+                  <Link
+                    href="/visualizations"
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
+                  >
+                    <span>Open Visualization Studio</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+              ) : (
+                (() => {
+                  const filtered = savedVisualizations.filter((viz) => {
+                    if (!savedVizSearch.trim()) return true;
+                    const q = savedVizSearch.toLowerCase();
+                    return (
+                      viz.title.toLowerCase().includes(q) ||
+                      viz.chartType.toLowerCase().includes(q) ||
+                      (viz.datasetName && viz.datasetName.toLowerCase().includes(q))
+                    );
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="py-8 text-center text-xs text-gray-500">
+                        No saved visualizations matching &quot;{savedVizSearch}&quot;.
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((viz) => {
+                    const isAdding = addingVizId === viz.id;
+                    const catField = viz.config?.category || viz.config?.xAxis || (viz.config?.dimensions && viz.config.dimensions[0]);
+                    const valField = viz.config?.value || viz.config?.yAxis || (viz.config?.measures && viz.config.measures[0]?.column);
+                    const agg = viz.config?.aggregation || (viz.config?.measures && viz.config.measures[0]?.aggregation) || "SUM";
+
+                    return (
+                      <div
+                        key={viz.id}
+                        className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-2xs hover:border-indigo-300 hover:shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-xs text-gray-900 truncate">{viz.title}</h4>
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-[10px] font-bold text-indigo-700 uppercase">
+                              {viz.chartType}
+                            </span>
+                          </div>
+                          {viz.description && (
+                            <p className="text-[11px] text-gray-400 truncate mt-0.5">{viz.description}</p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-gray-500 font-mono">
+                            {viz.datasetName && (
+                              <span className="flex items-center gap-1 bg-gray-100 rounded px-1.5 py-0.5">
+                                <Database className="h-2.5 w-2.5 text-gray-400" />
+                                <span>{viz.datasetName}</span>
+                              </span>
+                            )}
+                            {catField && (
+                              <span className="bg-gray-100 rounded px-1.5 py-0.5">
+                                X: {String(catField)}
+                              </span>
+                            )}
+                            {valField && (
+                              <span className="bg-gray-100 rounded px-1.5 py-0.5">
+                                Y: {agg}({String(valField)})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={isAdding}
+                          onClick={() => void handleAddSavedVisualization(viz)}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 transition disabled:opacity-70 shrink-0"
+                        >
+                          {isAdding ? (
+                            <>
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                              <span>Adding...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-3.5 w-3.5" />
+                              <span>Add to Dashboard</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  });
+                })()
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between text-xs">
+              <span className="text-gray-400 text-[11px]">
+                {savedVisualizations.length} saved visualization{savedVisualizations.length === 1 ? "" : "s"} available
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsAddSavedModalOpen(false)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 5. SHARE DASHBOARD MODAL */}
+      {/* ============================================================ */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 no-print">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 p-5 bg-gray-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                  <Share2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Share Dashboard</h3>
+                  <p className="text-xs text-gray-500">
+                    Create a secure read-only link to share with clients or stakeholders
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-5">
+              {loadingShareStatus ? (
+                <div className="flex items-center justify-center py-8 text-xs text-gray-500 gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
+                  <span>Loading sharing status...</span>
+                </div>
+              ) : shareStatus?.active && shareStatus.shareUrl ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-emerald-900 space-y-1">
+                      <p className="font-semibold">Public Link is Active</p>
+                      <p className="text-emerald-700 text-[11px]">
+                        Anyone with this link can view this dashboard in read-only mode without logging in. Your private workspace data and credentials remain strictly isolated.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      Share Link
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={shareStatus.shareUrl}
+                        className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-mono text-gray-800 focus:outline-none select-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCopyShareLink}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 transition shrink-0"
+                      >
+                        {copiedShareLink ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>Copy Link</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <a
+                      href={shareStatus.shareUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span>Open Shared View in New Tab</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      disabled={updatingShare}
+                      onClick={handleDisableShareLink}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                    >
+                      {updatingShare ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Lock className="h-3.5 w-3.5" />
+                      )}
+                      <span>Disable Link</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 space-y-4">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                    <Globe className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold text-gray-900">No active share link</h4>
+                    <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                      Generate a unique, cryptographically secure share link to allow stakeholders to view this dashboard in read-only mode.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={updatingShare}
+                    onClick={handleCreateShareLink}
+                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition disabled:opacity-70"
+                  >
+                    {updatingShare ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Share2 className="h-4 w-4" />
+                    )}
+                    <span>Create Share Link</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between text-xs">
+              <span className="text-gray-400 text-[11px]">
+                {shareStatus?.sharedAt
+                  ? `Shared on ${new Date(shareStatus.sharedAt).toLocaleDateString()}`
+                  : "Private to Workspace"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 6. SCHEDULE REPORT MODAL */}
+      {/* ============================================================ */}
+      {isScheduleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 no-print">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 p-5 bg-gray-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Dashboard Report Schedule</h3>
+                  <p className="text-xs text-gray-500">
+                    Automated periodic dashboard snapshot generation
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsScheduleModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              {loadingSchedule ? (
+                <div className="flex items-center justify-center py-8 text-xs text-gray-500 gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin text-purple-600" />
+                  <span>Loading schedule...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Current Schedule Summary */}
+                  <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-3.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500 font-medium">Schedule Status</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          scheduleData?.enabled
+                            ? "bg-green-100 text-green-800"
+                            : scheduleData
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-gray-200 text-gray-600"
+                        }`}
+                      >
+                        {scheduleData?.enabled ? "Active" : scheduleData ? "Paused" : "Not Scheduled"}
+                      </span>
+                    </div>
+                    {scheduleData?.nextRunAt && (
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200/60 text-[11px]">
+                        <span className="text-gray-400">Next scheduled run:</span>
+                        <span className="text-gray-700 font-medium">
+                          {new Date(scheduleData.nextRunAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {scheduleData?.lastRunAt && (
+                      <div className="flex items-center justify-between mt-1 text-[11px]">
+                        <span className="text-gray-400">Last run:</span>
+                        <span className="text-gray-700 font-medium">
+                          {new Date(scheduleData.lastRunAt).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {/* Delivery Status Indicator */}
+                    {scheduleData?.lastDeliveryStatus && (
+                      <div className="flex items-center justify-between mt-1 pt-2 border-t border-gray-200/60 text-[11px]">
+                        <span className="text-gray-400">Delivery status:</span>
+                        <span
+                          className={`font-semibold px-1.5 py-0.5 rounded text-[10px] ${
+                            scheduleData.lastDeliveryStatus === "SUCCESS"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {scheduleData.lastDeliveryStatus === "SUCCESS"
+                            ? `✓ Delivered${scheduleData.lastDeliveryAt ? ` (${new Date(scheduleData.lastDeliveryAt).toLocaleTimeString()})` : ""}`
+                            : `✗ Failed: ${scheduleData.lastDeliveryError || "Error"}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Frequency Selection */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-700 block mb-1">
+                        Report Frequency
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setScheduleFrequency("DAILY")}
+                          className={`p-2.5 rounded-xl border text-xs font-medium text-center transition ${
+                            scheduleFrequency === "DAILY"
+                              ? "border-purple-600 bg-purple-50 text-purple-700 font-bold"
+                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <p>Daily</p>
+                          <span className="text-[10px] text-gray-400 font-normal">Every 24 hours</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setScheduleFrequency("WEEKLY")}
+                          className={`p-2.5 rounded-xl border text-xs font-medium text-center transition ${
+                            scheduleFrequency === "WEEKLY"
+                              ? "border-purple-600 bg-purple-50 text-purple-700 font-bold"
+                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <p>Weekly</p>
+                          <span className="text-[10px] text-gray-400 font-normal">Every 7 days</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Delivery Destination Inputs */}
+                    <div className="space-y-2 pt-1 border-t border-gray-100">
+                      <div>
+                        <label className="text-[11px] font-semibold text-gray-700 block mb-0.5">
+                          Email Recipients (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={scheduleRecipients}
+                          onChange={(e) => setScheduleRecipients(e.target.value)}
+                          placeholder="reports@acme.com, exec@acme.com"
+                          className="w-full text-xs px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-hidden focus:ring-1 focus:ring-purple-500 font-mono"
+                        />
+                        <span className="text-[10px] text-gray-400">Comma-separated email addresses</span>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-semibold text-gray-700 block mb-0.5">
+                          Webhook URL (Optional)
+                        </label>
+                        <input
+                          type="url"
+                          value={scheduleWebhookUrl}
+                          onChange={(e) => setScheduleWebhookUrl(e.target.value)}
+                          placeholder="https://api.example.com/webhooks/reports"
+                          className="w-full text-xs px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-hidden focus:ring-1 focus:ring-purple-500 font-mono"
+                        />
+                        <span className="text-[10px] text-gray-400">Receives report snapshot JSON event payload</span>
+                      </div>
+                    </div>
+
+                    <label className="flex items-center gap-2 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={scheduleEnabled}
+                        onChange={(e) => setScheduleEnabled(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-xs font-medium text-gray-700">
+                        Enable automated report generation & delivery
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Snapshot Preview */}
+                  {lastGeneratedReport && (
+                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-xs space-y-1">
+                      <div className="flex items-center justify-between font-semibold text-indigo-900">
+                        <span>Latest Report Snapshot</span>
+                        <span className="text-[10px] text-indigo-500">
+                          {lastGeneratedReport.summary.executionTimeMs}ms
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-indigo-700">
+                        Queried {lastGeneratedReport.chartCount} charts with {lastGeneratedReport.summary.totalRecords} total records.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                    <div>
+                      {scheduleData && (
+                        <button
+                          type="button"
+                          onClick={handleDeleteSchedule}
+                          disabled={deletingSchedule}
+                          className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                        >
+                          {deletingSchedule ? "Deleting..." : "Delete"}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleGenerateReportNow}
+                        disabled={generatingReport}
+                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 shadow-2xs"
+                      >
+                        {generatingReport ? "Generating..." : "Generate Now"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveSchedule}
+                        disabled={savingSchedule}
+                        className="rounded-lg bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-purple-500 transition shadow-xs disabled:opacity-50"
+                      >
+                        {savingSchedule ? "Saving..." : "Save Schedule"}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Media Query Rules */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            margin: 1.5cm;
+            size: auto;
+          }
+          header,
+          aside,
+          .no-print,
+          button,
+          .fixed {
+            display: none !important;
+          }
+          body,
+          .min-h-screen,
+          main {
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: visible !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -245,8 +245,7 @@ export async function createChart(req: Request, res: Response): Promise<void> {
     userAgent: req.get("user-agent"),
   });
 
-  res.status(201);
-  sendSuccess(res, buildSafeChart(chart));
+  sendSuccess(res, buildSafeChart(chart), 201);
 }
 
 /**

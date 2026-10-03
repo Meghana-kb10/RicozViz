@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useSyncExternalStore } from "react";
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import { ArrowLeft, RotateCcw, AlertCircle } from "lucide-react";
 import type { ChartType, ChartConfig, DatasetQueryResult } from "../../lib/api";
 import { mapQueryResultToChartData } from "../../lib/chart-query-mapper";
 import { BarChartRenderer } from "./BarChartRenderer";
@@ -112,6 +112,27 @@ export function ChartRenderer({
 
   if (!mounted) {
     return <div style={{ height }} className="bg-gray-50/40 rounded-xl" />;
+  }
+
+  // Validate configuration completeness
+  const hasDimension = (config.dimensions && config.dimensions.length > 0) || Boolean(config.xAxis || (config as Record<string, unknown>).category);
+  const hasMeasure = (config.measures && config.measures.length > 0) || Boolean(config.yAxis || (config as Record<string, unknown>).value);
+
+  if (chartType !== "TABLE" && chartType !== "KPI" && (!hasDimension || !hasMeasure)) {
+    return (
+      <div
+        style={{ height }}
+        className="flex flex-col items-center justify-center rounded-xl bg-amber-50/50 border border-amber-200 p-6 text-center"
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-2">
+          <AlertCircle className="h-5 w-5" />
+        </div>
+        <h5 className="text-xs font-bold text-amber-900">Incomplete Visualization Configuration</h5>
+        <p className="mt-1 text-[11px] text-amber-700 max-w-xs leading-relaxed">
+          This {!hasDimension && !hasMeasure ? "chart requires both an X-axis dimension and a Y-axis measure" : !hasDimension ? "chart requires a category / X-axis dimension" : "chart requires a metric / Y-axis measure"} to render.
+        </p>
+      </div>
+    );
   }
 
   const mapped = mapQueryResultToChartData(chartType, queryResult, config);

@@ -94,21 +94,41 @@ export function buildChartQueryParams(
     filterLogic,
   };
 
+  const effectiveMeasures =
+    config.measures && config.measures.length > 0
+      ? config.measures
+      : (config.yAxis || (config as Record<string, unknown>).value)
+        ? [
+            {
+              column: String(config.yAxis || (config as Record<string, unknown>).value),
+              aggregation: ((config as Record<string, unknown>).aggregation as AggregationFunction) || "SUM",
+              alias: String(config.yAxis || (config as Record<string, unknown>).value),
+            },
+          ]
+        : [];
+
+  const effectiveDimensions =
+    config.dimensions && config.dimensions.length > 0
+      ? config.dimensions
+      : (config.xAxis || (config as Record<string, unknown>).category)
+        ? [String(config.xAxis || (config as Record<string, unknown>).category)]
+        : [];
+
   // Measures & Dimensions (Aggregation mode)
-  if (config.measures && config.measures.length > 0) {
-    const validMeasures: DatasetQueryMeasure[] = config.measures.map((m) => ({
+  if (effectiveMeasures.length > 0) {
+    const validMeasures: DatasetQueryMeasure[] = effectiveMeasures.map((m) => ({
       column: m.column,
       aggregation: m.aggregation as AggregationFunction,
       alias: m.alias || `${m.aggregation.toLowerCase()}_${m.column}`,
     }));
     params.measures = validMeasures;
 
-    if (config.dimensions && config.dimensions.length > 0) {
-      params.dimensions = config.dimensions;
+    if (effectiveDimensions.length > 0) {
+      params.dimensions = effectiveDimensions;
     }
-  } else if (config.dimensions && config.dimensions.length > 0) {
+  } else if (effectiveDimensions.length > 0) {
     // Raw column selection
-    params.columns = config.dimensions;
+    params.columns = effectiveDimensions;
   }
 
   // Filters

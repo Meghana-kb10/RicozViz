@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../contexts/auth-context";
+import { useWorkspace } from "../../contexts/workspace-context";
 import {
   apiListDataSources,
   apiCreateDataSource,
@@ -17,6 +18,7 @@ import {
 
 export default function DataSourcesPage() {
   const { auth, isLoading, logout, hasPermission } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   const router = useRouter();
 
   const [dataSources, setDataSources] = useState<DataSourceData[]>([]);
@@ -67,7 +69,7 @@ export default function DataSourcesPage() {
   // ---- Fetch Data Sources ----
   const refreshDataSources = () => {
     setLoadingData(true);
-    apiListDataSources()
+    apiListDataSources(currentWorkspace?.id ? { workspaceId: currentWorkspace.id } : undefined)
       .then((list) => {
         setDataSources(list);
         setErrorMsg(null);
@@ -84,7 +86,7 @@ export default function DataSourcesPage() {
     if (!auth) return;
     let ignore = false;
 
-    apiListDataSources()
+    apiListDataSources(currentWorkspace?.id ? { workspaceId: currentWorkspace.id } : undefined)
       .then((list) => {
         if (!ignore) {
           setDataSources(list);
@@ -101,7 +103,7 @@ export default function DataSourcesPage() {
     return () => {
       ignore = true;
     };
-  }, [auth]);
+  }, [auth, currentWorkspace?.id]);
 
   // Permissions
   const canCreate = hasPermission("DATA_SOURCE_CREATE");
@@ -206,6 +208,7 @@ export default function DataSourcesPage() {
           description: formDescription || undefined,
           type: formType,
           connection,
+          workspaceId: currentWorkspace?.id,
         });
         setSuccessMsg(`Data source "${formName}" created successfully.`);
       }

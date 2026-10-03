@@ -16,11 +16,21 @@ import {
   updateChartSchema,
   chartConfigSchema,
 } from "../services/chart/chart.service.js";
+import { datasetQueryEngine } from "../services/dataset/query-engine.js";
 
 const app = createApp();
 const request = supertest(app);
 
 let dbAvailable = false;
+
+beforeAll(async () => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbAvailable = true;
+  } catch {
+    dbAvailable = false;
+  }
+});
 
 // Mock Tokens
 const ADMIN_ORG_ID = "org-test-admin-1";
@@ -566,7 +576,8 @@ describe("Visualization Studio Backend Lifecycle & Security", () => {
       data: {
         name: "Studio Test Dataset A",
         organizationId: ADMIN_ORG_ID,
-        type: "CUSTOM",
+        type: "UPLOADED",
+        createdById: "user-admin-1",
       },
     });
     datasetAId = dsA.id;
@@ -575,7 +586,8 @@ describe("Visualization Studio Backend Lifecycle & Security", () => {
       data: {
         name: "Studio Test Dataset B (Foreign)",
         organizationId: OTHER_ORG_ID,
-        type: "CUSTOM",
+        type: "UPLOADED",
+        createdById: "user-other-org",
       },
     });
     datasetBId = dsB.id;
@@ -647,3 +659,336 @@ describe("Visualization Studio Backend Lifecycle & Security", () => {
     expect(res.body.success).toBe(true);
   });
 });
+
+// ============================================================
+// 5. DATA PROCESSING & QUERY ENGINE TESTS (Part A & B)
+// ============================================================
+
+describe("Data Processing & Query Engine Core", () => {
+  const sampleDataset: any = {
+    id: "ds-sample-test",
+    name: "Sales Sample Dataset",
+    organizationId: ADMIN_ORG_ID,
+    type: "UPLOADED",
+    schemaMeta: {
+      columns: [
+        { name: "region", type: "string" },
+        { name: "revenue", type: "number" },
+        { name: "units", type: "integer" },
+        { name: "category", type: "string" },
+      ],
+      sampleData: [
+        { region: "North", revenue: 10000, units: 10, category: "Tech" },
+        { region: "North", revenue: 15000, units: 15, category: "Office" },
+        { region: "South", revenue: 20000, units: 20, category: "Tech" },
+        { region: "South", revenue: 25000, units: 25, category: "Office" },
+        { region: "West", revenue: 50000, units: 50, category: "Tech" },
+        { region: "West", revenue: 100000, units: 100, category: "Office" },
+        { region: null, revenue: 5000, units: 5, category: "Other" },
+      ],
+    },
+  };
+
+  it("selects only requested columns and validates column existence", async () => {
+    const result = await datasetQueryEngine.executeQuery(sampleDataset, {
+      columns: ["region", "revenue"],
+    });
+
+    expect(result.columns.map((c) => c.name)).toEqual(["region", "revenue"]);
+    expect(result.rows.length).toBe(7);
+    expect(result.rows[0]).toHaveProperty("region");
+    expect(result.rows[0]).toHaveProperty("revenue");
+    expect(result.rows[0]).not.toHaveProperty("category");
+    expect(result.processedColumns.map((c) => c.name)).toEqual(["region", "revenue"]);
+    expect(result.metadata.queryMode).toBe("RAW");
+  });
+
+  it("rejects unknown column names with 400 Bad Request", async () => {
+    await expect(
+      datasetQueryEngine.executeQuery(sampleDataset, {
+        columns: ["region", "nonexistent_field"],
+      })
+    ).rejects.toThrow(/does not exist in dataset schema/);
+  });
+
+  it("filters with equals, not equals, greater than, less than, gte, lte, and contains", async () => {
+    // greater than
+    const gt = await datasetQueryEngine.executeQuery(sampleDataset, {
+      filters: [{ column: "revenue", operator: "greaterThan", value: 20000 }],
+    });
+    expect(gt.rows.length).toBe(3); // 25000, 50000, 100000
+
+    // equals
+    const eq = await datasetQueryEngine.executeQuery(sampleDataset, {
+      filters: [{ column: "region", operator: "equals", value: "South" }],
+    });
+    expect(eq.rows.length).toBe(2);
+
+    // contains
+    const cont = await datasetQueryEngine.executeQuery(sampleDataset, {
+      filters: [{ column: "category", operator: "contains", value: "ec" }],
+    });
+    expect(cont.rows.length).toBe(3); // Tech rows
+
+    // is empty (isNull)
+    const emptyRes = await datasetQueryEngine.executeQuery(sampleDataset, {
+      filters: [{ column: "region", operator: "is empty" }],
+    });
+    expect(emptyRes.rows.length).toBe(1);
+    expect(emptyRes.rows[0].category).toBe("Other");
+
+    // is not empty (isNotNull)
+    const notEmptyRes = await datasetQueryEngine.executeQuery(sampleDataset, {
+      filters: [{ column: "region", operator: "is not empty" }],
+    });
+    expect(notEmptyRes.rows.length).toBe(6);
+  });
+
+  it("rejects unsupported filter operators with 400 Bad Request", async () => {
+    await expect(
+      datasetQueryEngine.executeQuery(sampleDataset, {
+        filters: [{ column: "revenue", operator: "INVALID_OP" as any, value: 100 }],
+      })
+    ).rejects.toThrow(/Unsupported filter operator/);
+  });
+
+  it("sorts rows ascending and descending", async () => {
+    const asc = await datasetQueryEngine.executeQuery(sampleDataset, {
+      orderBy: { column: "revenue", direction: "asc" },
+    });
+    expect(asc.rows[0].revenue).toBe(5000);
+
+    const desc = await datasetQueryEngine.executeQuery(sampleDataset, {
+      orderBy: { column: "revenue", direction: "desc" },
+    });
+    expect(desc.rows[0].revenue).toBe(100000);
+  });
+
+  it("groups by column and computes SUM, AVG, MIN, MAX, COUNT aggregations", async () => {
+    const aggResult = await datasetQueryEngine.executeQuery(sampleDataset, {
+      groupBy: ["region"],
+      aggregations: [
+        { column: "revenue", function: "SUM", alias: "total_revenue" },
+        { column: "revenue", function: "AVG", alias: "avg_revenue" },
+        { column: "revenue", function: "MIN", alias: "min_revenue" },
+        { column: "revenue", function: "MAX", alias: "max_revenue" },
+        { column: "*", function: "COUNT", alias: "row_count" },
+      ],
+      orderBy: { column: "total_revenue", direction: "desc" },
+    });
+
+    expect(aggResult.columns.map((c) => c.name)).toEqual([
+      "region",
+      "total_revenue",
+      "avg_revenue",
+      "min_revenue",
+      "max_revenue",
+      "row_count",
+    ]);
+
+    // West has 50000 + 100000 = 150000
+    const west = aggResult.rows.find((r) => r.region === "West");
+    expect(west).toBeDefined();
+    expect(west?.total_revenue).toBe(150000);
+    expect(west?.avg_revenue).toBe(75000);
+    expect(west?.min_revenue).toBe(50000);
+    expect(west?.max_revenue).toBe(100000);
+    expect(west?.row_count).toBe(2);
+
+    // North has 10000 + 15000 = 25000
+    const north = aggResult.rows.find((r) => r.region === "North");
+    expect(north).toBeDefined();
+    expect(north?.total_revenue).toBe(25000);
+    expect(north?.row_count).toBe(2);
+  });
+
+  it("rejects SUM/AVG applied to non-numeric columns", async () => {
+    await expect(
+      datasetQueryEngine.executeQuery(sampleDataset, {
+        groupBy: ["region"],
+        aggregations: [{ column: "category", function: "SUM" }],
+      })
+    ).rejects.toThrow(/cannot be applied to non-numeric column/);
+  });
+
+  it("enforces safe maximum result size limits", async () => {
+    const limited = await datasetQueryEngine.executeQuery(sampleDataset, {
+      limit: 2,
+    });
+    expect(limited.rows.length).toBe(2);
+    expect(limited.total).toBe(7);
+    expect(limited.limit).toBe(2);
+
+    await expect(
+      datasetQueryEngine.executeQuery(sampleDataset, {
+        limit: 99999,
+      })
+    ).rejects.toThrow(/exceeds maximum allowable limit/);
+  });
+});
+
+// ============================================================
+// 6. STANDALONE VISUALIZATION API TESTS (Part C)
+// ============================================================
+
+describe("Standalone Visualization Engine API (/api/v1/visualizations)", () => {
+  let createdVizId: string;
+  let testDatasetId: string;
+  let foreignDatasetId: string;
+
+  beforeAll(async () => {
+    if (!dbAvailable) return;
+
+    // Create test dataset in ADMIN_ORG_ID
+    const ds = await prisma.dataset.create({
+      data: {
+        name: "Test Visualization Studio Dataset",
+        organizationId: ADMIN_ORG_ID,
+        type: "UPLOADED",
+        createdById: "user-admin-1",
+        schemaMeta: {
+          columns: [
+            { name: "region", type: "string" },
+            { name: "sales", type: "number" },
+          ],
+          sampleData: [
+            { region: "East", sales: 50000 },
+            { region: "West", sales: 80000 },
+            { region: "Central", sales: 30000 },
+          ],
+        },
+      },
+    });
+    testDatasetId = ds.id;
+
+    // Create foreign dataset in OTHER_ORG_ID
+    const foreignDs = await prisma.dataset.create({
+      data: {
+        name: "Foreign Dataset",
+        organizationId: OTHER_ORG_ID,
+        type: "UPLOADED",
+        createdById: "user-other-org",
+      },
+    });
+    foreignDatasetId = foreignDs.id;
+  });
+
+  it("POST /api/v1/visualizations creates a new visualization", async () => {
+    if (!dbAvailable) return;
+
+    const res = await request
+      .post("/api/v1/visualizations")
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`)
+      .send({
+        title: "Regional Sales Bar Chart",
+        description: "Sales breakdown by geographic region",
+        chartType: "BAR",
+        datasetId: testDatasetId,
+        config: {
+          xAxis: "region",
+          category: "region",
+          yAxis: "sales",
+          value: "sales",
+          aggregation: "SUM",
+        },
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.title).toBe("Regional Sales Bar Chart");
+    expect(res.body.data.chartType).toBe("BAR");
+    expect(res.body.data.datasetId).toBe(testDatasetId);
+    createdVizId = res.body.data.id;
+  });
+
+  it("rejects creating a visualization with a cross-tenant dataset", async () => {
+    if (!dbAvailable) return;
+
+    const res = await request
+      .post("/api/v1/visualizations")
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`)
+      .send({
+        title: "Unauthorized Cross-Tenant Viz",
+        chartType: "LINE",
+        datasetId: foreignDatasetId,
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("GET /api/v1/visualizations lists visualizations for the workspace/org", async () => {
+    if (!dbAvailable) return;
+
+    const res = await request
+      .get("/api/v1/visualizations")
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.some((v: any) => v.id === createdVizId)).toBe(true);
+  });
+
+  it("GET /api/v1/visualizations/:id retrieves single visualization", async () => {
+    if (!dbAvailable) return;
+
+    const res = await request
+      .get(`/api/v1/visualizations/${createdVizId}`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.id).toBe(createdVizId);
+    expect(res.body.data.title).toBe("Regional Sales Bar Chart");
+  });
+
+  it("GET /api/v1/visualizations/:id/data executes chart query and returns real data", async () => {
+    if (!dbAvailable) return;
+
+    const res = await request
+      .get(`/api/v1/visualizations/${createdVizId}/data`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.rows).toBeDefined();
+    expect(res.body.data.rows.length).toBe(3);
+    expect(res.body.data.visualization.id).toBe(createdVizId);
+  });
+
+  it("PATCH /api/v1/visualizations/:id updates visualization configuration", async () => {
+    if (!dbAvailable) return;
+
+    const res = await request
+      .patch(`/api/v1/visualizations/${createdVizId}`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`)
+      .send({
+        title: "Updated Regional Sales Pie Chart",
+        chartType: "PIE",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.title).toBe("Updated Regional Sales Pie Chart");
+    expect(res.body.data.chartType).toBe("PIE");
+  });
+
+  it("DELETE /api/v1/visualizations/:id deletes visualization", async () => {
+    if (!dbAvailable) return;
+
+    const res = await request
+      .delete(`/api/v1/visualizations/${createdVizId}`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const check = await request
+      .get(`/api/v1/visualizations/${createdVizId}`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
+
+    expect(check.status).toBe(404);
+  });
+});
+

@@ -14,6 +14,11 @@ import { sendSuccess } from "../../utils/response.js";
 import { credentialService } from "./credential.service.js";
 import { getConnector } from "./connectors/index.js";
 import { logAuditEvent } from "../audit.service.js";
+import {
+  resolveTargetWorkspaceId,
+  verifyResourceWorkspaceAccess,
+} from "../workspace/workspace-auth.helper.js";
+import { resolveWorkspaceAccess } from "../workspace.service.js";
 
 // ============================================================
 // ZOD VALIDATION SCHEMAS
@@ -35,6 +40,18 @@ const csvConnectionSchema = z.object({
   fileSize: z.number().optional(),
 });
 
+const xlsxConnectionSchema = z.object({
+  fileName: z.string().min(1, "File name is required"),
+  sheetName: z.string().optional().default("Sheet1"),
+  fileSize: z.number().optional(),
+});
+
+const jsonConnectionSchema = z.object({
+  fileName: z.string().min(1, "File name is required"),
+  dataPath: z.string().optional().default("root"),
+  fileSize: z.number().optional(),
+});
+
 const restApiConnectionSchema = z.object({
   url: z.string().url("Must be a valid URL"),
   method: z.enum(["GET", "POST"]).default("GET"),
@@ -45,9 +62,10 @@ const restApiConnectionSchema = z.object({
 });
 
 export const createDataSourceSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID").optional().nullable(),
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
-  type: z.enum(["POSTGRESQL", "CSV", "CSV_UPLOAD", "REST_API"]),
+  type: z.enum(["POSTGRESQL", "CSV", "CSV_UPLOAD", "REST_API", "XLSX", "JSON"]),
   connection: z.record(z.unknown()),
 }).superRefine((data, ctx) => {
   const normalizedType = data.type === "CSV" ? "CSV_UPLOAD" : data.type;
@@ -60,6 +78,20 @@ export const createDataSourceSchema = z.object({
     }
   } else if (normalizedType === "CSV_UPLOAD") {
     const res = csvConnectionSchema.safeParse(data.connection);
+    if (!res.success) {
+      for (const issue of res.error.issues) {
+        ctx.addIssue({ ...issue, path: ["connection", ...issue.path] });
+      }
+    }
+  } else if (normalizedType === "XLSX") {
+    const res = xlsxConnectionSchema.safeParse(data.connection);
+    if (!res.success) {
+      for (const issue of res.error.issues) {
+        ctx.addIssue({ ...issue, path: ["connection", ...issue.path] });
+      }
+    }
+  } else if (normalizedType === "JSON") {
+    const res = jsonConnectionSchema.safeParse(data.connection);
     if (!res.success) {
       for (const issue of res.error.issues) {
         ctx.addIssue({ ...issue, path: ["connection", ...issue.path] });
@@ -96,6 +128,8 @@ export function buildSafeDataSource(ds: DataSource) {
   delete safeConnection.bearerToken;
   delete safeConnection.token;
   delete safeConnection.secret;
+  delete safeConnection.accessToken;
+  delete safeConnection.privateKey;
 
   // Map internal status to client-friendly status
   const clientStatus =
@@ -105,11 +139,19 @@ export function buildSafeDataSource(ds: DataSource) {
         ? "FAILED"
         : ds.status;
 
-  // Map internal type CSV_UPLOAD to CSV
-  const clientType = ds.type === "CSV_UPLOAD" ? "CSV" : ds.type;
+  // Map internal type to client-friendly type
+  const clientType =
+    meta.sourceFormat === "XLSX"
+      ? "XLSX"
+      : meta.sourceFormat === "JSON"
+        ? "JSON"
+        : ds.type === "CSV_UPLOAD"
+          ? "CSV"
+          : ds.type;
 
   return {
     id: ds.id,
+    workspaceId: ds.workspaceId ?? null,
     name: ds.name,
     description: ds.description,
     type: clientType,
@@ -156,19 +198,36 @@ function separateCredentials(
 
 /**
  * POST /api/v1/data-sources
- * Create a new data source within the authenticated user's organization.
+ * Create a new data source within the authenticated user's organization and workspace.
  */
 export async function createDataSource(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const input = createDataSourceSchema.parse(req.body);
 
   const prismaType: DataSourceType =
-    input.type === "CSV" ? "CSV_UPLOAD" : (input.type as DataSourceType);
+    input.type === "CSV"
+      ? "CSV_UPLOAD"
+      : input.type === "XLSX" || input.type === "JSON"
+        ? "OTHER"
+        : (input.type as DataSourceType);
+
+  const requestedWsId =
+    input.workspaceId || (req.headers["x-workspace-id"] as string | undefined);
+  const workspaceId = await resolveTargetWorkspaceId(
+    requestedWsId,
+    userId,
+    organizationId,
+    roleName
+  );
 
   const { nonSecretMeta, credentials } = separateCredentials(
     input.type,
     input.connection
   );
+
+  if (input.type === "XLSX" || input.type === "JSON") {
+    nonSecretMeta.sourceFormat = input.type;
+  }
 
   let credentialRef: string | null = null;
   if (Object.keys(credentials).length > 0) {
@@ -181,6 +240,7 @@ export async function createDataSource(req: Request, res: Response): Promise<voi
   const dataSource = await prisma.dataSource.create({
     data: {
       organizationId,
+      workspaceId,
       name: input.name,
       description: input.description,
       type: prismaType,
@@ -200,6 +260,7 @@ export async function createDataSource(req: Request, res: Response): Promise<voi
     metadata: {
       name: dataSource.name,
       type: dataSource.type,
+      workspaceId,
     },
     ipAddress: req.ip,
     userAgent: req.get("user-agent"),
@@ -210,13 +271,37 @@ export async function createDataSource(req: Request, res: Response): Promise<voi
 
 /**
  * GET /api/v1/data-sources
- * List data sources belonging exclusively to the user's organization.
+ * List data sources belonging to the user's workspace/organization.
  */
 export async function listDataSources(req: Request, res: Response): Promise<void> {
-  const { organizationId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
+  const queryWsId =
+    (req.query.workspaceId as string | undefined) ||
+    (req.headers["x-workspace-id"] as string | undefined);
+
+  const whereClause: {
+    organizationId: string;
+    workspaceId?: string;
+    OR?: Array<{ workspaceId: { in: string[] } } | { workspaceId: null }>;
+  } = { organizationId };
+
+  if (queryWsId) {
+    await resolveWorkspaceAccess(queryWsId, userId, organizationId, roleName);
+    whereClause.workspaceId = queryWsId;
+  } else if (roleName !== "ADMIN") {
+    const userMemberships = await prisma.workspaceMember.findMany({
+      where: { userId },
+      select: { workspaceId: true },
+    });
+    const wsIds = userMemberships.map((m) => m.workspaceId);
+    whereClause.OR = [
+      { workspaceId: { in: wsIds } },
+      { workspaceId: null },
+    ];
+  }
 
   const dataSources = await prisma.dataSource.findMany({
-    where: { organizationId },
+    where: whereClause,
     orderBy: { createdAt: "desc" },
   });
 
@@ -225,10 +310,10 @@ export async function listDataSources(req: Request, res: Response): Promise<void
 
 /**
  * GET /api/v1/data-sources/:id
- * Retrieve a single data source by ID with tenant verification.
+ * Retrieve a single data source by ID with tenant and workspace verification.
  */
 export async function getDataSource(req: Request, res: Response): Promise<void> {
-  const { organizationId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   const dataSource = await prisma.dataSource.findUnique({
@@ -239,11 +324,12 @@ export async function getDataSource(req: Request, res: Response): Promise<void> 
     throw AppError.notFound("Data source");
   }
 
-  if (dataSource.organizationId !== organizationId) {
-    throw AppError.forbidden(
-      "Access denied: resource belongs to a different organization"
-    );
-  }
+  await verifyResourceWorkspaceAccess(
+    dataSource,
+    userId,
+    organizationId,
+    roleName
+  );
 
   sendSuccess(res, buildSafeDataSource(dataSource));
 }
@@ -253,7 +339,7 @@ export async function getDataSource(req: Request, res: Response): Promise<void> 
  * Update an existing data source.
  */
 export async function updateDataSource(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   const existing = await prisma.dataSource.findUnique({
@@ -264,11 +350,12 @@ export async function updateDataSource(req: Request, res: Response): Promise<voi
     throw AppError.notFound("Data source");
   }
 
-  if (existing.organizationId !== organizationId) {
-    throw AppError.forbidden(
-      "Access denied: resource belongs to a different organization"
-    );
-  }
+  await verifyResourceWorkspaceAccess(
+    existing,
+    userId,
+    organizationId,
+    roleName
+  );
 
   const input = updateDataSourceSchema.parse(req.body);
 
@@ -332,10 +419,10 @@ export async function updateDataSource(req: Request, res: Response): Promise<voi
 
 /**
  * DELETE /api/v1/data-sources/:id
- * Delete data source after verifying referential integrity.
+ * Delete data source after verifying referential integrity and workspace permissions.
  */
 export async function deleteDataSource(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   const existing = await prisma.dataSource.findUnique({
@@ -346,11 +433,12 @@ export async function deleteDataSource(req: Request, res: Response): Promise<voi
     throw AppError.notFound("Data source");
   }
 
-  if (existing.organizationId !== organizationId) {
-    throw AppError.forbidden(
-      "Access denied: resource belongs to a different organization"
-    );
-  }
+  await verifyResourceWorkspaceAccess(
+    existing,
+    userId,
+    organizationId,
+    roleName
+  );
 
   // Integrity check: prevent deletion if datasets depend on this data source
   const datasetCount = await prisma.dataset.count({
@@ -394,7 +482,7 @@ export async function deleteDataSource(req: Request, res: Response): Promise<voi
  * Attempt connection test and return safe status.
  */
 export async function testDataSourceConnection(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   const dataSource = await prisma.dataSource.findUnique({
@@ -405,11 +493,12 @@ export async function testDataSourceConnection(req: Request, res: Response): Pro
     throw AppError.notFound("Data source");
   }
 
-  if (dataSource.organizationId !== organizationId) {
-    throw AppError.forbidden(
-      "Access denied: resource belongs to a different organization"
-    );
-  }
+  await verifyResourceWorkspaceAccess(
+    dataSource,
+    userId,
+    organizationId,
+    roleName
+  );
 
   const connector = getConnector(dataSource.type);
   if (!connector) {

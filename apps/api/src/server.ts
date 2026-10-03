@@ -9,6 +9,7 @@ dotenv.config({ path: envPath });
 import { config } from "./config/env.js";
 import { createApp } from "./app.js";
 import { logger } from "./utils/logger.js";
+import { scheduledReportWorker } from "./services/report/report-worker.service.js";
 
 const app = createApp();
 
@@ -18,11 +19,15 @@ const server = app.listen(config.PORT, () => {
     env: config.NODE_ENV,
     health: `http://localhost:${config.PORT}/api/v1/health`,
   });
+
+  // Start background scheduled report worker
+  scheduledReportWorker.start(60_000);
 });
 
 // ---- Graceful shutdown ----
 function shutdown(signal: string): void {
   logger.info(`Received ${signal} — shutting down gracefully...`);
+  scheduledReportWorker.stop();
   server.close(() => {
     logger.info("HTTP server closed");
     process.exit(0);

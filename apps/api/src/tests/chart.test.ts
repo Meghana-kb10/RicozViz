@@ -114,7 +114,7 @@ afterAll(async () => {
         where: { title: { startsWith: "Test Chart" } },
       });
       await prisma.dashboard.deleteMany({
-        where: { name: { startsWith: "Test Dashboard" } },
+        where: { name: { in: ["Test Dashboard Org A", "Test Dashboard Org B"] } },
       });
     } catch {
       // ignore cleanup errors
@@ -415,7 +415,8 @@ describe("Chart Service DB Lifecycle & Multi-Tenancy", () => {
       data: {
         name: "Test Dataset Org A",
         organizationId: ADMIN_ORG_ID,
-        type: "CUSTOM",
+        type: "UPLOADED",
+        createdById: "user-admin-1",
       },
     });
     orgADatasetId = datasetA.id;
@@ -424,7 +425,8 @@ describe("Chart Service DB Lifecycle & Multi-Tenancy", () => {
       data: {
         name: "Test Dataset Org B",
         organizationId: OTHER_ORG_ID,
-        type: "CUSTOM",
+        type: "UPLOADED",
+        createdById: "user-other-org",
       },
     });
     orgBDatasetId = datasetB.id;
