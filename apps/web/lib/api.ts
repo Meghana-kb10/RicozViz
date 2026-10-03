@@ -5,8 +5,19 @@
 // Attaches the Authorization header automatically.
 // Handles refresh token flow on 401.
 // ========================================
+export function getApiBaseUrl(): string {
+  if (process.env["NEXT_PUBLIC_API_URL"] && !process.env["NEXT_PUBLIC_API_URL"].includes("localhost:4000")) {
+    return process.env["NEXT_PUBLIC_API_URL"];
+  }
+  if (typeof window !== "undefined") {
+    if (window.location.origin.includes("-web.onrender.com")) {
+      return window.location.origin.replace("-web.onrender.com", "-api.onrender.com");
+    }
+  }
+  return process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000";
+}
 
-const API_BASE = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000";
+const API_BASE = getApiBaseUrl();
 
 export class ApiError extends Error {
   constructor(
@@ -59,7 +70,8 @@ async function apiFetch<T>(
     }
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const apiBase = getApiBaseUrl();
+  const res = await fetch(`${apiBase}${path}`, {
     ...options,
     headers,
     credentials: "include", // Send refresh cookie automatically
