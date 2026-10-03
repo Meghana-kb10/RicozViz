@@ -11,6 +11,9 @@ import { PieChartRenderer } from "./PieChartRenderer";
 import { ScatterChartRenderer } from "./ScatterChartRenderer";
 import { TableRenderer } from "./TableRenderer";
 import { KpiRenderer } from "./KpiRenderer";
+import { RadarChartRenderer } from "./RadarChartRenderer";
+import { FunnelChartRenderer } from "./FunnelChartRenderer";
+import { HeatmapRenderer } from "./HeatmapRenderer";
 
 export interface ChartRendererProps {
   chartType: ChartType;
@@ -205,6 +208,12 @@ export function ChartRenderer({
         );
       case "KPI":
         return <KpiRenderer data={mapped} config={config} height="100%" />;
+      case "RADAR":
+        return <RadarChartRenderer data={mapped} config={config} height="100%" />;
+      case "FUNNEL":
+        return <FunnelChartRenderer data={mapped} config={config} height="100%" />;
+      case "HEATMAP":
+        return <HeatmapRenderer data={mapped} config={config} height="100%" />;
       default:
         return (
           <BarChartRenderer

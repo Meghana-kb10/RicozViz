@@ -22,6 +22,10 @@ import {
   type PreviewCalculatedFieldResult,
   ApiError,
 } from "../../../lib/api";
+import {
+  getRecommendedVisualizations,
+  classifyColumn,
+} from "../../../lib/chart-recommender";
 
 const FILTER_OPERATORS: { label: string; value: FilterOperator }[] = [
   { label: "equals (=)", value: "=" },
@@ -58,7 +62,9 @@ export default function DatasetDetailPage({
 
   const [dataset, setDataset] = useState<DatasetData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"SCHEMA" | "PREVIEW" | "EXPLORE" | "CALCULATED">("SCHEMA");
+  const [activeTab, setActiveTab] = useState<
+    "SCHEMA" | "PREVIEW" | "EXPLORE" | "CALCULATED" | "VISUALIZATIONS"
+  >("SCHEMA");
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -391,12 +397,20 @@ export default function DatasetDetailPage({
             </div>
 
             {!isEditing && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="self-start rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-              >
-                ✏️ Edit Metadata
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/visualizations?datasetId=${dataset.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 transition"
+                >
+                  <span>📊 Create Visualization</span>
+                </Link>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  ✏️ Edit Metadata
+                </button>
+              </div>
             )}
           </div>
 
@@ -478,6 +492,19 @@ export default function DatasetDetailPage({
           >
             ⚡ Calculated Fields ({dataset.calculatedFields?.length || dataset.columns.filter((c) => c.isCalculated).length})
           </button>
+          <button
+            onClick={() => setActiveTab("VISUALIZATIONS")}
+            className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 ${
+              activeTab === "VISUALIZATIONS"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <span>📊 Visualizations & Recommendations</span>
+            <span className="rounded-full bg-indigo-100 px-1.5 py-0.2 text-[10px] font-bold text-indigo-700">
+              {getRecommendedVisualizations(dataset.columns).length}
+            </span>
+          </button>
         </div>
 
         {/* Tab 1: Schema Table */}
@@ -491,6 +518,9 @@ export default function DatasetDetailPage({
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">
                     Type
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">
+                    Role / Classification
                   </th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600 uppercase">
                     Nullable
@@ -520,6 +550,37 @@ export default function DatasetDetailPage({
                       >
                         {col.type}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const cls = classifyColumn(col);
+                        if (cls === "numeric") {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">
+                              🔢 Numeric Measure
+                            </span>
+                          );
+                        }
+                        if (cls === "date") {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                              📅 Date / Temporal
+                            </span>
+                          );
+                        }
+                        if (cls === "boolean") {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-800">
+                              ⚑ Boolean Flag
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                            🏷️ Dimension
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -1106,6 +1167,150 @@ export default function DatasetDetailPage({
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab 5: Visualizations & Recommendations */}
+        {activeTab === "VISUALIZATIONS" && (
+          <div className="space-y-6">
+            {/* Recommendations Banner */}
+            <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 via-purple-50/50 to-white p-6 shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-700 mb-2">
+                    ✨ Schema-Aware Multi-Chart Recommendations
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Explore {dataset.name} with Suitable Visualizations
+                  </h2>
+                  <p className="mt-1 text-xs text-gray-600 max-w-2xl leading-relaxed">
+                    RicozViz automatically inspects column data types (dates, numerics, dimensions, and flags) to curate instant chart recipes using your real data. Click any card below to launch the Visualization Studio pre-configured for this dataset.
+                  </p>
+                </div>
+                <Link
+                  href={`/visualizations?datasetId=${dataset.id}`}
+                  className="self-start md:self-auto inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-500 transition whitespace-nowrap"
+                >
+                  <span>Open Studio</span>
+                  <span>→</span>
+                </Link>
+              </div>
+
+              {/* Column Stats Pill Row */}
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-md bg-white px-2.5 py-1 text-slate-700 border border-slate-200 font-medium">
+                  Total Columns: <strong className="text-gray-900">{dataset.columns.length}</strong>
+                </span>
+                <span className="rounded-md bg-blue-50 px-2.5 py-1 text-blue-700 border border-blue-200 font-medium">
+                  Numeric Measures: <strong className="text-blue-900">{dataset.columns.filter((c) => classifyColumn(c) === "numeric").length}</strong>
+                </span>
+                <span className="rounded-md bg-amber-50 px-2.5 py-1 text-amber-700 border border-amber-200 font-medium">
+                  Date / Time: <strong className="text-amber-900">{dataset.columns.filter((c) => classifyColumn(c) === "date").length}</strong>
+                </span>
+                <span className="rounded-md bg-purple-50 px-2.5 py-1 text-purple-700 border border-purple-200 font-medium">
+                  Dimensions: <strong className="text-purple-900">{dataset.columns.filter((c) => classifyColumn(c) === "categorical").length}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Recommendations Grid */}
+            {(() => {
+              const recs = getRecommendedVisualizations(dataset.columns);
+              if (recs.length === 0) {
+                return (
+                  <div className="rounded-xl border border-gray-200 bg-white p-12 text-center text-xs text-gray-500">
+                    No automatic recommendations available. Ensure your dataset has at least one numeric or categorical column.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {recs.map((rec) => {
+                    const studioUrl = `/visualizations?datasetId=${dataset.id}&chartType=${rec.chartType}&category=${encodeURIComponent(rec.categoryCol)}&value=${encodeURIComponent(rec.valueCol)}${rec.secondaryValueCol ? `&secondary=${encodeURIComponent(rec.secondaryValueCol)}` : ""}${rec.groupCol ? `&group=${encodeURIComponent(rec.groupCol)}` : ""}&agg=${rec.aggregation}`;
+
+                    const badgeColor =
+                      rec.badge === "Trend"
+                        ? "bg-amber-100 text-amber-800 border-amber-200"
+                        : rec.badge === "Distribution"
+                          ? "bg-purple-100 text-purple-800 border-purple-200"
+                          : rec.badge === "Correlation"
+                            ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                            : rec.badge === "Matrix"
+                              ? "bg-pink-100 text-pink-800 border-pink-200"
+                              : rec.badge === "KPI"
+                                ? "bg-cyan-100 text-cyan-800 border-cyan-200"
+                                : "bg-blue-100 text-blue-800 border-blue-200";
+
+                    return (
+                      <div
+                        key={rec.id}
+                        className="flex flex-col justify-between rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-indigo-300 transition group"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${badgeColor}`}>
+                              {rec.badge}
+                            </span>
+                            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              {rec.suitabilityScore}% match
+                            </span>
+                          </div>
+
+                          <h3 className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition">
+                            {rec.title}
+                          </h3>
+                          <p className="mt-1 text-xs text-gray-500 leading-relaxed">
+                            {rec.description}
+                          </p>
+
+                          {/* Mapping Details */}
+                          <div className="mt-4 rounded-lg bg-gray-50 p-3 space-y-1.5 text-[11px] font-mono text-gray-600 border border-gray-100">
+                            {rec.categoryCol ? (
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Dimension / X:</span>
+                                <span className="font-semibold text-gray-800">{rec.categoryCol}</span>
+                              </div>
+                            ) : null}
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-400">Measure / Y:</span>
+                              <span className="font-semibold text-indigo-700">
+                                {rec.aggregation}({rec.valueCol})
+                              </span>
+                            </div>
+                            {rec.secondaryValueCol && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Secondary Series:</span>
+                                <span className="font-semibold text-purple-700">{rec.secondaryValueCol}</span>
+                              </div>
+                            )}
+                            {rec.groupCol && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Matrix Dimension:</span>
+                                <span className="font-semibold text-pink-700">{rec.groupCol}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                            {rec.chartType}
+                          </span>
+                          <Link
+                            href={studioUrl}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 group-hover:underline"
+                          >
+                            <span>Launch Chart</span>
+                            <span>→</span>
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 

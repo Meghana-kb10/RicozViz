@@ -514,6 +514,63 @@ export async function apiGetSourceTableSchema(
 }
 
 // ============================================================
+// DEMO DATASET TYPES & API METHODS
+// ============================================================
+
+export interface DemoDatasetColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+}
+
+export interface DemoDatasetCatalogItem {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  sourceUrl: string;
+  license: string;
+  sourceAttribution: string;
+  fileName: string;
+  sourceType: string;
+  rowCount: number;
+  columnCount: number;
+  tags: string[];
+  columns: DemoDatasetColumn[];
+  sampleData: Array<Record<string, unknown>>;
+  records?: Array<Record<string, unknown>>;
+}
+
+export interface ImportedDatasetData extends DatasetData {
+  alreadyImported?: boolean;
+}
+
+export async function apiGetDemoCatalog(params?: {
+  category?: string;
+  search?: string;
+}): Promise<DemoDatasetCatalogItem[]> {
+  const query = new URLSearchParams();
+  if (params?.category) query.set("category", params.category);
+  if (params?.search) query.set("search", params.search);
+  const qs = query.toString();
+  return apiFetch<DemoDatasetCatalogItem[]>(`/api/v1/datasets/demo/catalog${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetDemoDataset(demoId: string): Promise<DemoDatasetCatalogItem> {
+  return apiFetch<DemoDatasetCatalogItem>(`/api/v1/datasets/demo/${demoId}`);
+}
+
+export async function apiImportDemoDataset(
+  demoId: string,
+  input?: { workspaceId?: string | null; customName?: string }
+): Promise<ImportedDatasetData> {
+  return apiFetch<ImportedDatasetData>(`/api/v1/datasets/demo/${demoId}/import`, {
+    method: "POST",
+    body: JSON.stringify(input || {}),
+  });
+}
+
+// ============================================================
 // DATASET BLENDING TYPES & API METHODS
 // ============================================================
 
@@ -868,6 +925,9 @@ export async function apiListDashboards(params?: {
   return apiFetch<DashboardListResponse>(`/api/v1/dashboards${qs ? `?${qs}` : ""}`);
 }
 
+export const apiGetDashboards = apiListDashboards;
+export type DashboardItem = DashboardData;
+
 export async function apiGetDashboard(id: string): Promise<DashboardData> {
   return apiFetch<DashboardData>(`/api/v1/dashboards/${id}`);
 }
@@ -986,7 +1046,10 @@ export type ChartType =
   | "DONUT"
   | "SCATTER"
   | "TABLE"
-  | "KPI";
+  | "KPI"
+  | "RADAR"
+  | "FUNNEL"
+  | "HEATMAP";
 
 export interface ChartPosition {
   x: number;

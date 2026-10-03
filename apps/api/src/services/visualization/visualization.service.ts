@@ -37,6 +37,9 @@ export const ALLOWED_VISUALIZATION_TYPES = [
   "TABLE",
   "KPI",
   "SCATTER",
+  "RADAR",
+  "FUNNEL",
+  "HEATMAP",
 ] as const;
 
 export type VisualizationType = (typeof ALLOWED_VISUALIZATION_TYPES)[number];
@@ -311,6 +314,8 @@ export async function executeVisualizationQuery(
   } else if (Array.isArray(rawConfig.aggregations) && rawConfig.aggregations.length > 0) {
     queryParams.aggregations = rawConfig.aggregations;
     queryParams.dimensions = rawConfig.dimensions || rawConfig.groupBy || (xAxis ? [String(xAxis)] : []);
+  } else if (chartType === "SCATTER" && !aggregation && xAxis && yAxis) {
+    queryParams.columns = [String(xAxis), String(yAxis)];
   } else if (yAxis && (aggregation || chartType === "KPI")) {
     const agg = String(aggregation || "SUM").toUpperCase() as AggregationFunction;
     const yCol = String(yAxis);
@@ -321,10 +326,21 @@ export async function executeVisualizationQuery(
         alias: yCol === "*" ? `${agg.toLowerCase()}_count` : yCol,
       },
     ];
+
+    const secondaryY = rawConfig.secondaryValueCol || rawConfig.secondary || rawConfig.yAxis2;
+    if (secondaryY && String(secondaryY) !== yCol) {
+      queryParams.measures.push({
+        column: String(secondaryY),
+        aggregation: agg,
+        alias: String(secondaryY),
+      });
+    }
+
     if (chartType !== "KPI" && xAxis) {
       const dims = [String(xAxis)];
-      if (series && series !== xAxis) {
-        dims.push(String(series));
+      const groupCol = rawConfig.groupCol || rawConfig.group || series;
+      if (groupCol && groupCol !== xAxis) {
+        dims.push(String(groupCol));
       }
       queryParams.dimensions = dims;
     }

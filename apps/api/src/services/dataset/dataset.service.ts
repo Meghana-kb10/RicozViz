@@ -42,7 +42,7 @@ import {
 } from "../workspace/workspace-auth.helper.js";
 import { resolveWorkspaceAccess } from "../workspace.service.js";
 
-function mapToPrismaColumnType(type: string): DatasetColumnType {
+export function mapToPrismaColumnType(type: string): DatasetColumnType {
   const normalized = type.toUpperCase();
   if (
     normalized === "INTEGER" ||

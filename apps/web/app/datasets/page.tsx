@@ -568,6 +568,13 @@ export default function DatasetsPage() {
 
           {canCreate && (
             <div className="flex items-center gap-2.5">
+              <Link
+                href="/datasets/demo"
+                id="explore-demo-datasets-btn"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 transition shadow-2xs"
+              >
+                <span>✨ Demo Datasets</span>
+              </Link>
               <button
                 id="blend-datasets-btn"
                 type="button"
@@ -661,12 +668,20 @@ export default function DatasetsPage() {
                   Create a dataset from a connected PostgreSQL database or import an uploaded CSV/Excel file.
                 </p>
                 {canCreate && (
-                  <button
-                    onClick={openCreateModal}
-                    className="mt-6 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-                  >
-                    + Create Dataset
-                  </button>
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={openCreateModal}
+                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    >
+                      + Create Dataset
+                    </button>
+                    <Link
+                      href="/datasets/demo"
+                      className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 shadow-2xs hover:bg-amber-100"
+                    >
+                      ✨ Explore Demo Datasets
+                    </Link>
+                  </div>
                 )}
               </>
             )}

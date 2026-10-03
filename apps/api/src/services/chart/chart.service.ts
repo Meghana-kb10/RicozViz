@@ -30,6 +30,9 @@ export const ALLOWED_CHART_TYPES = [
   "SCATTER",
   "TABLE",
   "KPI",
+  "RADAR",
+  "FUNNEL",
+  "HEATMAP",
 ] as const;
 
 export type ChartType = (typeof ALLOWED_CHART_TYPES)[number];

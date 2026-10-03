@@ -199,10 +199,17 @@ export function mapQueryResultToChartDataTest(
     };
   }
 
+  const groupKey =
+    config.groupCol ||
+    config.dimensions?.[1] ||
+    config.series ||
+    undefined;
+
   return {
     chartType,
     rows: sanitizedRows,
     xKey,
+    groupKey,
     measureKeys,
     columns,
   };
@@ -435,6 +442,93 @@ describe("Visualization Data Mapping", () => {
     expect(mapped.rows[0].profit).toBe(3000);
   });
 
+  it("maps RADAR chart data with multiple metrics across radial categories", () => {
+    const radarResult = {
+      columns: [
+        { name: "department", type: "string" },
+        { name: "budget", type: "number" },
+        { name: "spending", type: "number" },
+      ],
+      rows: [
+        { department: "Engineering", budget: "80000", spending: "75000" },
+        { department: "Marketing", budget: "50000", spending: "48000" },
+        { department: "Sales", budget: "60000", spending: "62000" },
+      ],
+    };
+
+    const config = {
+      dimensions: ["department"],
+      measures: [
+        { column: "budget", aggregation: "SUM", alias: "budget" },
+        { column: "spending", aggregation: "SUM", alias: "spending" },
+      ],
+    };
+
+    const mapped = mapQueryResultToChartDataTest("RADAR", radarResult, config);
+    expect(mapped.chartType).toBe("RADAR");
+    expect(mapped.xKey).toBe("department");
+    expect(mapped.measureKeys).toEqual(["budget", "spending"]);
+    expect(mapped.rows[0].budget).toBe(80000);
+    expect(mapped.rows[0].spending).toBe(75000);
+  });
+
+  it("maps FUNNEL chart data preserving ordered progression stages", () => {
+    const funnelResult = {
+      columns: [
+        { name: "stage", type: "string" },
+        { name: "conversions", type: "number" },
+      ],
+      rows: [
+        { stage: "Impressions", conversions: "10000" },
+        { stage: "Clicks", conversions: "2500" },
+        { stage: "Signups", conversions: "500" },
+        { stage: "Purchases", conversions: "120" },
+      ],
+    };
+
+    const config = {
+      dimensions: ["stage"],
+      measures: [{ column: "conversions", aggregation: "SUM", alias: "conversions" }],
+    };
+
+    const mapped = mapQueryResultToChartDataTest("FUNNEL", funnelResult, config);
+    expect(mapped.chartType).toBe("FUNNEL");
+    expect(mapped.xKey).toBe("stage");
+    expect(mapped.measureKeys).toEqual(["conversions"]);
+    expect(mapped.rows).toHaveLength(4);
+    expect(mapped.rows[3].conversions).toBe(120);
+  });
+
+  it("maps HEATMAP matrix data with 2D category dimensions and cell intensity", () => {
+    const heatmapResult = {
+      columns: [
+        { name: "region", type: "string" },
+        { name: "quarter", type: "string" },
+        { name: "sales", type: "number" },
+      ],
+      rows: [
+        { region: "North", quarter: "Q1", sales: "3400" },
+        { region: "North", quarter: "Q2", sales: "4100" },
+        { region: "South", quarter: "Q1", sales: "2900" },
+        { region: "South", quarter: "Q2", sales: "3800" },
+      ],
+    };
+
+    const config = {
+      dimensions: ["region", "quarter"],
+      groupCol: "quarter",
+      measures: [{ column: "sales", aggregation: "SUM", alias: "sales" }],
+    };
+
+    const mapped = mapQueryResultToChartDataTest("HEATMAP", heatmapResult, config);
+    expect(mapped.chartType).toBe("HEATMAP");
+    expect(mapped.xKey).toBe("region");
+    expect(mapped.groupKey).toBe("quarter");
+    expect(mapped.measureKeys).toEqual(["sales"]);
+    expect(mapped.rows).toHaveLength(4);
+    expect(mapped.rows[0].sales).toBe(3400);
+  });
+
   it("converts all query filter operators and sorting correctly", () => {
     const operators = [
       "=",
@@ -547,6 +641,253 @@ describe("Visualization Configuration Schema Validation", () => {
     });
 
     expect(updated.chartType).toBe("DONUT");
+  });
+
+  it("accepts newly supported chart types: RADAR, FUNNEL, and HEATMAP in schemas", () => {
+    const radar = createChartSchema.parse({
+      title: "Performance Radar",
+      chartType: "RADAR",
+    });
+    expect(radar.chartType).toBe("RADAR");
+
+    const funnel = createChartSchema.parse({
+      title: "Conversion Funnel",
+      chartType: "FUNNEL",
+    });
+    expect(funnel.chartType).toBe("FUNNEL");
+
+    const heatmap = createChartSchema.parse({
+      title: "Density Heatmap",
+      chartType: "HEATMAP",
+    });
+    expect(heatmap.chartType).toBe("HEATMAP");
+  });
+});
+
+// ============================================================
+// COLUMN TYPE HEURISTICS & COMPATIBILITY VALIDATION
+// ============================================================
+
+describe("Column-Type Heuristics & Chart Compatibility Rules", () => {
+  // Classification helper for unit tests
+  function classifyCol(type: string): "numeric" | "date" | "categorical" | "boolean" {
+    const t = type.toLowerCase();
+    if (["number", "integer", "int", "decimal", "float", "double"].includes(t)) return "numeric";
+    if (["date", "datetime", "timestamp"].includes(t) || t.includes("date") || t.includes("time")) return "date";
+    if (t === "boolean" || t === "bool") return "boolean";
+    return "categorical";
+  }
+
+  function validateCompatibility(
+    chartType: string,
+    params: {
+      categoryCol?: string;
+      valueCol?: string;
+      secondaryValueCol?: string;
+      groupCol?: string;
+      aggregation?: string;
+      columns: { name: string; type: string }[];
+    }
+  ): { valid: boolean; error?: string } {
+    const { categoryCol, valueCol, secondaryValueCol, groupCol, columns } = params;
+    const colMap = new Map(columns.map((c) => [c.name, classifyCol(c.type)]));
+
+    if (!valueCol) {
+      return { valid: false, error: "A primary metric column is required." };
+    }
+
+    const valueType = colMap.get(valueCol);
+
+    if (chartType === "KPI") {
+      if (valueType !== "numeric" && params.aggregation !== "COUNT") {
+        return { valid: false, error: "KPI requires a numeric measure or COUNT." };
+      }
+      return { valid: true };
+    }
+
+    if (chartType === "SCATTER") {
+      if (!categoryCol) {
+        return { valid: false, error: "Scatter plots require an X-axis numeric dimension." };
+      }
+      const xType = colMap.get(categoryCol);
+      if (xType !== "numeric") {
+        return { valid: false, error: "Scatter plots require a numeric column for X-axis." };
+      }
+      if (valueType !== "numeric") {
+        return { valid: false, error: "Scatter plots require a numeric column for Y-axis." };
+      }
+      return { valid: true };
+    }
+
+    if (chartType === "HEATMAP") {
+      if (!categoryCol || !groupCol) {
+        return { valid: false, error: "Heatmaps require two distinct categorical dimensions (X and Matrix/Y)." };
+      }
+      if (categoryCol === groupCol) {
+        return { valid: false, error: "Heatmap dimensions must be different columns." };
+      }
+      if (valueType !== "numeric" && params.aggregation !== "COUNT") {
+        return { valid: false, error: "Heatmap requires a numeric cell value." };
+      }
+      return { valid: true };
+    }
+
+    if (chartType === "RADAR") {
+      if (!categoryCol) {
+        return { valid: false, error: "Radar charts require an axis category dimension." };
+      }
+      if (valueType !== "numeric") {
+        return { valid: false, error: "Radar primary series must be numeric." };
+      }
+      if (secondaryValueCol) {
+        const secType = colMap.get(secondaryValueCol);
+        if (secType !== "numeric") {
+          return { valid: false, error: "Radar secondary series must be numeric." };
+        }
+      }
+      return { valid: true };
+    }
+
+    if (chartType === "PIE" || chartType === "DONUT") {
+      if (!categoryCol) {
+        return { valid: false, error: "Pie/Donut charts require a slicing category." };
+      }
+      if (valueType !== "numeric" && params.aggregation !== "COUNT") {
+        return { valid: false, error: "Pie/Donut charts require a numeric measure." };
+      }
+      return { valid: true };
+    }
+
+    if (!categoryCol) {
+      return { valid: false, error: "This chart type requires an X-axis dimension." };
+    }
+
+    return { valid: true };
+  }
+
+  const sampleColumns = [
+    { name: "id", type: "integer" },
+    { name: "customer_name", type: "string" },
+    { name: "category", type: "string" },
+    { name: "region", type: "string" },
+    { name: "stage", type: "string" },
+    { name: "signup_date", type: "date" },
+    { name: "sales", type: "float" },
+    { name: "expenses", type: "float" },
+    { name: "age", type: "integer" },
+    { name: "is_active", type: "boolean" },
+  ];
+
+  it("validates Categorical + Numeric pairs for Bar, Pie, and Donut", () => {
+    const barValid = validateCompatibility("BAR", {
+      categoryCol: "category",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(barValid.valid).toBe(true);
+
+    const pieValid = validateCompatibility("PIE", {
+      categoryCol: "category",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(pieValid.valid).toBe(true);
+
+    const donutValid = validateCompatibility("DONUT", {
+      categoryCol: "category",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(donutValid.valid).toBe(true);
+  });
+
+  it("validates Date + Numeric pairs for Line and Area charts", () => {
+    const lineValid = validateCompatibility("LINE", {
+      categoryCol: "signup_date",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(lineValid.valid).toBe(true);
+
+    const areaValid = validateCompatibility("AREA", {
+      categoryCol: "signup_date",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(areaValid.valid).toBe(true);
+  });
+
+  it("validates Numeric + Numeric pairs for Scatter plots and rejects non-numeric dimensions", () => {
+    const scatterValid = validateCompatibility("SCATTER", {
+      categoryCol: "sales",
+      valueCol: "expenses",
+      columns: sampleColumns,
+    });
+    expect(scatterValid.valid).toBe(true);
+
+    const scatterInvalid = validateCompatibility("SCATTER", {
+      categoryCol: "customer_name",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(scatterInvalid.valid).toBe(false);
+    expect(scatterInvalid.error).toContain("numeric column for X-axis");
+  });
+
+  it("validates Category × Category × Numeric for Heatmaps and rejects identical dimensions", () => {
+    const heatmapValid = validateCompatibility("HEATMAP", {
+      categoryCol: "region",
+      groupCol: "category",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(heatmapValid.valid).toBe(true);
+
+    const heatmapSameCol = validateCompatibility("HEATMAP", {
+      categoryCol: "region",
+      groupCol: "region",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(heatmapSameCol.valid).toBe(false);
+    expect(heatmapSameCol.error).toContain("must be different columns");
+  });
+
+  it("validates Radar with primary and optional secondary numeric series", () => {
+    const radarValid = validateCompatibility("RADAR", {
+      categoryCol: "category",
+      valueCol: "sales",
+      secondaryValueCol: "expenses",
+      columns: sampleColumns,
+    });
+    expect(radarValid.valid).toBe(true);
+
+    const radarInvalidSec = validateCompatibility("RADAR", {
+      categoryCol: "category",
+      valueCol: "sales",
+      secondaryValueCol: "customer_name",
+      columns: sampleColumns,
+    });
+    expect(radarInvalidSec.valid).toBe(false);
+    expect(radarInvalidSec.error).toContain("secondary series must be numeric");
+  });
+
+  it("validates Funnel chart with category stages and numeric metrics", () => {
+    const funnelValid = validateCompatibility("FUNNEL", {
+      categoryCol: "stage",
+      valueCol: "sales",
+      columns: sampleColumns,
+    });
+    expect(funnelValid.valid).toBe(true);
+  });
+
+  it("validates single aggregated value for Metric/KPI card", () => {
+    const kpiValid = validateCompatibility("KPI", {
+      valueCol: "sales",
+      aggregation: "SUM",
+      columns: sampleColumns,
+    });
+    expect(kpiValid.valid).toBe(true);
   });
 });
 
@@ -989,6 +1330,84 @@ describe("Standalone Visualization Engine API (/api/v1/visualizations)", () => {
       .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
 
     expect(check.status).toBe(404);
+  });
+
+  it("POST /api/v1/visualizations creates RADAR, FUNNEL, and HEATMAP visualizations with real queries", async () => {
+    if (!dbAvailable) return;
+
+    // 1. RADAR
+    const radarRes = await request
+      .post("/api/v1/visualizations")
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`)
+      .send({
+        title: "Studio Test Department Radar",
+        chartType: "RADAR",
+        datasetId: testDatasetId,
+        config: {
+          category: "region",
+          value: "sales",
+          secondary: "sales",
+          aggregation: "AVG",
+        },
+      });
+
+    expect(radarRes.status).toBe(201);
+    expect(radarRes.body.data.chartType).toBe("RADAR");
+
+    const radarData = await request
+      .get(`/api/v1/visualizations/${radarRes.body.data.id}/data`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
+
+    expect(radarData.status).toBe(200);
+    expect(radarData.body.data.rows.length).toBeGreaterThan(0);
+
+    // 2. FUNNEL
+    const funnelRes = await request
+      .post("/api/v1/visualizations")
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`)
+      .send({
+        title: "Studio Test Regional Funnel",
+        chartType: "FUNNEL",
+        datasetId: testDatasetId,
+        config: {
+          category: "region",
+          value: "sales",
+          aggregation: "SUM",
+        },
+      });
+
+    expect(funnelRes.status).toBe(201);
+    expect(funnelRes.body.data.chartType).toBe("FUNNEL");
+
+    // 3. HEATMAP
+    const heatmapRes = await request
+      .post("/api/v1/visualizations")
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`)
+      .send({
+        title: "Studio Test Regional Heatmap",
+        chartType: "HEATMAP",
+        datasetId: testDatasetId,
+        config: {
+          category: "region",
+          group: "region",
+          value: "sales",
+          aggregation: "SUM",
+        },
+      });
+
+    expect(heatmapRes.status).toBe(201);
+    expect(heatmapRes.body.data.chartType).toBe("HEATMAP");
+
+    // Clean up created visualizations
+    await request
+      .delete(`/api/v1/visualizations/${radarRes.body.data.id}`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
+    await request
+      .delete(`/api/v1/visualizations/${funnelRes.body.data.id}`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
+    await request
+      .delete(`/api/v1/visualizations/${heatmapRes.body.data.id}`)
+      .set("Authorization", `Bearer ${ADMIN_TOKEN}`);
   });
 });
 

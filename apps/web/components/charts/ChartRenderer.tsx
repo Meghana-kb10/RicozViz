@@ -22,6 +22,9 @@ import {
 } from "recharts";
 import type { ChartType, ChartConfig, DatasetQueryResult } from "../../lib/api";
 import { mapQueryResultToChartData } from "../../lib/chart-query-mapper";
+import { RadarChartRenderer } from "../visualization/RadarChartRenderer";
+import { FunnelChartRenderer } from "../visualization/FunnelChartRenderer";
+import { HeatmapRenderer } from "../visualization/HeatmapRenderer";
 
 const PALETTE = [
   "#4f46e5", // Indigo
@@ -406,6 +409,21 @@ export function ChartRenderer({
             {mapped.rows.length} records analyzed
           </span>
         </div>
+      )}
+
+      {/* 9. RADAR CHART */}
+      {chartType === "RADAR" && (
+        <RadarChartRenderer data={mapped} config={config} height="100%" />
+      )}
+
+      {/* 10. FUNNEL CHART */}
+      {chartType === "FUNNEL" && (
+        <FunnelChartRenderer data={mapped} config={config} height="100%" />
+      )}
+
+      {/* 11. HEATMAP MATRIX */}
+      {chartType === "HEATMAP" && (
+        <HeatmapRenderer data={mapped} config={config} height="100%" />
       )}
     </div>
   );

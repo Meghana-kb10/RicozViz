@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   BarChart3,
@@ -17,10 +17,16 @@ import {
   RefreshCw,
   Database,
   ArrowUpDown,
-  Filter as FilterIcon,
+  Filter as FunnelIcon,
   Check,
   AlertCircle,
   FolderOpen,
+  ScatterChart as ScatterIcon,
+  Radar as RadarIcon,
+  LayoutGrid as HeatmapIcon,
+  Sparkles,
+  LayoutDashboard,
+  Layers,
 } from "lucide-react";
 import { useAuth } from "../../contexts/auth-context";
 import {
@@ -30,14 +36,22 @@ import {
   apiCreateVisualization,
   apiUpdateVisualization,
   apiDeleteVisualization,
+  apiGetDashboards,
+  apiCreateChart,
   type DatasetData,
   type DatasetColumn,
   type DatasetQueryResult,
   type VisualizationData,
   type ChartType,
   type AggregationFunction,
+  type DashboardItem,
 } from "../../lib/api";
 import { ChartRenderer } from "../../components/charts/ChartRenderer";
+import {
+  getRecommendedVisualizations,
+  validateChartCompatibility,
+  type ChartRecommendation,
+} from "../../lib/chart-recommender";
 
 const CHART_TYPES: Array<{
   id: ChartType;
@@ -45,13 +59,17 @@ const CHART_TYPES: Array<{
   icon: typeof BarChart3;
   description: string;
 }> = [
-  { id: "BAR", label: "Bar Chart", icon: BarChart3, description: "Compare categorical values" },
-  { id: "LINE", label: "Line Chart", icon: LineChartIcon, description: "Trends and continuous sequences" },
-  { id: "AREA", label: "Area Chart", icon: AreaChartIcon, description: "Volume and trend over categories" },
-  { id: "PIE", label: "Pie Chart", icon: PieChartIcon, description: "Proportions and shares" },
-  { id: "DONUT", label: "Donut Chart", icon: PieChartIcon, description: "Ring proportions with center readout" },
-  { id: "TABLE", label: "Data Table", icon: TableIcon, description: "Tabular records and aggregations" },
-  { id: "KPI", label: "KPI Metric", icon: Gauge, description: "Single highlighted key metric" },
+  { id: "BAR", label: "Bar Chart", icon: BarChart3, description: "Compare categorical values & frequencies" },
+  { id: "LINE", label: "Line Chart", icon: LineChartIcon, description: "Trends and continuous sequences over time" },
+  { id: "AREA", label: "Area Chart", icon: AreaChartIcon, description: "Volume and cumulative progression" },
+  { id: "PIE", label: "Pie Chart", icon: PieChartIcon, description: "Proportions and category shares" },
+  { id: "DONUT", label: "Donut Chart", icon: PieChartIcon, description: "Ring proportions with central readout" },
+  { id: "SCATTER", label: "Scatter Plot", icon: ScatterIcon, description: "Correlation & clusters between numeric variables" },
+  { id: "RADAR", label: "Radar Chart", icon: RadarIcon, description: "Multi-metric radial profile comparison" },
+  { id: "FUNNEL", label: "Funnel Chart", icon: FunnelIcon, description: "Sequential stages and conversion dropoffs" },
+  { id: "HEATMAP", label: "Heatmap Matrix", icon: HeatmapIcon, description: "2D category cross-table density matrix" },
+  { id: "KPI", label: "KPI Metric", icon: Gauge, description: "Single highlighted key summary metric" },
+  { id: "TABLE", label: "Data Table", icon: TableIcon, description: "Tabular raw records and aggregations" },
 ];
 
 const AGGREGATIONS: Array<{ id: AggregationFunction; label: string }> = [
@@ -80,25 +98,44 @@ interface FilterRow {
   value: string;
 }
 
-export default function VisualizationsPage() {
+function VisualizationsStudioContent() {
   const { auth, isLoading: authLoading, logout } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Navigation & State
   const [activeTab, setActiveTab] = useState<"builder" | "saved">("builder");
 
   // Datasets
   const [datasets, setDatasets] = useState<DatasetData[]>([]);
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string>("");
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>(
+    searchParams.get("datasetId") || ""
+  );
   const [isLoadingDatasets, setIsLoadingDatasets] = useState<boolean>(true);
 
   // Visualization Configuration
-  const [title, setTitle] = useState<string>("New Visualization");
+  const [title, setTitle] = useState<string>(
+    searchParams.get("title") || "New Visualization"
+  );
   const [description, setDescription] = useState<string>("");
-  const [chartType, setChartType] = useState<ChartType>("BAR");
-  const [categoryCol, setCategoryCol] = useState<string>("");
-  const [valueCol, setValueCol] = useState<string>("");
-  const [aggregation, setAggregation] = useState<AggregationFunction>("SUM");
+  const [chartType, setChartType] = useState<ChartType>(
+    (searchParams.get("chartType") as ChartType) || "BAR"
+  );
+  const [categoryCol, setCategoryCol] = useState<string>(
+    searchParams.get("category") || ""
+  );
+  const [valueCol, setValueCol] = useState<string>(
+    searchParams.get("value") || ""
+  );
+  const [secondaryValueCol, setSecondaryValueCol] = useState<string>(
+    searchParams.get("secondary") || ""
+  );
+  const [groupCol, setGroupCol] = useState<string>(
+    searchParams.get("group") || ""
+  );
+  const [aggregation, setAggregation] = useState<AggregationFunction>(
+    (searchParams.get("agg") as AggregationFunction) || "SUM"
+  );
   const [sortCol, setSortCol] = useState<string>("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState<FilterRow[]>([]);
@@ -114,7 +151,17 @@ export default function VisualizationsPage() {
   const [savedVisualizations, setSavedVisualizations] = useState<VisualizationData[]>([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [feedbackMessage, setFeedbackMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  // Add to Dashboard Modal State
+  const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
+  const [dashboards, setDashboards] = useState<DashboardItem[]>([]);
+  const [selectedDashboardId, setSelectedDashboardId] = useState("");
+  const [addingToDashboard, setAddingToDashboard] = useState(false);
+  const [targetVizForDashboard, setTargetVizForDashboard] = useState<VisualizationData | null>(null);
 
   // Auth Protection
   useEffect(() => {
@@ -152,12 +199,26 @@ export default function VisualizationsPage() {
     }
   }, []);
 
+  // Load Available Dashboards
+  const loadDashboards = useCallback(async () => {
+    try {
+      const res = await apiGetDashboards();
+      setDashboards(res.dashboards || []);
+      if (res.dashboards?.length > 0 && !selectedDashboardId) {
+        setSelectedDashboardId(res.dashboards[0].id);
+      }
+    } catch {
+      // Ignore
+    }
+  }, [selectedDashboardId]);
+
   useEffect(() => {
     if (auth) {
       void loadDatasets();
       void loadSavedVisualizations();
+      void loadDashboards();
     }
-  }, [auth, loadDatasets, loadSavedVisualizations]);
+  }, [auth, loadDatasets, loadSavedVisualizations, loadDashboards]);
 
   // Current selected dataset object and its columns
   const currentDataset = useMemo(() => {
@@ -169,7 +230,24 @@ export default function VisualizationsPage() {
     return currentDataset.columns || [];
   }, [currentDataset]);
 
-  // Auto-select initial Category & Value fields when dataset changes
+  // Dynamic recommendations based on current dataset columns
+  const recommendations = useMemo(() => {
+    return getRecommendedVisualizations(columns);
+  }, [columns]);
+
+  // Live Chart Compatibility Check
+  const compatibility = useMemo(() => {
+    return validateChartCompatibility(chartType, {
+      categoryCol,
+      valueCol,
+      secondaryValueCol,
+      groupCol,
+      aggregation,
+      columns,
+    });
+  }, [chartType, categoryCol, valueCol, secondaryValueCol, groupCol, aggregation, columns]);
+
+  // Auto-select initial Category & Value fields when dataset changes if none selected
   useEffect(() => {
     if (columns.length > 0) {
       const numericCols = columns.filter(
@@ -179,17 +257,30 @@ export default function VisualizationsPage() {
         (c) => c.type.toLowerCase() !== "number" && c.type.toLowerCase() !== "integer"
       );
 
-      // Category
       if (!categoryCol || !columns.some((c) => c.name === categoryCol)) {
         setCategoryCol(textCols[0]?.name || columns[0].name);
       }
 
-      // Value
       if (!valueCol || !columns.some((c) => c.name === valueCol)) {
         setValueCol(numericCols[0]?.name || columns[1]?.name || columns[0].name);
       }
     }
   }, [columns, categoryCol, valueCol]);
+
+  // Apply a recommendation
+  const applyRecommendation = (rec: ChartRecommendation) => {
+    setChartType(rec.chartType);
+    setCategoryCol(rec.categoryCol);
+    setValueCol(rec.valueCol);
+    if (rec.secondaryValueCol) setSecondaryValueCol(rec.secondaryValueCol);
+    if (rec.groupCol) setGroupCol(rec.groupCol);
+    setAggregation(rec.aggregation);
+    setTitle(rec.title);
+    setFeedbackMessage({
+      type: "success",
+      text: `Applied recommendation: ${rec.title}`,
+    });
+  };
 
   // Clear feedback after 4 seconds
   useEffect(() => {
@@ -219,10 +310,6 @@ export default function VisualizationsPage() {
           value: f.operator === "is empty" || f.operator === "is not empty" ? undefined : f.value,
         }));
 
-      // Grouping and Aggregation logic
-      const isKpi = chartType === "KPI";
-      const isTable = chartType === "TABLE";
-
       const queryPayload: Record<string, unknown> = {
         limit: 1000,
         filters: validFilters,
@@ -235,7 +322,7 @@ export default function VisualizationsPage() {
         };
       }
 
-      if (isKpi) {
+      if (chartType === "KPI") {
         if (valueCol) {
           queryPayload.aggregations = [
             {
@@ -245,8 +332,7 @@ export default function VisualizationsPage() {
             },
           ];
         }
-      } else if (isTable) {
-        // Raw table mode if no aggregation, or group by category if selected
+      } else if (chartType === "TABLE") {
         if (categoryCol && valueCol) {
           queryPayload.groupBy = [categoryCol];
           queryPayload.aggregations = [
@@ -257,11 +343,25 @@ export default function VisualizationsPage() {
             },
           ];
         } else {
-          queryPayload.columns = columns.map((c) => c.name).slice(0, 10);
+          queryPayload.columns = columns.map((c) => c.name).slice(0, 15);
         }
-      } else {
-        // BAR, LINE, AREA, PIE, DONUT
+      } else if (chartType === "SCATTER") {
+        // Raw data points mode for Scatter if both X & Y exist
         if (categoryCol && valueCol) {
+          queryPayload.columns = [categoryCol, valueCol];
+        }
+      } else if (chartType === "HEATMAP") {
+        // 2D Matrix: categoryCol × groupCol with value aggregate
+        if (categoryCol && groupCol && valueCol) {
+          queryPayload.groupBy = [categoryCol, groupCol];
+          queryPayload.aggregations = [
+            {
+              column: valueCol,
+              function: aggregation,
+              alias: valueCol,
+            },
+          ];
+        } else if (categoryCol && valueCol) {
           queryPayload.groupBy = [categoryCol];
           queryPayload.aggregations = [
             {
@@ -270,6 +370,26 @@ export default function VisualizationsPage() {
               alias: valueCol,
             },
           ];
+        }
+      } else {
+        // BAR, LINE, AREA, PIE, DONUT, RADAR, FUNNEL
+        if (categoryCol && valueCol) {
+          queryPayload.groupBy = [categoryCol];
+          const aggs = [
+            {
+              column: valueCol,
+              function: aggregation,
+              alias: valueCol,
+            },
+          ];
+          if (secondaryValueCol && secondaryValueCol !== valueCol) {
+            aggs.push({
+              column: secondaryValueCol,
+              function: aggregation,
+              alias: secondaryValueCol,
+            });
+          }
+          queryPayload.aggregations = aggs;
         } else if (categoryCol) {
           queryPayload.groupBy = [categoryCol];
           queryPayload.aggregations = [
@@ -291,16 +411,66 @@ export default function VisualizationsPage() {
     } finally {
       setIsQuerying(false);
     }
-  }, [selectedDatasetId, chartType, categoryCol, valueCol, aggregation, sortCol, sortDir, filters, columns]);
+  }, [
+    selectedDatasetId,
+    chartType,
+    categoryCol,
+    valueCol,
+    secondaryValueCol,
+    groupCol,
+    aggregation,
+    sortCol,
+    sortDir,
+    filters,
+    columns,
+  ]);
 
   // Auto-run query on configuration change
   useEffect(() => {
     if (selectedDatasetId && (categoryCol || valueCol)) {
       void executeQuery();
     }
-  }, [selectedDatasetId, chartType, categoryCol, valueCol, aggregation, executeQuery]);
+  }, [selectedDatasetId, chartType, categoryCol, valueCol, secondaryValueCol, groupCol, aggregation, executeQuery]);
 
-  // Save Visualization to Backend
+  // Build current chart config object
+  const currentChartConfig = useMemo(() => {
+    return {
+      xAxis: categoryCol,
+      category: categoryCol,
+      yAxis: secondaryValueCol ? [valueCol, secondaryValueCol] : valueCol,
+      value: valueCol,
+      secondaryValueCol: secondaryValueCol || undefined,
+      groupCol: groupCol || undefined,
+      aggregation,
+      dimensions: groupCol ? [categoryCol, groupCol] : categoryCol ? [categoryCol] : [],
+      measures: valueCol
+        ? [
+            {
+              column: valueCol,
+              aggregation,
+              alias: valueCol,
+            },
+            ...(secondaryValueCol
+              ? [
+                  {
+                    column: secondaryValueCol,
+                    aggregation,
+                    alias: secondaryValueCol,
+                  },
+                ]
+              : []),
+          ]
+        : [],
+      filters: filters.map((f) => ({
+        column: f.column,
+        operator: f.operator,
+        value: f.value,
+      })),
+      sort: sortCol ? { column: sortCol, direction: sortDir } : undefined,
+    };
+  }, [categoryCol, valueCol, secondaryValueCol, groupCol, aggregation, filters, sortCol, sortDir]);
+
+  // Save Visualization
   const handleSaveVisualization = async () => {
     if (!title.trim()) {
       setFeedbackMessage({ type: "error", text: "Please enter a visualization title." });
@@ -314,30 +484,6 @@ export default function VisualizationsPage() {
     setIsSaving(true);
     setFeedbackMessage(null);
 
-    const config = {
-      xAxis: categoryCol,
-      category: categoryCol,
-      yAxis: valueCol,
-      value: valueCol,
-      aggregation,
-      dimensions: categoryCol ? [categoryCol] : [],
-      measures: valueCol
-        ? [
-            {
-              column: valueCol,
-              aggregation,
-              alias: valueCol,
-            },
-          ]
-        : [],
-      filters: filters.map((f) => ({
-        column: f.column,
-        operator: f.operator,
-        value: f.value,
-      })),
-      sort: sortCol ? { column: sortCol, direction: sortDir } : undefined,
-    };
-
     try {
       if (editingVizId) {
         await apiUpdateVisualization(editingVizId, {
@@ -345,7 +491,7 @@ export default function VisualizationsPage() {
           description: description || undefined,
           chartType,
           datasetId: selectedDatasetId,
-          config,
+          config: currentChartConfig,
         });
         setFeedbackMessage({ type: "success", text: "Visualization updated successfully!" });
       } else {
@@ -354,10 +500,13 @@ export default function VisualizationsPage() {
           description: description || undefined,
           chartType,
           datasetId: selectedDatasetId,
-          config,
+          config: currentChartConfig,
         });
         setEditingVizId(created.id);
-        setFeedbackMessage({ type: "success", text: "Visualization saved successfully! Ready to add to Dashboards." });
+        setFeedbackMessage({
+          type: "success",
+          text: "Visualization saved successfully! Ready to add to Dashboards.",
+        });
       }
       void loadSavedVisualizations();
     } catch (err: unknown) {
@@ -365,6 +514,51 @@ export default function VisualizationsPage() {
       setFeedbackMessage({ type: "error", text: msg });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Open "Add to Dashboard" Modal
+  const openAddToDashboard = (viz?: VisualizationData) => {
+    setTargetVizForDashboard(viz || null);
+    setIsDashboardModalOpen(true);
+  };
+
+  // Add chart to selected Dashboard
+  const handleConfirmAddToDashboard = async () => {
+    if (!selectedDashboardId) {
+      setFeedbackMessage({ type: "error", text: "Please choose a destination dashboard." });
+      return;
+    }
+
+    setAddingToDashboard(true);
+    try {
+      const targetConfig = targetVizForDashboard
+        ? (targetVizForDashboard.config as Record<string, unknown>)
+        : currentChartConfig;
+      const targetTitle = targetVizForDashboard?.title || title;
+      const targetType = targetVizForDashboard?.chartType || chartType;
+      const targetDsId = targetVizForDashboard?.datasetId || selectedDatasetId;
+
+      await apiCreateChart(selectedDashboardId, {
+        datasetId: targetDsId,
+        title: targetTitle,
+        description: description || undefined,
+        chartType: targetType,
+        config: targetConfig,
+      });
+
+      const dashName =
+        dashboards.find((d) => d.id === selectedDashboardId)?.name || "Dashboard";
+      setIsDashboardModalOpen(false);
+      setFeedbackMessage({
+        type: "success",
+        text: `🎉 Chart added to "${dashName}"!`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to add chart to dashboard";
+      setFeedbackMessage({ type: "error", text: msg });
+    } finally {
+      setAddingToDashboard(false);
     }
   };
 
@@ -378,25 +572,16 @@ export default function VisualizationsPage() {
       setSelectedDatasetId(viz.datasetId);
     }
 
-    const cfg = viz.config || {};
-    const cat = cfg.xAxis || cfg.category || (cfg.dimensions && cfg.dimensions[0]) || "";
-    const val =
-      (typeof cfg.yAxis === "string" ? cfg.yAxis : cfg.yAxis?.[0]) ||
-      (typeof cfg.value === "string" ? cfg.value : cfg.value?.[0]) ||
-      (cfg.measures && cfg.measures[0]?.column) ||
-      "";
-    const agg =
-      (cfg.aggregation as AggregationFunction) ||
-      (cfg.measures && (cfg.measures[0]?.aggregation as AggregationFunction)) ||
-      "SUM";
-
-    setCategoryCol(cat);
-    setValueCol(val);
-    setAggregation(agg);
+    const cfg = (viz.config || {}) as Record<string, any>;
+    if (cfg.xAxis || cfg.category) setCategoryCol(String(cfg.xAxis || cfg.category));
+    if (cfg.value) setValueCol(String(cfg.value));
+    if (cfg.secondaryValueCol) setSecondaryValueCol(String(cfg.secondaryValueCol));
+    if (cfg.groupCol) setGroupCol(String(cfg.groupCol));
+    if (cfg.aggregation) setAggregation(cfg.aggregation as AggregationFunction);
 
     if (cfg.filters && Array.isArray(cfg.filters)) {
       setFilters(
-        cfg.filters.map((f) => ({
+        cfg.filters.map((f: any) => ({
           column: f.column,
           operator: String(f.operator),
           value: f.value !== undefined ? String(f.value) : "",
@@ -408,7 +593,7 @@ export default function VisualizationsPage() {
 
     if (cfg.sort) {
       setSortCol(cfg.sort.column);
-      setSortDir(cfg.sort.direction.toLowerCase() === "desc" ? "desc" : "asc");
+      setSortDir(cfg.sort.direction?.toLowerCase() === "desc" ? "desc" : "asc");
     }
 
     setActiveTab("builder");
@@ -431,7 +616,7 @@ export default function VisualizationsPage() {
     }
   };
 
-  // Add / Remove Filter Row
+  // Filter Row helpers
   const addFilterRow = () => {
     const firstCol = columns[0]?.name || "";
     setFilters((prev) => [...prev, { column: firstCol, operator: "equals", value: "" }]);
@@ -474,6 +659,10 @@ export default function VisualizationsPage() {
             <span className="font-bold text-gray-900 tracking-tight">RicozViz</span>
           </Link>
           <span className="text-gray-300">/</span>
+          <Link href="/datasets" className="text-sm text-gray-500 hover:text-gray-900 transition">
+            Datasets
+          </Link>
+          <span className="text-gray-300">/</span>
           <span className="text-sm font-semibold text-gray-800">Visualizations Studio</span>
 
           {/* Tab switcher */}
@@ -502,24 +691,41 @@ export default function VisualizationsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Link
-            href="/dashboards"
-            className="text-xs font-medium text-gray-600 hover:text-indigo-600 transition"
-          >
-            Dashboards
-          </Link>
-          <Link
-            href="/datasets"
-            className="text-xs font-medium text-gray-600 hover:text-indigo-600 transition"
-          >
-            Datasets
-          </Link>
-          <span className="h-4 w-px bg-gray-200" />
-          <span className="text-xs text-gray-500 font-mono">{auth.user.email}</span>
+        <div className="flex items-center gap-3">
+          {activeTab === "builder" && (
+            <>
+              <button
+                type="button"
+                onClick={() => openAddToDashboard()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 transition"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600" />
+                <span>Add to Dashboard</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveVisualization}
+                disabled={isSaving}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 disabled:opacity-50 transition"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>{isSaving ? "Saving…" : editingVizId ? "Update" : "Save Visualization"}</span>
+              </button>
+            </>
+          )}
+
+          <div className="text-right hidden sm:block border-l border-gray-200 pl-3">
+            <p className="text-xs font-medium text-gray-900">{auth.user.name}</p>
+            <p className="text-2xs text-gray-500">
+              {auth.role} · {auth.organization.name}
+            </p>
+          </div>
           <button
-            onClick={() => void logout().then(() => router.push("/login"))}
-            className="text-xs font-medium text-red-600 hover:text-red-700 transition"
+            onClick={() => {
+              void logout();
+              router.replace("/login");
+            }}
+            className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
           >
             Sign out
           </button>
@@ -529,16 +735,16 @@ export default function VisualizationsPage() {
       {/* FEEDBACK TOAST */}
       {feedbackMessage && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium transition animate-in fade-in slide-in-from-bottom-2 ${
+          className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold shadow-lg transition animate-in fade-in slide-in-from-bottom-2 ${
             feedbackMessage.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-red-50 border-red-200 text-red-800"
+              ? "bg-emerald-600 text-white"
+              : "bg-red-600 text-white"
           }`}
         >
           {feedbackMessage.type === "success" ? (
-            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+            <Check className="h-4 w-4 shrink-0" />
           ) : (
-            <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+            <AlertCircle className="h-4 w-4 shrink-0" />
           )}
           <span>{feedbackMessage.text}</span>
         </div>
@@ -563,7 +769,7 @@ export default function VisualizationsPage() {
                     setTitle("New Visualization");
                     setDescription("");
                   }}
-                  className="text-[11px] text-indigo-600 hover:underline font-medium"
+                  className="text-2xs text-indigo-600 hover:underline font-medium"
                 >
                   New Chart
                 </button>
@@ -578,7 +784,7 @@ export default function VisualizationsPage() {
                     <Database className="h-3.5 w-3.5 text-indigo-600" />
                     Select Dataset
                   </span>
-                  <Link href="/datasets" className="text-[10px] text-indigo-600 hover:underline">
+                  <Link href="/datasets" className="text-2xs text-indigo-600 hover:underline">
                     Manage Datasets
                   </Link>
                 </label>
@@ -596,7 +802,7 @@ export default function VisualizationsPage() {
                   <select
                     value={selectedDatasetId}
                     onChange={(e) => setSelectedDatasetId(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-xs focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                    className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                   >
                     {datasets.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -607,10 +813,38 @@ export default function VisualizationsPage() {
                 )}
               </div>
 
-              {/* 2. CHART TYPE SELECTOR */}
+              {/* 2. DYNAMIC RECOMMENDATIONS */}
+              {recommendations.length > 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="flex items-center gap-1.5 text-2xs font-bold text-amber-900 uppercase tracking-wider">
+                      <Sparkles className="h-3 w-3 text-amber-600" />
+                      Recommended Charts
+                    </span>
+                    <span className="text-3xs text-amber-700">Auto-detected from columns</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recommendations.slice(0, 4).map((rec) => (
+                      <button
+                        key={rec.id}
+                        type="button"
+                        onClick={() => applyRecommendation(rec)}
+                        title={rec.description}
+                        className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2 py-1 text-2xs font-medium text-amber-900 hover:bg-amber-100 transition shadow-2xs"
+                      >
+                        <span className="font-semibold">{rec.chartType}</span>
+                        <span className="text-gray-400">·</span>
+                        <span className="truncate max-w-[120px]">{rec.valueCol}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. CHART TYPE SELECTOR */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Chart Type
+                  Chart Type ({CHART_TYPES.length})
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {CHART_TYPES.map((t) => {
@@ -623,7 +857,7 @@ export default function VisualizationsPage() {
                         onClick={() => setChartType(t.id)}
                         className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs transition ${
                           isSelected
-                            ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 font-semibold shadow-xs"
+                            ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 font-semibold shadow-2xs"
                             : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                         }`}
                       >
@@ -635,119 +869,206 @@ export default function VisualizationsPage() {
                 </div>
               </div>
 
-              {/* 3. DIMENSIONS & MEASURES */}
+              {/* 4. COMPATIBILITY ALERT */}
+              {compatibility.severity !== "none" && (
+                <div
+                  className={`rounded-lg p-3 text-2xs flex items-start gap-2 ${
+                    compatibility.severity === "error"
+                      ? "bg-red-50 text-red-800 border border-red-200"
+                      : "bg-amber-50 text-amber-800 border border-amber-200"
+                  }`}
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Chart Configuration Note</span>
+                    <span>{compatibility.message}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. DIMENSIONS & MEASURES */}
               <div className="space-y-3 pt-2 border-t border-gray-100">
                 {/* Category / X-Axis */}
                 {chartType !== "KPI" && (
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
                       <span>Category / X-Axis</span>
-                      <span className="text-[10px] text-gray-400 font-normal">Dimension</span>
+                      <span className="text-2xs text-gray-400 font-normal">Primary Dimension</span>
                     </label>
                     <select
                       value={categoryCol}
                       onChange={(e) => setCategoryCol(e.target.value)}
-                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-xs focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
                     >
                       <option value="">— Select Category Column —</option>
                       {columns.map((c) => (
                         <option key={c.name} value={c.name}>
-                          {c.name}{c.isCalculated ? " ⚡ (fx)" : ""} ({c.type})
+                          {c.name} ({c.type})
                         </option>
                       ))}
                     </select>
                   </div>
                 )}
 
-                {/* Value / Y-Axis */}
+                {/* Value / Measure 1 */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
                     <span>Value / Y-Axis</span>
-                    <span className="text-[10px] text-gray-400 font-normal">Numeric Measure</span>
+                    <span className="text-2xs text-gray-400 font-normal">Primary Metric</span>
                   </label>
                   <select
                     value={valueCol}
                     onChange={(e) => setValueCol(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-xs focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
                   >
-                    <option value="">— Select Value Column —</option>
+                    <option value="">— Select Measure Column —</option>
                     {columns.map((c) => (
                       <option key={c.name} value={c.name}>
-                        {c.name}{c.isCalculated ? " ⚡ (fx)" : ""} ({c.type})
+                        {c.name} ({c.type})
                       </option>
                     ))}
                   </select>
                 </div>
 
+                {/* Optional Second Measure (Multi-series / Radar) */}
+                {(chartType === "BAR" ||
+                  chartType === "LINE" ||
+                  chartType === "AREA" ||
+                  chartType === "RADAR") && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                      <span>Secondary Series (Optional)</span>
+                      <span className="text-2xs text-gray-400 font-normal">Multi-Metric</span>
+                    </label>
+                    <select
+                      value={secondaryValueCol}
+                      onChange={(e) => setSecondaryValueCol(e.target.value)}
+                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                    >
+                      <option value="">— None (Single Series) —</option>
+                      {columns
+                        .filter((c) => c.name !== valueCol)
+                        .map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name} ({c.type})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Optional Grouping / Matrix Column (Heatmap) */}
+                {chartType === "HEATMAP" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                      <span>Matrix Y-Axis (Category 2)</span>
+                      <span className="text-2xs text-indigo-600 font-bold">Required for Matrix</span>
+                    </label>
+                    <select
+                      value={groupCol}
+                      onChange={(e) => setGroupCol(e.target.value)}
+                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                    >
+                      <option value="">— Select Second Category —</option>
+                      {columns
+                        .filter((c) => c.name !== categoryCol)
+                        .map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name} ({c.type})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Aggregation Function */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Aggregation
-                  </label>
+                {chartType !== "SCATTER" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Aggregation Method
+                    </label>
+                    <select
+                      value={aggregation}
+                      onChange={(e) => setAggregation(e.target.value as AggregationFunction)}
+                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                    >
+                      {AGGREGATIONS.map((agg) => (
+                        <option key={agg.id} value={agg.id}>
+                          {agg.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* 6. SORTING */}
+              <div className="pt-2 border-t border-gray-100">
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                  <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />
+                  Sorting
+                </label>
+                <div className="grid grid-cols-2 gap-2">
                   <select
-                    value={aggregation}
-                    onChange={(e) => setAggregation(e.target.value as AggregationFunction)}
-                    className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-xs focus:border-indigo-500 focus:outline-hidden"
+                    value={sortCol}
+                    onChange={(e) => setSortCol(e.target.value)}
+                    className="text-xs rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-gray-800 shadow-2xs"
                   >
-                    {AGGREGATIONS.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.label}
+                    <option value="">— Default Sort —</option>
+                    {columns.map((c) => (
+                      <option key={c.name} value={c.name}>
+                        {c.name}
                       </option>
                     ))}
+                  </select>
+                  <select
+                    value={sortDir}
+                    onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+                    className="text-xs rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-gray-800 shadow-2xs"
+                  >
+                    <option value="asc">Ascending (A→Z, 0→9)</option>
+                    <option value="desc">Descending (Z→A, 9→0)</option>
                   </select>
                 </div>
               </div>
 
-              {/* 4. FILTERS */}
+              {/* 7. FILTERS */}
               <div className="pt-2 border-t border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                    <FilterIcon className="h-3.5 w-3.5 text-indigo-600" />
-                    Filters ({filters.length})
+                    <FunnelIcon className="h-3.5 w-3.5 text-gray-400" />
+                    Query Filters ({filters.length})
                   </label>
                   <button
                     type="button"
                     onClick={addFilterRow}
-                    className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                    className="text-2xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5"
                   >
-                    <Plus className="h-3 w-3" />
-                    Add Filter
+                    <Plus className="h-3 w-3" /> Add Filter
                   </button>
                 </div>
 
                 {filters.length === 0 ? (
-                  <p className="text-[11px] text-gray-400 italic">No filters applied</p>
+                  <p className="text-2xs text-gray-400">No active filters applied.</p>
                 ) : (
                   <div className="space-y-2">
                     {filters.map((f, idx) => (
-                      <div
-                        key={idx}
-                        className="p-2.5 rounded-lg border border-gray-200 bg-gray-50/70 space-y-1.5"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <select
-                            value={f.column}
-                            onChange={(e) => updateFilterRow(idx, "column", e.target.value)}
-                            className="flex-1 text-[11px] rounded-md border border-gray-300 bg-white px-2 py-1"
-                          >
-                            {columns.map((c) => (
-                              <option key={c.name} value={c.name}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => removeFilterRow(idx)}
-                            className="text-gray-400 hover:text-red-600 p-1"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                      <div key={idx} className="flex items-center gap-1.5 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        <select
+                          value={f.column}
+                          onChange={(e) => updateFilterRow(idx, "column", e.target.value)}
+                          className="w-1/3 text-3xs rounded border border-gray-300 bg-white p-1"
+                        >
+                          {columns.map((c) => (
+                            <option key={c.name} value={c.name}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
                         <select
                           value={f.operator}
                           onChange={(e) => updateFilterRow(idx, "operator", e.target.value)}
-                          className="w-full text-[11px] rounded-md border border-gray-300 bg-white px-2 py-1"
+                          className="w-1/3 text-3xs rounded border border-gray-300 bg-white p-1"
                         >
                           {FILTER_OPERATORS.map((op) => (
                             <option key={op.id} value={op.id}>
@@ -755,230 +1076,129 @@ export default function VisualizationsPage() {
                             </option>
                           ))}
                         </select>
-                        {f.operator !== "is empty" && f.operator !== "is not empty" && (
+                        {!f.operator.includes("empty") && (
                           <input
                             type="text"
-                            placeholder="Filter value..."
+                            placeholder="Value"
                             value={f.value}
                             onChange={(e) => updateFilterRow(idx, "value", e.target.value)}
-                            className="w-full text-[11px] rounded-md border border-gray-300 bg-white px-2 py-1"
+                            className="w-1/3 text-3xs rounded border border-gray-300 bg-white p-1"
                           />
                         )}
+                        <button
+                          type="button"
+                          onClick={() => removeFilterRow(idx)}
+                          className="text-red-500 hover:text-red-700 p-0.5"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-
-              {/* 5. SORTING */}
-              <div className="pt-2 border-t border-gray-100">
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                  <ArrowUpDown className="h-3.5 w-3.5 text-indigo-600" />
-                  Sorting
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={sortCol}
-                    onChange={(e) => setSortCol(e.target.value)}
-                    className="text-xs rounded-lg border border-gray-300 bg-white px-2.5 py-1.5"
-                  >
-                    <option value="">Default order</option>
-                    {categoryCol && <option value={categoryCol}>Category ({categoryCol})</option>}
-                    {valueCol && <option value={valueCol}>Value ({valueCol})</option>}
-                  </select>
-                  <select
-                    value={sortDir}
-                    onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-                    className="text-xs rounded-lg border border-gray-300 bg-white px-2.5 py-1.5"
-                  >
-                    <option value="asc">Ascending (A–Z, 0–9)</option>
-                    <option value="desc">Descending (Z–A, 9–0)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* 6. TITLE & DESCRIPTION */}
-              <div className="pt-2 border-t border-gray-100 space-y-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Visualization Title
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Revenue by Region"
-                    className="w-full text-xs rounded-lg border border-gray-300 px-3 py-2 text-gray-800 shadow-xs focus:border-indigo-500 focus:outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Description (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Brief description..."
-                    className="w-full text-xs rounded-lg border border-gray-300 px-3 py-2 text-gray-800 shadow-xs focus:border-indigo-500 focus:outline-hidden"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ACTION FOOTER */}
-            <div className="mt-auto p-4 border-t border-gray-200 bg-gray-50 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void executeQuery()}
-                disabled={isQuerying || !selectedDatasetId}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 disabled:opacity-50 transition"
-              >
-                {isQuerying ? (
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-indigo-600" />
-                ) : (
-                  <Play className="h-3.5 w-3.5 text-indigo-600" />
-                )}
-                Run Query
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSaveVisualization()}
-                disabled={isSaving || !selectedDatasetId}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 transition"
-              >
-                {isSaving ? (
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Save className="h-3.5 w-3.5" />
-                )}
-                {editingVizId ? "Update" : "Save"}
-              </button>
             </div>
           </aside>
 
-          {/* MAIN CANVAS AREA */}
-          <main className="flex-1 p-6 overflow-y-auto flex flex-col">
-            {/* Top Toolbar */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                  {title || "Untitled Visualization"}
-                  {editingVizId && (
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">
-                      Saved
-                    </span>
-                  )}
-                </h1>
-                {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+          {/* MAIN PREVIEW CANVAS */}
+          <main className="flex-1 flex flex-col h-[calc(100vh-57px)] overflow-hidden bg-gray-50/70 p-6">
+            {/* Title & Metadata Top Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 bg-white p-4 rounded-xl border border-gray-200 shadow-2xs">
+              <div className="flex-1 max-w-xl">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Visualization Title"
+                  className="w-full text-base font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-indigo-500 focus:outline-hidden px-1 py-0.5"
+                />
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add an optional description or business insight notes…"
+                  className="w-full text-xs text-gray-500 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-indigo-500 focus:outline-hidden px-1 py-0.5 mt-0.5"
+                />
               </div>
 
-              {/* View Switcher: Chart vs Raw Data */}
-              <div className="flex items-center gap-3">
-                {queryResult && (
-                  <div className="text-xs text-gray-500 font-mono">
-                    <span className="font-semibold text-gray-700">{queryResult.rowCount}</span> rows{" "}
-                    <span className="text-gray-400">({queryResult.executionTimeMs}ms)</span>
-                  </div>
-                )}
-                <div className="flex items-center bg-gray-200/80 p-0.5 rounded-lg text-xs font-medium">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-xs">
                   <button
                     onClick={() => setPreviewTab("chart")}
                     className={`px-3 py-1 rounded-md transition ${
                       previewTab === "chart"
-                        ? "bg-white text-gray-900 shadow-xs font-semibold"
+                        ? "bg-white text-indigo-700 shadow-2xs font-semibold"
                         : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
-                    Chart View
+                    Live Chart
                   </button>
                   <button
                     onClick={() => setPreviewTab("data")}
                     className={`px-3 py-1 rounded-md transition ${
                       previewTab === "data"
-                        ? "bg-white text-gray-900 shadow-xs font-semibold"
+                        ? "bg-white text-indigo-700 shadow-2xs font-semibold"
                         : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
-                    Data Table ({queryResult?.rowCount ?? 0})
+                    Raw Data ({queryResult?.rows?.length ?? 0})
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={executeQuery}
+                  disabled={isQuerying}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 ${isQuerying ? "animate-spin text-indigo-600" : ""}`} />
+                  <span>Refresh</span>
+                </button>
               </div>
             </div>
 
             {/* PREVIEW CONTAINER */}
-            <div className="flex-1 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm flex flex-col min-h-[480px]">
+            <div className="flex-1 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col overflow-hidden">
               {previewTab === "chart" ? (
-                <div className="flex-1 flex flex-col justify-center">
+                <div className="flex-1 w-full h-full relative">
                   <ChartRenderer
                     chartType={chartType}
-                    config={{
-                      xAxis: categoryCol,
-                      yAxis: valueCol,
-                      dimensions: categoryCol ? [categoryCol] : [],
-                      measures: valueCol
-                        ? [
-                            {
-                              column: valueCol,
-                              aggregation,
-                              alias: valueCol,
-                            },
-                          ]
-                        : [],
-                    }}
+                    config={currentChartConfig}
                     queryResult={queryResult}
                     isLoading={isQuerying}
                     error={queryError}
-                    height={440}
+                    height="100%"
                   />
                 </div>
               ) : (
-                /* PROCESSED DATA TABLE */
-                <div className="flex-1 overflow-auto">
-                  {isQuerying ? (
-                    <div className="h-64 flex items-center justify-center text-xs text-gray-500 animate-pulse">
-                      Executing query engine...
-                    </div>
-                  ) : !queryResult || queryResult.rows.length === 0 ? (
-                    <div className="h-64 flex flex-col items-center justify-center text-center text-gray-400">
-                      <p className="text-xs font-semibold text-gray-500">No rows returned</p>
-                      <p className="text-[11px] mt-1">Run query to inspect transformed dataset records.</p>
-                    </div>
-                  ) : (
-                    <table className="min-w-full divide-y divide-gray-200 text-left text-xs">
-                      <thead className="bg-gray-50 sticky top-0">
-                        <tr>
-                          {queryResult.columns.map((c) => (
-                            <th
-                              key={c.name}
-                              className="px-4 py-2.5 font-semibold text-gray-700 tracking-wider"
-                            >
-                              {c.name}
-                              <span className="ml-1 text-[10px] text-gray-400 font-normal font-mono">
-                                ({c.type})
-                              </span>
-                            </th>
+                <div className="flex-1 overflow-auto rounded-lg border border-gray-100">
+                  <table className="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        {queryResult?.columns?.map((col) => (
+                          <th key={col.name} className="px-3.5 py-2.5 text-left font-semibold text-gray-700">
+                            {col.name}
+                            <span className="block text-3xs text-gray-400 font-mono font-normal">
+                              {col.type}
+                            </span>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {queryResult?.rows?.map((row, rIdx) => (
+                        <tr key={rIdx} className="hover:bg-gray-50">
+                          {queryResult.columns.map((col) => (
+                            <td key={col.name} className="px-3.5 py-2 font-mono text-gray-800">
+                              {row[col.name] !== undefined && row[col.name] !== null
+                                ? String(row[col.name])
+                                : "—"}
+                            </td>
                           ))}
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
-                        {queryResult.rows.map((row, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50/80 transition">
-                            {queryResult.columns.map((c) => (
-                              <td
-                                key={c.name}
-                                className="px-4 py-2 text-gray-800 font-mono text-[11px]"
-                              >
-                                {row[c.name] !== null && row[c.name] !== undefined
-                                  ? String(row[c.name])
-                                  : "—"}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -988,98 +1208,102 @@ export default function VisualizationsPage() {
 
       {/* TAB 2: SAVED VISUALIZATIONS */}
       {activeTab === "saved" && (
-        <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
+        <main className="max-w-7xl mx-auto w-full px-6 py-8 flex-1">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Saved Visualizations</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Visualizations saved in your workspace. Open in the builder or add to dashboards.
+              <h2 className="text-xl font-bold text-gray-900">Saved Visualizations Gallery</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Explore, edit, or attach saved visualizations directly into your dashboards.
               </p>
             </div>
             <button
               onClick={() => {
                 setEditingVizId(null);
                 setTitle("New Visualization");
-                setDescription("");
                 setActiveTab("builder");
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500"
             >
               <Plus className="h-4 w-4" />
-              Create New Visualization
+              <span>Create New Visualization</span>
             </button>
           </div>
 
           {isLoadingSaved ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-48 rounded-xl bg-gray-100 animate-pulse border border-gray-200" />
-              ))}
+            <div className="py-20 text-center text-sm text-gray-500">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2" />
+              <p>Loading saved visualizations…</p>
             </div>
           ) : savedVisualizations.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
-              <BarChart3 className="mx-auto h-10 w-10 text-gray-400 mb-3" />
-              <h3 className="text-sm font-semibold text-gray-900">No saved visualizations yet</h3>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 text-2xl mb-3">
+                📊
+              </div>
+              <h3 className="text-base font-bold text-gray-900">No saved visualizations yet</h3>
               <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-                Use the Studio Builder to transform your datasets and save your charts.
+                Use the Studio Builder to create and save charts, then pin them onto your analytics dashboards.
               </p>
               <button
                 onClick={() => setActiveTab("builder")}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 transition"
+                className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500"
               >
-                Go to Studio Builder
+                Open Studio Builder →
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {savedVisualizations.map((v) => (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {savedVisualizations.map((viz) => (
                 <div
-                  key={v.id}
-                  className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs hover:shadow-md transition flex flex-col justify-between"
+                  key={viz.id}
+                  className="rounded-xl border border-gray-200 bg-white p-5 shadow-2xs hover:shadow-md transition flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
-                        {v.chartType}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-2xs font-semibold text-indigo-700">
+                        {viz.chartType}
                       </span>
-                      <span className="text-[11px] text-gray-400">
-                        {new Date(v.updatedAt).toLocaleDateString()}
+                      <span className="text-3xs text-gray-400">
+                        {new Date(viz.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                    <h3 className="text-base font-bold text-gray-900 tracking-tight line-clamp-1">
-                      {v.title}
-                    </h3>
-                    {v.description && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{v.description}</p>
-                    )}
-                    <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-600">
-                      <Database className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="truncate">{v.datasetName || "No dataset attached"}</span>
+
+                    <h3 className="text-sm font-bold text-gray-900 truncate">{viz.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                      {viz.description || "No description provided."}
+                    </p>
+
+                    <div className="mt-4 pt-3 border-t border-gray-100 text-2xs text-gray-500 flex items-center justify-between">
+                      <span className="truncate">
+                        Dataset: <strong>{viz.datasetName || "Linked Dataset"}</strong>
+                      </span>
                     </div>
                   </div>
 
-                  <div className="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => handleLoadSaved(v)}
-                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
-                      >
-                        Open in Builder →
-                      </button>
-                      <Link
-                        href="/dashboards"
-                        className="text-[11px] font-medium text-gray-400 hover:text-indigo-600 transition"
-                      >
-                        Add to Dashboard →
-                      </Link>
-                    </div>
+                  <div className="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
                     <button
-                      onClick={() => void handleDeleteSaved(v.id, v.title)}
-                      className="text-gray-400 hover:text-red-600 p-1 rounded-md transition"
-                      title="Delete visualization"
+                      type="button"
+                      onClick={() => handleLoadSaved(viz)}
+                      className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      Edit in Builder
                     </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openAddToDashboard(viz)}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-2xs font-semibold text-gray-700 hover:bg-gray-50 shadow-2xs"
+                      >
+                        <LayoutDashboard className="h-3 w-3 text-indigo-600" />
+                        <span>Add to Dashboard</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSaved(viz.id, viz.title)}
+                        className="text-gray-400 hover:text-red-600 p-1"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1087,6 +1311,77 @@ export default function VisualizationsPage() {
           )}
         </main>
       )}
+
+      {/* ADD TO DASHBOARD MODAL */}
+      {isDashboardModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-2xs">
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-base font-bold text-gray-900 mb-1">Add to Dashboard</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Pin &quot;{targetVizForDashboard?.title || title}&quot; to one of your active dashboards.
+            </p>
+
+            {dashboards.length === 0 ? (
+              <div className="p-4 bg-amber-50 rounded-lg text-xs text-amber-800 border border-amber-200 mb-4">
+                No dashboards found in your organization.{" "}
+                <Link href="/dashboards" className="underline font-bold">
+                  Create a dashboard first
+                </Link>
+                .
+              </div>
+            ) : (
+              <div className="space-y-3 mb-5">
+                <label className="block text-xs font-semibold text-gray-700">
+                  Select Destination Dashboard
+                </label>
+                <select
+                  value={selectedDashboardId}
+                  onChange={(e) => setSelectedDashboardId(e.target.value)}
+                  className="w-full text-xs rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-2xs"
+                >
+                  {dashboards.map((dash) => (
+                    <option key={dash.id} value={dash.id}>
+                      {dash.name} ({dash.charts?.length ?? dash.chartCount ?? 0} charts)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setIsDashboardModalOpen(false)}
+                className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={addingToDashboard || dashboards.length === 0}
+                onClick={handleConfirmAddToDashboard}
+                className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {addingToDashboard ? "Adding…" : "Confirm & Add"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function VisualizationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <p className="text-xs text-gray-500">Loading Visualizations Studio…</p>
+        </div>
+      }
+    >
+      <VisualizationsStudioContent />
+    </Suspense>
   );
 }

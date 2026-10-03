@@ -34,6 +34,11 @@ import {
   updateCalculatedField,
   deleteCalculatedField,
 } from "../services/dataset/calculated-field.service.js";
+import {
+  listDemoCatalogHandler,
+  getDemoDatasetDetailsHandler,
+  importDemoDatasetHandler,
+} from "../services/dataset/demo-dataset.service.js";
 import { multipartUpload } from "../middleware/upload.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -162,6 +167,39 @@ router.delete(
   "/blends/:id",
   requirePermission("DATASET_DELETE"),
   asyncHandler(deleteDatasetBlend)
+);
+
+/**
+ * GET /api/v1/datasets/demo/catalog
+ * List curated demo datasets with filters.
+ * Permission: DATASET_VIEW
+ */
+router.get(
+  "/demo/catalog",
+  requirePermission("DATASET_VIEW"),
+  asyncHandler(listDemoCatalogHandler)
+);
+
+/**
+ * GET /api/v1/datasets/demo/:demoId
+ * Retrieve detailed info and preview rows for a demo dataset.
+ * Permission: DATASET_VIEW
+ */
+router.get(
+  "/demo/:demoId",
+  requirePermission("DATASET_VIEW"),
+  asyncHandler(getDemoDatasetDetailsHandler)
+);
+
+/**
+ * POST /api/v1/datasets/demo/:demoId/import
+ * Import a curated demo dataset into the active workspace.
+ * Permission: DATASET_CREATE
+ */
+router.post(
+  "/demo/:demoId/import",
+  requirePermission("DATASET_CREATE"),
+  asyncHandler(importDemoDatasetHandler)
 );
 
 /**

@@ -22,6 +22,7 @@ export interface MappedChartData {
   rows: Record<string, unknown>[];
   xKey?: string;
   yKey?: string;
+  groupKey?: string;
   measureKeys: string[];
   kpiValue?: number | string;
   kpiLabel?: string;
@@ -263,21 +264,35 @@ export function mapQueryResultToChartData(
       measureKeys[0] ||
       (columns[1]?.name ?? "y");
 
+    const groupKey =
+      ((config as Record<string, unknown>).groupCol as string) ||
+      config.dimensions?.[1] ||
+      ((config as Record<string, unknown>).series as string) ||
+      undefined;
+
     return {
       chartType,
       rows: sanitizedRows,
       xKey,
       yKey,
+      groupKey,
       measureKeys,
       columns,
     };
   }
 
-  // Default: BAR, LINE, AREA, TABLE
+  const groupKey =
+    ((config as Record<string, unknown>).groupCol as string) ||
+    config.dimensions?.[1] ||
+    ((config as Record<string, unknown>).series as string) ||
+    undefined;
+
+  // Default: BAR, LINE, AREA, TABLE, RADAR, FUNNEL, HEATMAP
   return {
     chartType,
     rows: sanitizedRows,
     xKey,
+    groupKey,
     measureKeys,
     columns,
   };
