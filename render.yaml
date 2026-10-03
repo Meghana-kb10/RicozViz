@@ -8,8 +8,8 @@ services:
     plan: free
     region: oregon
     rootDir: .
-    buildCommand: npm install && npm run build:api && npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
-    startCommand: node apps/api/dist/server.js
+    buildCommand: npm install --include=dev && npx prisma generate --schema=apps/api/prisma/schema.prisma && npm run build:api
+    startCommand: npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma && node apps/api/dist/server.js
     healthCheckPath: /api/v1/health
     autoDeploy: true
     envVars:
@@ -41,7 +41,7 @@ services:
     plan: free
     region: oregon
     rootDir: .
-    buildCommand: npm install && npm run build:web
+    buildCommand: npm install --include=dev && npm run build:web
     startCommand: npm run start:web
     autoDeploy: true
     envVars:

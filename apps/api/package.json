@@ -19,7 +19,8 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "build:prod": "prisma generate && tsc --project tsconfig.build.json"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
@@ -32,7 +33,9 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.0",
+    "prisma": "^5.14.0",
     "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
@@ -50,10 +53,8 @@
     "@typescript-eslint/parser": "^7.13.0",
     "@vitest/coverage-v8": "^5.0.3",
     "eslint": "^8.57.0",
-    "prisma": "^5.14.0",
     "supertest": "^7.3.0",
     "tsx": "^4.15.0",
-    "typescript": "^5.4.5",
     "vitest": "^5.0.3"
   },
   "prisma": {
