@@ -6,7 +6,15 @@ import { Router } from "express";
 import {
   requireAuth,
   requirePermission,
+  requireAnyPermission,
 } from "../middleware/auth.middleware.js";
+import { sendSuccess } from "../utils/response.js";
+import {
+  GrantAccessSchema,
+  listDashboardCollaborators,
+  grantDashboardCollaborator,
+  revokeDashboardCollaborator,
+} from "../services/collaboration/collaboration.service.js";
 import {
   createDashboard,
   listDashboards,
@@ -74,6 +82,74 @@ router.delete(
   "/:id/share",
   requirePermission("DASHBOARD_EDIT"),
   asyncHandler(disableShareLink)
+);
+
+// ============================================================
+// FEATURE 15: WORKSPACE COLLABORATION & RESOURCE SHARING
+// ============================================================
+
+/**
+ * GET /api/v1/dashboards/:id/collaborators
+ * List collaborators and access levels for a dashboard.
+ * Permission: DASHBOARD_VIEW
+ */
+router.get(
+  "/:id/collaborators",
+  requirePermission("DASHBOARD_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const result = await listDashboardCollaborators(
+      req.params.id as string,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, result, 200);
+  })
+);
+
+/**
+ * POST /api/v1/dashboards/:id/collaborators
+ * Grant access to a workspace member.
+ * Permission: DASHBOARD_SHARE or COLLABORATION_MANAGE
+ */
+router.post(
+  "/:id/collaborators",
+  requireAnyPermission("DASHBOARD_SHARE", "COLLABORATION_MANAGE", "DASHBOARD_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const parsed = GrantAccessSchema.parse(req.body);
+    const result = await grantDashboardCollaborator(
+      req.params.id as string,
+      parsed.targetUserId,
+      parsed.accessLevel,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, result, 201);
+  })
+);
+
+/**
+ * DELETE /api/v1/dashboards/:id/collaborators/:accessId
+ * Revoke collaborator access.
+ * Permission: DASHBOARD_SHARE or COLLABORATION_MANAGE
+ */
+router.delete(
+  "/:id/collaborators/:accessId",
+  requireAnyPermission("DASHBOARD_SHARE", "COLLABORATION_MANAGE", "DASHBOARD_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const result = await revokeDashboardCollaborator(
+      req.params.id as string,
+      req.params.accessId as string,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, result, 200);
+  })
 );
 
 /**

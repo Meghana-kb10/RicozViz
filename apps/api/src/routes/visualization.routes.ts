@@ -15,11 +15,37 @@ import {
   updateVisualization,
   deleteVisualization,
 } from "../services/visualization/visualization.service.js";
+import {
+  createChartShareLink,
+  revokeChartShareLink,
+  getSharedChartByToken,
+  getSharedChartDataByToken,
+} from "../services/collaboration/collaboration.service.js";
+import { sendSuccess } from "../utils/response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
 
-// All visualization endpoints require authentication
+// ============================================================
+// Public Shared Visualization Routes (No Authentication Required)
+// ============================================================
+router.get(
+  "/shared/:shareToken",
+  asyncHandler(async (req, res) => {
+    const chart = await getSharedChartByToken(req.params.shareToken as string);
+    sendSuccess(res, chart, 200);
+  })
+);
+
+router.post(
+  "/shared/:shareToken/data",
+  asyncHandler(async (req, res) => {
+    const data = await getSharedChartDataByToken(req.params.shareToken as string);
+    sendSuccess(res, data, 200);
+  })
+);
+
+// All subsequent visualization endpoints require authentication
 router.use(requireAuth);
 
 /**
@@ -80,6 +106,46 @@ router.delete(
   "/:id",
   requireAnyPermission("CHART_DELETE", "DASHBOARD_DELETE"),
   asyncHandler(deleteVisualization)
+);
+
+/**
+ * POST /api/v1/visualizations/:id/share
+ * Generate/activate public share link for standalone visualization.
+ * Permission: CHART_SHARE or CHART_EDIT
+ */
+router.post(
+  "/:id/share",
+  requireAnyPermission("CHART_SHARE", "CHART_EDIT", "DASHBOARD_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const result = await createChartShareLink(
+      req.params.id as string,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, result, 200);
+  })
+);
+
+/**
+ * DELETE /api/v1/visualizations/:id/share
+ * Revoke public share link for standalone visualization.
+ * Permission: CHART_SHARE or CHART_EDIT
+ */
+router.delete(
+  "/:id/share",
+  requireAnyPermission("CHART_SHARE", "CHART_EDIT", "DASHBOARD_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const result = await revokeChartShareLink(
+      req.params.id as string,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, result, 200);
+  })
 );
 
 export default router;

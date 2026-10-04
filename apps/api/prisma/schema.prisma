@@ -189,6 +189,7 @@ model User {
   createdTemplates     DashboardTemplate[]  @relation("TemplateCreator")
   exportJobs           ExportJob[]
   dashboardAccess      DashboardAccess[]
+  createdDatasetVersions DatasetVersion[]   @relation("DatasetVersionCreator")
   auditLogs            AuditLog[]
 
   @@map("users")
@@ -425,14 +426,21 @@ model Dataset {
   // Stores column definitions, inferred types, row count snapshot, etc.
   schemaMeta Json @default("{}")
 
+  currentVersion      Int      @default(1)
+  parentDatasetId     String?
+  transformationSteps Json     @default("[]")
+
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  workspace    Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  dataSource   DataSource?     @relation(fields: [dataSourceId], references: [id], onDelete: SetNull)
-  createdBy    User            @relation("DatasetCreator", fields: [createdById], references: [id])
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace      Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  dataSource     DataSource?      @relation(fields: [dataSourceId], references: [id], onDelete: SetNull)
+  createdBy      User             @relation("DatasetCreator", fields: [createdById], references: [id])
+  parentDataset  Dataset?         @relation("DatasetLineage", fields: [parentDatasetId], references: [id], onDelete: SetNull)
+  derivedDatasets Dataset[]       @relation("DatasetLineage")
+  versions       DatasetVersion[]
 
   columns DatasetColumn[]
   charts  Chart[]
@@ -441,6 +449,7 @@ model Dataset {
   @@index([organizationId])
   @@index([workspaceId])
   @@index([dataSourceId])
+  @@index([parentDatasetId])
   @@index([createdById])
   @@map("datasets")
 }
@@ -524,6 +533,13 @@ model Chart {
   position Json @default("{}")
 
   sortOrder Int      @default(0)
+
+  // Public/embed sharing for standalone visualization
+  isPublic         Boolean   @default(false)
+  shareToken       String?   @unique
+  shareTokenActive Boolean   @default(true)
+  sharedAt         DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -532,6 +548,7 @@ model Chart {
 
   @@index([dashboardId])
   @@index([datasetId])
+  @@index([shareToken])
   @@map("charts")
 }
 
@@ -815,5 +832,31 @@ model DashboardTemplate {
   @@index([workspaceId])
   @@index([category])
   @@map("dashboard_templates")
+}
+
+// ============================================================
+// DATASET VERSION & LINEAGE
+// ============================================================
+// Stores immutable snapshots of dataset versions and transformation history.
+
+model DatasetVersion {
+  id                   String   @id @default(uuid())
+  datasetId            String
+  versionNumber        Int
+  changeSummary        String?
+  transformationConfig Json     @default("[]")
+  schemaSnapshot       Json     @default("{}")
+  rowCount             Int      @default(0)
+  columnCount          Int      @default(0)
+  createdById          String
+  createdAt            DateTime @default(now())
+
+  dataset              Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  createdBy            User     @relation("DatasetVersionCreator", fields: [createdById], references: [id])
+
+  @@unique([datasetId, versionNumber])
+  @@index([datasetId])
+  @@index([createdById])
+  @@map("dataset_versions")
 }
 

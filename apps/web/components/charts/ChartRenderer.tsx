@@ -19,6 +19,7 @@ import {
   Tooltip,
   Legend,
   CartesianGrid,
+  Treemap,
 } from "recharts";
 import type { ChartType, ChartConfig, DatasetQueryResult } from "../../lib/api";
 import { mapQueryResultToChartData } from "../../lib/chart-query-mapper";
@@ -26,16 +27,68 @@ import { RadarChartRenderer } from "../visualization/RadarChartRenderer";
 import { FunnelChartRenderer } from "../visualization/FunnelChartRenderer";
 import { HeatmapRenderer } from "../visualization/HeatmapRenderer";
 
-const PALETTE = [
-  "#4f46e5", // Indigo
-  "#06b6d4", // Cyan
-  "#10b981", // Emerald
-  "#f59e0b", // Amber
-  "#ec4899", // Pink
-  "#8b5cf6", // Purple
-  "#3b82f6", // Blue
-  "#14b8a6", // Teal
-];
+export const COLOR_PALETTES: Record<string, string[]> = {
+  default: [
+    "#4f46e5", // Indigo
+    "#06b6d4", // Cyan
+    "#10b981", // Emerald
+    "#f59e0b", // Amber
+    "#ec4899", // Pink
+    "#8b5cf6", // Purple
+    "#3b82f6", // Blue
+    "#14b8a6", // Teal
+  ],
+  emerald: [
+    "#059669",
+    "#10b981",
+    "#34d399",
+    "#6ee7b7",
+    "#047857",
+    "#065f46",
+    "#15803d",
+    "#22c55e",
+  ],
+  ocean: [
+    "#0284c7",
+    "#0ea5e9",
+    "#38bdf8",
+    "#7dd3fc",
+    "#0369a1",
+    "#075985",
+    "#2563eb",
+    "#60a5fa",
+  ],
+  sunset: [
+    "#f97316",
+    "#fb923c",
+    "#fdba74",
+    "#ea580c",
+    "#e11d48",
+    "#f43f5e",
+    "#fb7185",
+    "#be123c",
+  ],
+  purple: [
+    "#7c3aed",
+    "#8b5cf6",
+    "#a78bfa",
+    "#c4b5fd",
+    "#6d28d9",
+    "#5b21b6",
+    "#9333ea",
+    "#c084fc",
+  ],
+  monochrome: [
+    "#18181b",
+    "#27272a",
+    "#3f3f46",
+    "#52525b",
+    "#71717a",
+    "#a1a1aa",
+    "#d4d4d8",
+    "#e4e4e7",
+  ],
+};
 
 export interface ChartRendererProps {
   chartType: ChartType;
@@ -48,6 +101,35 @@ export interface ChartRendererProps {
 
 function subscribe() {
   return () => {};
+}
+
+function formatValue(val: unknown, numConfig?: ChartConfig["numberFormat"]): string {
+  if (val === null || val === undefined) return "";
+  if (typeof val !== "number") return String(val);
+  const decimals = numConfig?.decimals ?? 2;
+  const prefix = numConfig?.prefix ?? "";
+  const suffix = numConfig?.suffix ?? "";
+
+  let numStr = "";
+  if (numConfig?.compact) {
+    numStr = Intl.NumberFormat("en", {
+      notation: "compact",
+      maximumFractionDigits: decimals,
+    }).format(val);
+  } else {
+    numStr = val.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimals,
+    });
+  }
+
+  if (numConfig?.formatType === "percentage") {
+    return `${prefix}${numStr}%${suffix}`;
+  }
+  if (numConfig?.formatType === "currency" && !prefix) {
+    return `$${numStr}${suffix}`;
+  }
+  return `${prefix}${numStr}${suffix}`;
 }
 
 export function ChartRenderer({
@@ -113,6 +195,25 @@ export function ChartRenderer({
   const measureKeys =
     mapped.measureKeys.length > 0 ? mapped.measureKeys : ["value"];
 
+  // Resolve palette
+  const activePalette =
+    config.customColors && config.customColors.length > 0
+      ? config.customColors
+      : COLOR_PALETTES[config.colorPalette || "default"] || COLOR_PALETTES.default;
+
+  // Customization options
+  const showLegend = config.legend?.show !== false && measureKeys.length > 1;
+  const legendPos = config.legend?.position || "top";
+  const xAxisCfg = config.xAxisConfig;
+  const yAxisCfg = config.yAxisConfig;
+  const numFmt = config.numberFormat;
+  const chartOpts = config.chartOptions;
+
+  const tooltipFormatter = (val: unknown) => [
+    formatValue(val, numFmt),
+    "Value",
+  ];
+
   return (
     <div style={{ height }} className="w-full relative">
       {/* 1. BAR CHART */}
@@ -120,21 +221,33 @@ export function ChartRenderer({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={mapped.rows}
-            margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
+            margin={{ top: 10, right: 10, left: -10, bottom: xAxisCfg?.labelRotation ? 35 : 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-            <XAxis
-              dataKey={xKey}
-              tick={{ fontSize: 11, fill: "#6b7280" }}
-              tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={xAxisCfg?.showGrid ?? false}
+              horizontal={yAxisCfg?.showGrid ?? true}
+              stroke="#f3f4f6"
             />
+            {xAxisCfg?.showLabels !== false && (
+              <XAxis
+                dataKey={xKey}
+                tick={{ fontSize: 11, fill: "#6b7280" }}
+                angle={xAxisCfg?.labelRotation ?? 0}
+                textAnchor={xAxisCfg?.labelRotation ? "end" : "middle"}
+                tickLine={false}
+                axisLine={{ stroke: "#e5e7eb" }}
+              />
+            )}
             <YAxis
               tick={{ fontSize: 11, fill: "#6b7280" }}
+              domain={[yAxisCfg?.min ?? "auto", yAxisCfg?.max ?? "auto"]}
+              tickFormatter={(v) => formatValue(v, { ...numFmt, compact: true })}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
             />
             <Tooltip
+              formatter={tooltipFormatter}
               contentStyle={{
                 backgroundColor: "#ffffff",
                 borderColor: "#e5e7eb",
@@ -143,13 +256,20 @@ export function ChartRenderer({
                 fontSize: "12px",
               }}
             />
-            {measureKeys.length > 1 && <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />}
+            {showLegend && (
+              <Legend
+                verticalAlign={legendPos === "bottom" ? "bottom" : "top"}
+                align={legendPos === "left" ? "left" : legendPos === "right" ? "right" : "center"}
+                wrapperStyle={{ fontSize: 11, paddingTop: 6 }}
+              />
+            )}
             {measureKeys.map((key, idx) => (
               <Bar
                 key={key}
                 dataKey={key}
-                fill={PALETTE[idx % PALETTE.length]}
-                radius={[4, 4, 0, 0]}
+                stackId={chartOpts?.stacked ? "a" : undefined}
+                fill={activePalette[idx % activePalette.length]}
+                radius={chartOpts?.stacked ? [0, 0, 0, 0] : [4, 4, 0, 0]}
               />
             ))}
           </BarChart>
@@ -161,21 +281,33 @@ export function ChartRenderer({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={mapped.rows}
-            margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
+            margin={{ top: 10, right: 10, left: -10, bottom: xAxisCfg?.labelRotation ? 35 : 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-            <XAxis
-              dataKey={xKey}
-              tick={{ fontSize: 11, fill: "#6b7280" }}
-              tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={xAxisCfg?.showGrid ?? false}
+              horizontal={yAxisCfg?.showGrid ?? true}
+              stroke="#f3f4f6"
             />
+            {xAxisCfg?.showLabels !== false && (
+              <XAxis
+                dataKey={xKey}
+                tick={{ fontSize: 11, fill: "#6b7280" }}
+                angle={xAxisCfg?.labelRotation ?? 0}
+                textAnchor={xAxisCfg?.labelRotation ? "end" : "middle"}
+                tickLine={false}
+                axisLine={{ stroke: "#e5e7eb" }}
+              />
+            )}
             <YAxis
               tick={{ fontSize: 11, fill: "#6b7280" }}
+              domain={[yAxisCfg?.min ?? "auto", yAxisCfg?.max ?? "auto"]}
+              tickFormatter={(v) => formatValue(v, { ...numFmt, compact: true })}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
             />
             <Tooltip
+              formatter={tooltipFormatter}
               contentStyle={{
                 backgroundColor: "#ffffff",
                 borderColor: "#e5e7eb",
@@ -184,15 +316,21 @@ export function ChartRenderer({
                 fontSize: "12px",
               }}
             />
-            {measureKeys.length > 1 && <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />}
+            {showLegend && (
+              <Legend
+                verticalAlign={legendPos === "bottom" ? "bottom" : "top"}
+                align={legendPos === "left" ? "left" : legendPos === "right" ? "right" : "center"}
+                wrapperStyle={{ fontSize: 11, paddingTop: 6 }}
+              />
+            )}
             {measureKeys.map((key, idx) => (
               <Line
                 key={key}
-                type="monotone"
+                type={chartOpts?.smooth !== false ? "monotone" : "linear"}
                 dataKey={key}
-                stroke={PALETTE[idx % PALETTE.length]}
+                stroke={activePalette[idx % activePalette.length]}
                 strokeWidth={2}
-                dot={{ r: 3, fill: PALETTE[idx % PALETTE.length] }}
+                dot={{ r: 3, fill: activePalette[idx % activePalette.length] }}
                 activeDot={{ r: 5 }}
               />
             ))}
@@ -205,21 +343,33 @@ export function ChartRenderer({
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={mapped.rows}
-            margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
+            margin={{ top: 10, right: 10, left: -10, bottom: xAxisCfg?.labelRotation ? 35 : 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-            <XAxis
-              dataKey={xKey}
-              tick={{ fontSize: 11, fill: "#6b7280" }}
-              tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={xAxisCfg?.showGrid ?? false}
+              horizontal={yAxisCfg?.showGrid ?? true}
+              stroke="#f3f4f6"
             />
+            {xAxisCfg?.showLabels !== false && (
+              <XAxis
+                dataKey={xKey}
+                tick={{ fontSize: 11, fill: "#6b7280" }}
+                angle={xAxisCfg?.labelRotation ?? 0}
+                textAnchor={xAxisCfg?.labelRotation ? "end" : "middle"}
+                tickLine={false}
+                axisLine={{ stroke: "#e5e7eb" }}
+              />
+            )}
             <YAxis
               tick={{ fontSize: 11, fill: "#6b7280" }}
+              domain={[yAxisCfg?.min ?? "auto", yAxisCfg?.max ?? "auto"]}
+              tickFormatter={(v) => formatValue(v, { ...numFmt, compact: true })}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
             />
             <Tooltip
+              formatter={tooltipFormatter}
               contentStyle={{
                 backgroundColor: "#ffffff",
                 borderColor: "#e5e7eb",
@@ -228,15 +378,22 @@ export function ChartRenderer({
                 fontSize: "12px",
               }}
             />
-            {measureKeys.length > 1 && <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />}
+            {showLegend && (
+              <Legend
+                verticalAlign={legendPos === "bottom" ? "bottom" : "top"}
+                align={legendPos === "left" ? "left" : legendPos === "right" ? "right" : "center"}
+                wrapperStyle={{ fontSize: 11, paddingTop: 6 }}
+              />
+            )}
             {measureKeys.map((key, idx) => (
               <Area
                 key={key}
-                type="monotone"
+                type={chartOpts?.smooth !== false ? "monotone" : "linear"}
+                stackId={chartOpts?.stacked ? "a" : undefined}
                 dataKey={key}
-                stroke={PALETTE[idx % PALETTE.length]}
-                fill={PALETTE[idx % PALETTE.length]}
-                fillOpacity={0.2}
+                stroke={activePalette[idx % activePalette.length]}
+                fill={activePalette[idx % activePalette.length]}
+                fillOpacity={chartOpts?.fillOpacity ?? 0.25}
                 strokeWidth={2}
               />
             ))}
@@ -249,10 +406,7 @@ export function ChartRenderer({
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Tooltip
-              formatter={(val) => [
-                typeof val === "number" ? val.toLocaleString() : String(val ?? ""),
-                "Value",
-              ]}
+              formatter={(val) => [formatValue(val, numFmt), "Value"]}
               contentStyle={{
                 backgroundColor: "#ffffff",
                 borderColor: "#e5e7eb",
@@ -260,7 +414,10 @@ export function ChartRenderer({
                 fontSize: "12px",
               }}
             />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Legend
+              verticalAlign={legendPos === "bottom" ? "bottom" : "top"}
+              wrapperStyle={{ fontSize: 11 }}
+            />
             <Pie
               data={mapped.pieSlices}
               dataKey="value"
@@ -276,7 +433,7 @@ export function ChartRenderer({
               {mapped.pieSlices?.map((_, index) => (
                 <Cell
                   key={`pie-cell-${index}`}
-                  fill={PALETTE[index % PALETTE.length]}
+                  fill={activePalette[index % activePalette.length]}
                 />
               ))}
             </Pie>
@@ -289,10 +446,7 @@ export function ChartRenderer({
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Tooltip
-              formatter={(val) => [
-                typeof val === "number" ? val.toLocaleString() : String(val ?? ""),
-                "Value",
-              ]}
+              formatter={(val) => [formatValue(val, numFmt), "Value"]}
               contentStyle={{
                 backgroundColor: "#ffffff",
                 borderColor: "#e5e7eb",
@@ -300,21 +454,24 @@ export function ChartRenderer({
                 fontSize: "12px",
               }}
             />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Legend
+              verticalAlign={legendPos === "bottom" ? "bottom" : "top"}
+              wrapperStyle={{ fontSize: 11 }}
+            />
             <Pie
               data={mapped.pieSlices}
               dataKey="value"
               nameKey="name"
               cx="50%"
               cy="50%"
-              innerRadius={50}
+              innerRadius={chartOpts?.donutHoleSize ?? 50}
               outerRadius={80}
               paddingAngle={2}
             >
               {mapped.pieSlices?.map((_, index) => (
                 <Cell
                   key={`donut-cell-${index}`}
-                  fill={PALETTE[index % PALETTE.length]}
+                  fill={activePalette[index % activePalette.length]}
                 />
               ))}
             </Pie>
@@ -322,8 +479,8 @@ export function ChartRenderer({
         </ResponsiveContainer>
       )}
 
-      {/* 6. SCATTER PLOT */}
-      {chartType === "SCATTER" && (
+      {/* 6. SCATTER PLOT / BUBBLE */}
+      {(chartType === "SCATTER" || chartType === "BUBBLE") && (
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -343,6 +500,7 @@ export function ChartRenderer({
             />
             <Tooltip
               cursor={{ strokeDasharray: "3 3" }}
+              formatter={tooltipFormatter}
               contentStyle={{
                 backgroundColor: "#ffffff",
                 borderColor: "#e5e7eb",
@@ -353,7 +511,7 @@ export function ChartRenderer({
             <Scatter
               name="Values"
               data={mapped.rows}
-              fill="#4f46e5"
+              fill={activePalette[0]}
             />
           </ScatterChart>
         </ResponsiveContainer>
@@ -400,9 +558,7 @@ export function ChartRenderer({
           </span>
           <div className="text-4xl font-extrabold text-gray-900 tracking-tight">
             {typeof mapped.kpiValue === "number"
-              ? mapped.kpiValue.toLocaleString(undefined, {
-                  maximumFractionDigits: 2,
-                })
+              ? formatValue(mapped.kpiValue, numFmt)
               : mapped.kpiValue ?? 0}
           </div>
           <span className="mt-2 text-[10px] text-gray-400 font-mono">
@@ -424,6 +580,87 @@ export function ChartRenderer({
       {/* 11. HEATMAP MATRIX */}
       {chartType === "HEATMAP" && (
         <HeatmapRenderer data={mapped} config={config} height="100%" />
+      )}
+
+      {/* 12. GAUGE METER */}
+      {chartType === "GAUGE" && (
+        <div className="h-full flex flex-col items-center justify-center p-4">
+          {(() => {
+            const rawVal =
+              typeof mapped.kpiValue === "number"
+                ? mapped.kpiValue
+                : typeof mapped.rows[0]?.[measureKeys[0]] === "number"
+                ? (mapped.rows[0][measureKeys[0]] as number)
+                : 68;
+            const min = yAxisCfg?.min ?? 0;
+            const max = yAxisCfg?.max ?? (rawVal > 100 ? rawVal * 1.25 : 100);
+            const clamped = Math.max(min, Math.min(rawVal, max));
+            const pct = Math.round(((clamped - min) / (max - min || 1)) * 100);
+            const strokeDash = 251.2;
+            const offset = strokeDash - (strokeDash * pct) / 100;
+
+            return (
+              <div className="flex flex-col items-center">
+                <div className="relative w-44 h-24 flex items-end justify-center overflow-hidden">
+                  <svg className="w-44 h-44 -rotate-90 transform" viewBox="0 0 100 100">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      strokeWidth="10"
+                      strokeDasharray={strokeDash}
+                      strokeDashoffset={strokeDash / 2}
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      stroke={activePalette[0]}
+                      strokeWidth="10"
+                      strokeDasharray={strokeDash}
+                      strokeDashoffset={offset}
+                      strokeLinecap="round"
+                      className="transition-all duration-700 ease-out"
+                    />
+                  </svg>
+                  <div className="absolute bottom-1 flex flex-col items-center">
+                    <span className="text-2xl font-black text-gray-900 tracking-tight">
+                      {formatValue(rawVal, numFmt)}
+                    </span>
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                      {pct}% of Target
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between w-40 text-[10px] text-gray-400 font-mono mt-1">
+                  <span>{formatValue(min, numFmt)}</span>
+                  <span>{formatValue(max, numFmt)}</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* 13. TREEMAP */}
+      {chartType === "TREEMAP" && (
+        <ResponsiveContainer width="100%" height="100%">
+          <Treemap
+            data={mapped.rows.map((r, i) => ({
+              name: String(r[xKey] ?? `Item ${i + 1}`),
+              size: Number(r[measureKeys[0]] ?? 1),
+              fill: activePalette[i % activePalette.length],
+            }))}
+            dataKey="size"
+            stroke="#ffffff"
+            fill={activePalette[0]}
+          >
+            <Tooltip formatter={tooltipFormatter} />
+          </Treemap>
+        </ResponsiveContainer>
       )}
     </div>
   );

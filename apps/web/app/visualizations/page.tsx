@@ -27,6 +27,11 @@ import {
   Sparkles,
   LayoutDashboard,
   Layers,
+  Share2,
+  Copy,
+  ExternalLink,
+  Lock,
+  Sliders,
 } from "lucide-react";
 import { useAuth } from "../../contexts/auth-context";
 import {
@@ -38,6 +43,8 @@ import {
   apiDeleteVisualization,
   apiGetDashboards,
   apiCreateChart,
+  apiShareVisualization,
+  apiRevokeVisualizationShare,
   type DatasetData,
   type DatasetColumn,
   type DatasetQueryResult,
@@ -46,7 +53,7 @@ import {
   type AggregationFunction,
   type DashboardItem,
 } from "../../lib/api";
-import { ChartRenderer } from "../../components/charts/ChartRenderer";
+import { ChartRenderer, COLOR_PALETTES } from "../../components/charts/ChartRenderer";
 import {
   getRecommendedVisualizations,
   validateChartCompatibility,
@@ -65,9 +72,12 @@ const CHART_TYPES: Array<{
   { id: "PIE", label: "Pie Chart", icon: PieChartIcon, description: "Proportions and category shares" },
   { id: "DONUT", label: "Donut Chart", icon: PieChartIcon, description: "Ring proportions with central readout" },
   { id: "SCATTER", label: "Scatter Plot", icon: ScatterIcon, description: "Correlation & clusters between numeric variables" },
+  { id: "BUBBLE", label: "Bubble Chart", icon: ScatterIcon, description: "3-variable scatter with point size" },
   { id: "RADAR", label: "Radar Chart", icon: RadarIcon, description: "Multi-metric radial profile comparison" },
   { id: "FUNNEL", label: "Funnel Chart", icon: FunnelIcon, description: "Sequential stages and conversion dropoffs" },
   { id: "HEATMAP", label: "Heatmap Matrix", icon: HeatmapIcon, description: "2D category cross-table density matrix" },
+  { id: "TREEMAP", label: "Treemap", icon: HeatmapIcon, description: "Hierarchical nested area proportions" },
+  { id: "GAUGE", label: "Gauge Meter", icon: Gauge, description: "Radial dial progress against min/max target" },
   { id: "KPI", label: "KPI Metric", icon: Gauge, description: "Single highlighted key summary metric" },
   { id: "TABLE", label: "Data Table", icon: TableIcon, description: "Tabular raw records and aggregations" },
 ];
@@ -140,6 +150,31 @@ function VisualizationsStudioContent() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filters, setFilters] = useState<FilterRow[]>([]);
   const [editingVizId, setEditingVizId] = useState<string | null>(null);
+
+  // Feature 11: Advanced Customization State
+  const [activeBuilderSubTab, setActiveBuilderSubTab] = useState<"fields" | "customization">("fields");
+  const [colorPalette, setColorPalette] = useState<string>("default");
+  const [legendShow, setLegendShow] = useState<boolean>(true);
+  const [legendPosition, setLegendPosition] = useState<"top" | "bottom" | "left" | "right">("top");
+  const [xAxisTitle, setXAxisTitle] = useState<string>("");
+  const [showXGrid, setShowXGrid] = useState<boolean>(false);
+  const [yAxisTitle, setYAxisTitle] = useState<string>("");
+  const [showYGrid, setShowYGrid] = useState<boolean>(true);
+  const [numberPrefix, setNumberPrefix] = useState<string>("");
+  const [numberSuffix, setNumberSuffix] = useState<string>("");
+  const [numberDecimals, setNumberDecimals] = useState<number>(2);
+  const [numberCompact, setNumberCompact] = useState<boolean>(false);
+  const [numberFormatType, setNumberFormatType] = useState<"number" | "currency" | "percentage">("number");
+  const [chartStacked, setChartStacked] = useState<boolean>(false);
+  const [chartSmooth, setChartSmooth] = useState<boolean>(true);
+
+  // Feature 15: Share Visualization Modal State
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [sharingVizId, setSharingVizId] = useState<string | null>(null);
+  const [sharingVizTitle, setSharingVizTitle] = useState<string>("");
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isSharingLoading, setIsSharingLoading] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
 
   // Live Query Execution & Preview
   const [queryResult, setQueryResult] = useState<DatasetQueryResult | null>(null);
@@ -467,8 +502,56 @@ function VisualizationsStudioContent() {
         value: f.value,
       })),
       sort: sortCol ? { column: sortCol, direction: sortDir } : undefined,
+      colorPalette,
+      legend: {
+        show: legendShow,
+        position: legendPosition,
+      },
+      xAxisConfig: {
+        title: xAxisTitle || undefined,
+        showGrid: showXGrid,
+        showLabels: true,
+      },
+      yAxisConfig: {
+        title: yAxisTitle || undefined,
+        showGrid: showYGrid,
+      },
+      numberFormat: {
+        prefix: numberPrefix,
+        suffix: numberSuffix,
+        decimals: numberDecimals,
+        compact: numberCompact,
+        formatType: numberFormatType,
+      },
+      chartOptions: {
+        stacked: chartStacked,
+        smooth: chartSmooth,
+      },
     };
-  }, [categoryCol, valueCol, secondaryValueCol, groupCol, aggregation, filters, sortCol, sortDir]);
+  }, [
+    categoryCol,
+    valueCol,
+    secondaryValueCol,
+    groupCol,
+    aggregation,
+    filters,
+    sortCol,
+    sortDir,
+    colorPalette,
+    legendShow,
+    legendPosition,
+    xAxisTitle,
+    showXGrid,
+    yAxisTitle,
+    showYGrid,
+    numberPrefix,
+    numberSuffix,
+    numberDecimals,
+    numberCompact,
+    numberFormatType,
+    chartStacked,
+    chartSmooth,
+  ]);
 
   // Save Visualization
   const handleSaveVisualization = async () => {
@@ -596,8 +679,68 @@ function VisualizationsStudioContent() {
       setSortDir(cfg.sort.direction?.toLowerCase() === "desc" ? "desc" : "asc");
     }
 
+    // Feature 11: Restore advanced customization settings
+    if (cfg.colorPalette) setColorPalette(cfg.colorPalette);
+    if (cfg.legend) {
+      if (typeof cfg.legend.show === "boolean") setLegendShow(cfg.legend.show);
+      if (cfg.legend.position) setLegendPosition(cfg.legend.position);
+    }
+    if (cfg.xAxisConfig) {
+      if (cfg.xAxisConfig.title) setXAxisTitle(cfg.xAxisConfig.title);
+      if (typeof cfg.xAxisConfig.showGrid === "boolean") setShowXGrid(cfg.xAxisConfig.showGrid);
+    }
+    if (cfg.yAxisConfig) {
+      if (cfg.yAxisConfig.title) setYAxisTitle(cfg.yAxisConfig.title);
+      if (typeof cfg.yAxisConfig.showGrid === "boolean") setShowYGrid(cfg.yAxisConfig.showGrid);
+    }
+    if (cfg.numberFormat) {
+      if (cfg.numberFormat.prefix) setNumberPrefix(cfg.numberFormat.prefix);
+      if (cfg.numberFormat.suffix) setNumberSuffix(cfg.numberFormat.suffix);
+      if (typeof cfg.numberFormat.decimals === "number") setNumberDecimals(cfg.numberFormat.decimals);
+      if (typeof cfg.numberFormat.compact === "boolean") setNumberCompact(cfg.numberFormat.compact);
+      if (cfg.numberFormat.formatType) setNumberFormatType(cfg.numberFormat.formatType);
+    }
+    if (cfg.chartOptions) {
+      if (typeof cfg.chartOptions.stacked === "boolean") setChartStacked(cfg.chartOptions.stacked);
+      if (typeof cfg.chartOptions.smooth === "boolean") setChartSmooth(cfg.chartOptions.smooth);
+    }
+
     setActiveTab("builder");
     setFeedbackMessage({ type: "success", text: `Loaded "${viz.title}" into builder.` });
+  };
+
+  // Feature 15: Share Visualization
+  const handleOpenShareModal = async (viz: VisualizationData) => {
+    setSharingVizId(viz.id);
+    setSharingVizTitle(viz.title);
+    setIsShareModalOpen(true);
+    setIsSharingLoading(true);
+    setCopiedShare(false);
+    try {
+      const res = await apiShareVisualization(viz.id);
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      setShareUrl(`${origin}/visualizations/shared/${res.shareToken}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create share link";
+      setFeedbackMessage({ type: "error", text: msg });
+    } finally {
+      setIsSharingLoading(false);
+    }
+  };
+
+  const handleRevokeShare = async () => {
+    if (!sharingVizId) return;
+    setIsSharingLoading(true);
+    try {
+      await apiRevokeVisualizationShare(sharingVizId);
+      setShareUrl(null);
+      setFeedbackMessage({ type: "success", text: "Public share link revoked." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to revoke share link";
+      setFeedbackMessage({ type: "error", text: msg });
+    } finally {
+      setIsSharingLoading(false);
+    }
   };
 
   // Delete saved visualization
@@ -776,6 +919,35 @@ function VisualizationsStudioContent() {
               )}
             </div>
 
+            {/* Sub-tab switcher: Data Fields vs. Customization */}
+            <div className="flex border-b border-gray-100 bg-gray-50/70 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setActiveBuilderSubTab("fields")}
+                className={`flex-1 py-2.5 text-center border-b-2 transition flex items-center justify-center gap-1.5 ${
+                  activeBuilderSubTab === "fields"
+                    ? "border-indigo-600 text-indigo-700 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                <Database className="h-3.5 w-3.5" />
+                <span>Data & Metrics</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveBuilderSubTab("customization")}
+                className={`flex-1 py-2.5 text-center border-b-2 transition flex items-center justify-center gap-1.5 ${
+                  activeBuilderSubTab === "customization"
+                    ? "border-indigo-600 text-indigo-700 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                <Sliders className="h-3.5 w-3.5" />
+                <span>Style & Axes</span>
+              </button>
+            </div>
+
+            {activeBuilderSubTab === "fields" ? (
             <div className="p-5 space-y-5">
               {/* 1. DATASET SELECTOR */}
               <div>
@@ -1098,6 +1270,226 @@ function VisualizationsStudioContent() {
                 )}
               </div>
             </div>
+            ) : (
+              <div className="p-5 space-y-5">
+                {/* 1. COLOR PALETTE */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Color Palette
+                  </label>
+                  <div className="space-y-1.5">
+                    {Object.entries(COLOR_PALETTES).map(([key, colors]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setColorPalette(key)}
+                        className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-xs transition ${
+                          colorPalette === key
+                            ? "border-indigo-600 bg-indigo-50/50 shadow-2xs font-semibold"
+                            : "border-gray-200 bg-white hover:bg-gray-50"
+                        }`}
+                      >
+                        <span className="capitalize text-gray-800">{key}</span>
+                        <div className="flex items-center gap-1">
+                          {colors.slice(0, 5).map((c, i) => (
+                            <span
+                              key={i}
+                              className="h-3 w-3 rounded-full inline-block shadow-2xs"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. LEGEND CONFIGURATION */}
+                <div className="pt-2 border-t border-gray-100 space-y-2.5">
+                  <label className="block text-xs font-semibold text-gray-700">
+                    Legend Settings
+                  </label>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Show Legend</span>
+                    <input
+                      type="checkbox"
+                      checked={legendShow}
+                      onChange={(e) => setLegendShow(e.target.checked)}
+                      className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                  </div>
+                  {legendShow && (
+                    <div>
+                      <span className="text-2xs text-gray-400 block mb-1">Position</span>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {(["top", "bottom", "left", "right"] as const).map((pos) => (
+                          <button
+                            key={pos}
+                            type="button"
+                            onClick={() => setLegendPosition(pos)}
+                            className={`py-1 rounded text-2xs font-medium capitalize border transition ${
+                              legendPosition === pos
+                                ? "border-indigo-600 bg-indigo-50 text-indigo-700 font-bold"
+                                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                            }`}
+                          >
+                            {pos}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. AXIS CONFIGURATION */}
+                <div className="pt-2 border-t border-gray-100 space-y-3">
+                  <label className="block text-xs font-semibold text-gray-700">
+                    Axes & Gridlines
+                  </label>
+                  <div>
+                    <span className="text-2xs text-gray-500 block mb-1">X-Axis Custom Title</span>
+                    <input
+                      type="text"
+                      value={xAxisTitle}
+                      onChange={(e) => setXAxisTitle(e.target.value)}
+                      placeholder="e.g. Regions, Months, Categories"
+                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-2.5 py-1.5"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Show X-Axis Gridlines</span>
+                    <input
+                      type="checkbox"
+                      checked={showXGrid}
+                      onChange={(e) => setShowXGrid(e.target.checked)}
+                      className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-2xs text-gray-500 block mb-1">Y-Axis Custom Title</span>
+                    <input
+                      type="text"
+                      value={yAxisTitle}
+                      onChange={(e) => setYAxisTitle(e.target.value)}
+                      placeholder="e.g. Revenue ($), Total Count"
+                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-2.5 py-1.5"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Show Y-Axis Gridlines</span>
+                    <input
+                      type="checkbox"
+                      checked={showYGrid}
+                      onChange={(e) => setShowYGrid(e.target.checked)}
+                      className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. NUMBER FORMATTING */}
+                <div className="pt-2 border-t border-gray-100 space-y-3">
+                  <label className="block text-xs font-semibold text-gray-700">
+                    Metric & Number Formatting
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: "number", label: "Standard" },
+                      { id: "currency", label: "Currency ($)" },
+                      { id: "percentage", label: "Percent (%)" },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setNumberFormatType(f.id as any)}
+                        className={`py-1.5 text-2xs rounded-lg border text-center font-medium transition ${
+                          numberFormatType === f.id
+                            ? "border-indigo-600 bg-indigo-50 text-indigo-700 font-bold"
+                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-2xs text-gray-500 block mb-1">Prefix</span>
+                      <input
+                        type="text"
+                        value={numberPrefix}
+                        onChange={(e) => setNumberPrefix(e.target.value)}
+                        placeholder="e.g. $, €"
+                        className="w-full text-xs rounded-lg border border-gray-300 px-2 py-1"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-2xs text-gray-500 block mb-1">Suffix</span>
+                      <input
+                        type="text"
+                        value={numberSuffix}
+                        onChange={(e) => setNumberSuffix(e.target.value)}
+                        placeholder="e.g. USD, /mo"
+                        className="w-full text-xs rounded-lg border border-gray-300 px-2 py-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Decimal Places</span>
+                    <select
+                      value={numberDecimals}
+                      onChange={(e) => setNumberDecimals(Number(e.target.value))}
+                      className="text-xs rounded border border-gray-300 bg-white px-2 py-1"
+                    >
+                      <option value={0}>0 (Integer)</option>
+                      <option value={1}>1 decimal</option>
+                      <option value={2}>2 decimals</option>
+                      <option value={3}>3 decimals</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Compact Format (1.5M, 24K)</span>
+                    <input
+                      type="checkbox"
+                      checked={numberCompact}
+                      onChange={(e) => setNumberCompact(e.target.checked)}
+                      className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. VISUALIZATION-SPECIFIC SETTINGS */}
+                <div className="pt-2 border-t border-gray-100 space-y-2.5">
+                  <label className="block text-xs font-semibold text-gray-700">
+                    Display Settings
+                  </label>
+                  {(chartType === "BAR" || chartType === "AREA") && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">Stacked Series</span>
+                      <input
+                        type="checkbox"
+                        checked={chartStacked}
+                        onChange={(e) => setChartStacked(e.target.checked)}
+                        className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      />
+                    </div>
+                  )}
+                  {(chartType === "LINE" || chartType === "AREA") && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">Smooth Spline Curve</span>
+                      <input
+                        type="checkbox"
+                        checked={chartSmooth}
+                        onChange={(e) => setChartSmooth(e.target.checked)}
+                        className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </aside>
 
           {/* MAIN PREVIEW CANVAS */}
@@ -1287,7 +1679,16 @@ function VisualizationsStudioContent() {
                     >
                       Edit in Builder
                     </button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenShareModal(viz)}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-2xs font-semibold text-gray-700 hover:bg-gray-50 shadow-2xs"
+                        title="Share visualization"
+                      >
+                        <Share2 className="h-3 w-3 text-indigo-600" />
+                        <span>Share</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => openAddToDashboard(viz)}
@@ -1363,6 +1764,125 @@ function VisualizationsStudioContent() {
                 className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 disabled:opacity-50"
               >
                 {addingToDashboard ? "Adding…" : "Confirm & Add"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SHARE VISUALIZATION MODAL (FEATURE 15) */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-2xs">
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Share2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Share Visualization</h3>
+                  <p className="text-2xs text-gray-500">Public view-only standalone access</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded"
+              >
+                ✕
+              </button>
+            </div>
+
+            {isSharingLoading ? (
+              <div className="py-8 text-center text-xs text-gray-500 flex flex-col items-center gap-2">
+                <RefreshCw className="h-5 w-5 animate-spin text-indigo-600" />
+                <span>Generating secure public link...</span>
+              </div>
+            ) : shareUrl ? (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-600">
+                  Anyone with this link can view the &quot;{sharingVizTitle}&quot; chart in live read-only mode without logging in.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={shareUrl}
+                    className="flex-1 text-xs font-mono bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 select-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (shareUrl) {
+                        void navigator.clipboard.writeText(shareUrl);
+                        setCopiedShare(true);
+                        setTimeout(() => setCopiedShare(false), 2000);
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500"
+                  >
+                    {copiedShare ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <a
+                    href={shareUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline font-medium"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    <span>Open in new tab</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleRevokeShare}
+                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline font-medium"
+                  >
+                    <Lock className="h-3 w-3" />
+                    <span>Revoke link</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 space-y-3">
+                <p className="text-xs text-gray-500">
+                  This chart is not publicly shared. Create a shareable link to allow external viewing.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (sharingVizId) {
+                      void apiShareVisualization(sharingVizId).then((res) => {
+                        const origin = typeof window !== "undefined" ? window.location.origin : "";
+                        setShareUrl(`${origin}/visualizations/shared/${res.shareToken}`);
+                      });
+                    }
+                  }}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500"
+                >
+                  Generate Share Link
+                </button>
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-gray-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(false)}
+                className="rounded-lg border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Done
               </button>
             </div>
           </div>

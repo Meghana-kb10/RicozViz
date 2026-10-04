@@ -18,6 +18,10 @@ import {
   apiCreateShareLink,
   apiGetShareLinkStatus,
   apiDisableShareLink,
+  apiListDashboardCollaborators,
+  apiGrantDashboardCollaborator,
+  apiRevokeDashboardCollaborator,
+  type DashboardCollaboratorData,
   apiGetDashboardSchedule,
   apiSaveDashboardSchedule,
   apiDeleteDashboardSchedule,
@@ -91,6 +95,9 @@ import {
   Download,
   Filter,
   Clock,
+  Users,
+  UserPlus,
+  ShieldCheck,
 } from "lucide-react";
 
 const QUICK_CHART_TYPES: { value: ChartType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -168,12 +175,21 @@ export default function DashboardDetailPage({
   const [savingDashboard, setSavingDashboard] = useState(false);
   const [reloadingDashboard, setReloadingDashboard] = useState(false);
 
-  // Dashboard Share State
+  // Dashboard Share & Collaboration State
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareModalTab, setShareModalTab] = useState<"COLLABORATORS" | "PUBLIC_LINK">("COLLABORATORS");
   const [shareStatus, setShareStatus] = useState<ShareLinkStatusResponse | null>(null);
   const [loadingShareStatus, setLoadingShareStatus] = useState(false);
   const [updatingShare, setUpdatingShare] = useState(false);
   const [copiedShareLink, setCopiedShareLink] = useState(false);
+  const [collaborators, setCollaborators] = useState<DashboardCollaboratorData[]>([]);
+  const [workspaceMembers, setWorkspaceMembers] = useState<
+    Array<{ userId: string; roleName: string; user: { id: string; name: string; email: string; avatarUrl: string | null } }>
+  >([]);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
+  const [selectedAccessLevel, setSelectedAccessLevel] = useState<"VIEW" | "EDIT" | "ADMIN">("VIEW");
+  const [loadingCollaborators, setLoadingCollaborators] = useState(false);
+  const [updatingCollaborator, setUpdatingCollaborator] = useState(false);
 
   // Dashboard Report Schedule & Snapshot State
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -686,17 +702,62 @@ export default function DashboardDetailPage({
     }
   };
 
-  // Share Management Handlers
+  // Share & Collaboration Management Handlers
   const handleOpenShareModal = async () => {
     setIsShareModalOpen(true);
     setLoadingShareStatus(true);
+    setLoadingCollaborators(true);
     try {
-      const res = await apiGetShareLinkStatus(id);
-      setShareStatus(res);
+      const [res, colRes] = await Promise.all([
+        apiGetShareLinkStatus(id).catch(() => null),
+        apiListDashboardCollaborators(id).catch(() => null),
+      ]);
+      if (res) setShareStatus(res);
+      if (colRes) {
+        setCollaborators(colRes.collaborators || []);
+        setWorkspaceMembers(colRes.workspaceMembers || []);
+        if (colRes.workspaceMembers && colRes.workspaceMembers.length > 0) {
+          setSelectedMemberId(colRes.workspaceMembers[0].userId);
+        }
+      }
     } catch (err) {
-      console.error("Failed to load share status", err);
+      console.error("Failed to load share status or collaborators", err);
     } finally {
       setLoadingShareStatus(false);
+      setLoadingCollaborators(false);
+    }
+  };
+
+  const handleGrantCollaborator = async () => {
+    if (!selectedMemberId) return;
+    setUpdatingCollaborator(true);
+    try {
+      const res = await apiGrantDashboardCollaborator(id, {
+        targetUserId: selectedMemberId,
+        accessLevel: selectedAccessLevel,
+      });
+      setCollaborators((prev) => {
+        const filtered = prev.filter((c) => c.userId !== res.collaborator.userId);
+        return [res.collaborator, ...filtered];
+      });
+      setSuccessMsg("Collaborator access updated successfully!");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to grant collaborator access");
+    } finally {
+      setUpdatingCollaborator(false);
+    }
+  };
+
+  const handleRevokeCollaborator = async (collaboratorUserId: string) => {
+    setUpdatingCollaborator(true);
+    try {
+      await apiRevokeDashboardCollaborator(id, collaboratorUserId);
+      setCollaborators((prev) => prev.filter((c) => c.userId !== collaboratorUserId));
+      setSuccessMsg("Collaborator access revoked successfully!");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to revoke collaborator");
+    } finally {
+      setUpdatingCollaborator(false);
     }
   };
 
@@ -1875,11 +1936,11 @@ export default function DashboardDetailPage({
       )}
 
       {/* ============================================================ */}
-      {/* 5. SHARE DASHBOARD MODAL */}
+      {/* 5. SHARE & COLLABORATION MODAL */}
       {/* ============================================================ */}
       {isShareModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 no-print">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-100 p-5 bg-gray-50/50">
               <div className="flex items-center gap-2.5">
@@ -1887,9 +1948,9 @@ export default function DashboardDetailPage({
                   <Share2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Share Dashboard</h3>
+                  <h3 className="text-sm font-bold text-gray-900">Share & Collaborate</h3>
                   <p className="text-xs text-gray-500">
-                    Create a secure read-only link to share with clients or stakeholders
+                    Manage workspace collaborator permissions and external sharing
                   </p>
                 </div>
               </div>
@@ -1902,106 +1963,266 @@ export default function DashboardDetailPage({
               </button>
             </div>
 
+            {/* Tab navigation */}
+            <div className="flex border-b border-gray-100 px-6 pt-3 gap-6 bg-gray-50/30 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setShareModalTab("COLLABORATORS")}
+                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition ${
+                  shareModalTab === "COLLABORATORS"
+                    ? "border-indigo-600 text-indigo-600"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Users className="h-4 w-4" />
+                <span>Workspace Collaborators</span>
+                {collaborators.length > 0 && (
+                  <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] text-indigo-700 font-bold">
+                    {collaborators.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShareModalTab("PUBLIC_LINK")}
+                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition ${
+                  shareModalTab === "PUBLIC_LINK"
+                    ? "border-indigo-600 text-indigo-600"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Globe className="h-4 w-4" />
+                <span>Public Share Link</span>
+                {shareStatus?.active && (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700 font-bold">
+                    Active
+                  </span>
+                )}
+              </button>
+            </div>
+
             {/* Modal Content */}
-            <div className="p-6 space-y-5">
-              {loadingShareStatus ? (
-                <div className="flex items-center justify-center py-8 text-xs text-gray-500 gap-2">
-                  <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
-                  <span>Loading sharing status...</span>
-                </div>
-              ) : shareStatus?.active && shareStatus.shareUrl ? (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                    <div className="text-xs text-emerald-900 space-y-1">
-                      <p className="font-semibold">Public Link is Active</p>
-                      <p className="text-emerald-700 text-[11px]">
-                        Anyone with this link can view this dashboard in read-only mode without logging in. Your private workspace data and credentials remain strictly isolated.
-                      </p>
+            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+              {shareModalTab === "COLLABORATORS" ? (
+                <div className="space-y-5">
+                  {/* Add collaborator control */}
+                  <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-800">
+                      <UserPlus className="h-4 w-4 text-indigo-600" />
+                      <span>Grant Workspace Member Access</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                      <div className="sm:col-span-6">
+                        <select
+                          value={selectedMemberId}
+                          onChange={(e) => setSelectedMemberId(e.target.value)}
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        >
+                          {workspaceMembers.length === 0 ? (
+                            <option value="">No other workspace members</option>
+                          ) : (
+                            workspaceMembers.map((m) => (
+                              <option key={m.userId} value={m.userId}>
+                                {m.user?.name || m.user?.email || m.userId} ({m.roleName})
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-3">
+                        <select
+                          value={selectedAccessLevel}
+                          onChange={(e) => setSelectedAccessLevel(e.target.value as "VIEW" | "EDIT" | "ADMIN")}
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        >
+                          <option value="VIEW">VIEW (Viewer)</option>
+                          <option value="EDIT">EDIT (Editor)</option>
+                          <option value="ADMIN">ADMIN (Full Access)</option>
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-3">
+                        <button
+                          type="button"
+                          disabled={!selectedMemberId || updatingCollaborator}
+                          onClick={handleGrantCollaborator}
+                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition disabled:opacity-50"
+                        >
+                          {updatingCollaborator ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                          )}
+                          <span>Save Access</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Collaborators List */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                      Share Link
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={shareStatus.shareUrl}
-                        className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-mono text-gray-800 focus:outline-none select-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleCopyShareLink}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 transition shrink-0"
-                      >
-                        {copiedShareLink ? (
-                          <>
-                            <Check className="h-3.5 w-3.5" />
-                            <span>Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3.5 w-3.5" />
-                            <span>Copy Link</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    <h4 className="text-xs font-semibold text-gray-700 mb-2.5">Current Collaborators</h4>
+                    {loadingCollaborators ? (
+                      <div className="flex items-center justify-center py-6 text-xs text-gray-500 gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
+                        <span>Loading collaborators...</span>
+                      </div>
+                    ) : collaborators.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-xs text-gray-500">
+                        No direct collaborator overrides configured. All workspace members have permissions matching their workspace role.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white overflow-hidden">
+                        {collaborators.map((c) => (
+                          <div key={c.id} className="p-3.5 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-gray-900 truncate">
+                                {c.user?.name || c.user?.email || c.userId}
+                              </p>
+                              <p className="text-[11px] text-gray-500 truncate">{c.user?.email}</p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span
+                                className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                                  c.accessLevel === "ADMIN"
+                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                    : c.accessLevel === "EDIT"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                                }`}
+                              >
+                                {c.accessLevel}
+                              </span>
+
+                              <button
+                                type="button"
+                                disabled={updatingCollaborator}
+                                onClick={() => handleRevokeCollaborator(c.userId)}
+                                className="rounded-md p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                                title="Revoke collaborator access"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center justify-between pt-2">
-                    <a
-                      href={shareStatus.shareUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      <span>Open Shared View in New Tab</span>
-                    </a>
-
-                    <button
-                      type="button"
-                      disabled={updatingShare}
-                      onClick={handleDisableShareLink}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
-                    >
-                      {updatingShare ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Lock className="h-3.5 w-3.5" />
-                      )}
-                      <span>Disable Link</span>
-                    </button>
+                  <div className="rounded-xl bg-gray-50 p-3 text-[11px] text-gray-500 flex items-start gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>
+                      Workspace isolation enforced: only authenticated accounts belonging to this workspace organization can be added as collaborators.
+                    </span>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6 space-y-4">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-                    <Globe className="h-6 w-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-gray-900">No active share link</h4>
-                    <p className="text-xs text-gray-500 max-w-sm mx-auto">
-                      Generate a unique, cryptographically secure share link to allow stakeholders to view this dashboard in read-only mode.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={updatingShare}
-                    onClick={handleCreateShareLink}
-                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition disabled:opacity-70"
-                  >
-                    {updatingShare ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Share2 className="h-4 w-4" />
-                    )}
-                    <span>Create Share Link</span>
-                  </button>
+                /* PUBLIC LINK TAB */
+                <div>
+                  {loadingShareStatus ? (
+                    <div className="flex items-center justify-center py-8 text-xs text-gray-500 gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
+                      <span>Loading sharing status...</span>
+                    </div>
+                  ) : shareStatus?.active && shareStatus.shareUrl ? (
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 flex items-start gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-emerald-900 space-y-1">
+                          <p className="font-semibold">Public Link is Active</p>
+                          <p className="text-emerald-700 text-[11px]">
+                            Anyone with this link can view this dashboard in read-only mode without logging in. Your private workspace data and credentials remain strictly isolated.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                          Share Link
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={shareStatus.shareUrl}
+                            className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-mono text-gray-800 focus:outline-none select-all"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleCopyShareLink}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 transition shrink-0"
+                          >
+                            {copiedShareLink ? (
+                              <>
+                                <Check className="h-3.5 w-3.5" />
+                                <span>Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3.5 w-3.5" />
+                                <span>Copy Link</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <a
+                          href={shareStatus.shareUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          <span>Open Shared View in New Tab</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          disabled={updatingShare}
+                          onClick={handleDisableShareLink}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                        >
+                          {updatingShare ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Lock className="h-3.5 w-3.5" />
+                          )}
+                          <span>Disable Link</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 space-y-4">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                        <Globe className="h-6 w-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-semibold text-gray-900">No active share link</h4>
+                        <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                          Generate a unique, cryptographically secure share link to allow stakeholders to view this dashboard in read-only mode.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={updatingShare}
+                        onClick={handleCreateShareLink}
+                        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition disabled:opacity-70"
+                      >
+                        {updatingShare ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Share2 className="h-4 w-4" />
+                        )}
+                        <span>Create Share Link</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2010,7 +2231,7 @@ export default function DashboardDetailPage({
             <div className="p-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between text-xs">
               <span className="text-gray-400 text-[11px]">
                 {shareStatus?.sharedAt
-                  ? `Shared on ${new Date(shareStatus.sharedAt).toLocaleDateString()}`
+                  ? `Public link active since ${new Date(shareStatus.sharedAt).toLocaleDateString()}`
                   : "Private to Workspace"}
               </span>
               <button

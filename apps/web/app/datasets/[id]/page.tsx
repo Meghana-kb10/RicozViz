@@ -12,6 +12,11 @@ import {
   apiPreviewCalculatedField,
   apiCreateCalculatedField,
   apiDeleteCalculatedField,
+  apiPreviewTransformations,
+  apiApplyTransformations,
+  apiListDatasetVersions,
+  apiRestoreDatasetVersion,
+  apiGetDatasetLineage,
   type DatasetData,
   type DatasetQueryFilter,
   type DatasetQueryMeasure,
@@ -20,6 +25,10 @@ import {
   type AggregationFunction,
   type CalculatedFieldConfig,
   type PreviewCalculatedFieldResult,
+  type TransformationStep,
+  type TransformationPreviewResponse,
+  type DatasetVersionItem,
+  type DatasetLineageResponse,
   ApiError,
 } from "../../../lib/api";
 import {
@@ -63,10 +72,39 @@ export default function DatasetDetailPage({
   const [dataset, setDataset] = useState<DatasetData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "SCHEMA" | "PREVIEW" | "EXPLORE" | "CALCULATED" | "VISUALIZATIONS"
+    "SCHEMA" | "PREVIEW" | "EXPLORE" | "CALCULATED" | "TRANSFORM" | "VERSIONS_LINEAGE" | "VISUALIZATIONS"
   >("SCHEMA");
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // Transformation Pipeline State (Feature 13)
+  const [transformSteps, setTransformSteps] = useState<TransformationStep[]>([]);
+  const [newStepType, setNewStepType] = useState<TransformationStep["type"]>("FILTER_ROWS");
+  const [stepColumn, setStepColumn] = useState<string>("");
+  const [stepOperator, setStepOperator] = useState<"EQUALS" | "NOT_EQUALS" | "GREATER_THAN" | "LESS_THAN" | "CONTAINS" | "IS_NULL" | "IS_NOT_NULL">("EQUALS");
+  const [stepValue, setStepValue] = useState<string>("");
+  const [stepNewName, setStepNewName] = useState<string>("");
+  const [stepTargetType, setStepTargetType] = useState<"STRING" | "NUMBER" | "BOOLEAN" | "DATE">("STRING");
+  const [stepMissingStrategy, setStepMissingStrategy] = useState<"DROP_ROW" | "FILL_ZERO" | "FILL_MEAN" | "FILL_VALUE">("DROP_ROW");
+  const [stepFillValue, setStepFillValue] = useState<string>("");
+  const [stepCaseMode, setStepCaseMode] = useState<"UPPER" | "LOWER">("UPPER");
+  const [stepDerivedName, setStepDerivedName] = useState<string>("");
+  const [stepDerivedExpr, setStepDerivedExpr] = useState<string>("");
+
+  const [previewingTransform, setPreviewingTransform] = useState(false);
+  const [transformPreviewResult, setTransformPreviewResult] = useState<TransformationPreviewResponse | null>(null);
+  const [applyingTransform, setApplyingTransform] = useState(false);
+  const [transformMode, setTransformMode] = useState<"CREATE_NEW" | "SAVE_VERSION">("CREATE_NEW");
+  const [newCleanedDatasetName, setNewCleanedDatasetName] = useState<string>("");
+  const [transformChangeSummary, setTransformChangeSummary] = useState<string>("");
+  const [transformError, setTransformError] = useState<string | null>(null);
+
+  // Versioning & Lineage State (Feature 14)
+  const [versions, setVersions] = useState<DatasetVersionItem[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [lineage, setLineage] = useState<DatasetLineageResponse | null>(null);
+  const [loadingLineage, setLoadingLineage] = useState(false);
+  const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
 
   // Calculated Fields State
   const [isCalcModalOpen, setIsCalcModalOpen] = useState(false);
@@ -153,6 +191,179 @@ export default function DatasetDetailPage({
         setLoadingPreview(false);
       });
   }, []);
+
+  const loadVersionsAndLineage = useCallback((datasetId: string) => {
+    setLoadingVersions(true);
+    setLoadingLineage(true);
+    apiListDatasetVersions(datasetId)
+      .then((data) => setVersions(data))
+      .catch(() => setVersions([]))
+      .finally(() => setLoadingVersions(false));
+
+    apiGetDatasetLineage(datasetId)
+      .then((data) => setLineage(data))
+      .catch(() => setLineage(null))
+      .finally(() => setLoadingLineage(false));
+  }, []);
+
+  const handleAddTransformStep = () => {
+    if (!stepColumn && newStepType !== "REMOVE_DUPLICATES" && newStepType !== "DERIVED_COLUMN") {
+      setTransformError("Please select a target column");
+      return;
+    }
+    setTransformError(null);
+
+    let newStep: TransformationStep;
+    switch (newStepType) {
+      case "FILTER_ROWS":
+        newStep = {
+          type: "FILTER_ROWS",
+          column: stepColumn,
+          operator: stepOperator,
+          value: stepOperator === "IS_NULL" || stepOperator === "IS_NOT_NULL" ? undefined : stepValue,
+        };
+        break;
+      case "RENAME_COLUMN":
+        if (!stepNewName.trim()) {
+          setTransformError("New column name is required");
+          return;
+        }
+        newStep = {
+          type: "RENAME_COLUMN",
+          oldName: stepColumn,
+          newName: stepNewName.trim(),
+        };
+        break;
+      case "TYPE_CONVERSION":
+        newStep = {
+          type: "TYPE_CONVERSION",
+          column: stepColumn,
+          targetType: stepTargetType,
+        };
+        break;
+      case "HANDLE_MISSING":
+        newStep = {
+          type: "HANDLE_MISSING",
+          column: stepColumn,
+          strategy: stepMissingStrategy,
+          fillValue: stepMissingStrategy === "FILL_VALUE" ? stepFillValue : undefined,
+        };
+        break;
+      case "REMOVE_DUPLICATES":
+        newStep = {
+          type: "REMOVE_DUPLICATES",
+          columns: stepColumn ? [stepColumn] : undefined,
+        };
+        break;
+      case "DERIVED_COLUMN":
+        if (!stepDerivedName.trim() || !stepDerivedExpr.trim()) {
+          setTransformError("Column name and formula expression are required");
+          return;
+        }
+        newStep = {
+          type: "DERIVED_COLUMN",
+          name: stepDerivedName.trim(),
+          expression: stepDerivedExpr.trim(),
+        };
+        break;
+      case "DROP_COLUMN":
+        newStep = {
+          type: "DROP_COLUMN",
+          column: stepColumn,
+        };
+        break;
+      case "TRIM_WHITESPACE":
+        newStep = {
+          type: "TRIM_WHITESPACE",
+          column: stepColumn,
+        };
+        break;
+      case "CASE_CONVERT":
+        newStep = {
+          type: "CASE_CONVERT",
+          column: stepColumn,
+          mode: stepCaseMode,
+        };
+        break;
+      default:
+        return;
+    }
+
+    setTransformSteps((prev) => [...prev, newStep]);
+    setTransformPreviewResult(null);
+    setStepValue("");
+    setStepNewName("");
+    setStepFillValue("");
+    setStepDerivedName("");
+    setStepDerivedExpr("");
+  };
+
+  const handlePreviewTransform = async () => {
+    if (!dataset || transformSteps.length === 0) return;
+    setPreviewingTransform(true);
+    setTransformError(null);
+    try {
+      const res = await apiPreviewTransformations(dataset.id, transformSteps);
+      setTransformPreviewResult(res);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to preview transformations";
+      setTransformError(msg);
+      setTransformPreviewResult(null);
+    } finally {
+      setPreviewingTransform(false);
+    }
+  };
+
+  const handleApplyTransform = async () => {
+    if (!dataset || transformSteps.length === 0) return;
+    setApplyingTransform(true);
+    setTransformError(null);
+    try {
+      const res = await apiApplyTransformations(dataset.id, {
+        steps: transformSteps,
+        mode: transformMode,
+        newDatasetName: transformMode === "CREATE_NEW" ? newCleanedDatasetName.trim() || `${dataset.name} (Cleaned)` : undefined,
+        changeSummary: transformChangeSummary.trim() || `Transformation pipeline with ${transformSteps.length} steps`,
+      });
+
+      if (transformMode === "CREATE_NEW" && (res.dataset as Record<string, unknown>)?.id) {
+        setSuccessMsg(`Derived dataset "${(res.dataset as Record<string, unknown>).name}" created successfully!`);
+        router.push(`/datasets/${(res.dataset as Record<string, unknown>).id}`);
+      } else {
+        setSuccessMsg(`Dataset updated and version saved successfully!`);
+        const updated = await apiGetDataset(dataset.id);
+        setDataset(updated);
+        setTransformSteps([]);
+        setTransformPreviewResult(null);
+        setActiveTab("SCHEMA");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to apply transformations";
+      setTransformError(msg);
+    } finally {
+      setApplyingTransform(false);
+    }
+  };
+
+  const handleRestoreVersion = async (versionNum: number) => {
+    if (!dataset) return;
+    if (!confirm(`Restore dataset to version ${versionNum}? This will safely roll back columns and create a new version.`)) {
+      return;
+    }
+    setRestoringVersion(versionNum);
+    try {
+      await apiRestoreDatasetVersion(dataset.id, versionNum);
+      setSuccessMsg(`Dataset rolled back to version ${versionNum} successfully!`);
+      const updated = await apiGetDataset(dataset.id);
+      setDataset(updated);
+      loadVersionsAndLineage(dataset.id);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to restore version";
+      setErrorMsg(msg);
+    } finally {
+      setRestoringVersion(null);
+    }
+  };
 
   async function handleSaveEdit(e: React.FormEvent) {
     e.preventDefault();
@@ -491,6 +702,37 @@ export default function DatasetDetailPage({
             }`}
           >
             ⚡ Calculated Fields ({dataset.calculatedFields?.length || dataset.columns.filter((c) => c.isCalculated).length})
+          </button>
+          <button
+            onClick={() => setActiveTab("TRANSFORM")}
+            className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 ${
+              activeTab === "TRANSFORM"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <span>🧹 Transformations</span>
+            {transformSteps.length > 0 && (
+              <span className="rounded-full bg-indigo-100 px-1.5 py-0.2 text-[10px] font-bold text-indigo-700">
+                {transformSteps.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("VERSIONS_LINEAGE");
+              if (dataset) loadVersionsAndLineage(dataset.id);
+            }}
+            className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 ${
+              activeTab === "VERSIONS_LINEAGE"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <span>📜 Versioning & Lineage</span>
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] font-bold text-slate-700">
+              v{dataset.currentVersion || 1}
+            </span>
           </button>
           <button
             onClick={() => setActiveTab("VISUALIZATIONS")}
@@ -1170,7 +1412,731 @@ export default function DatasetDetailPage({
           </div>
         )}
 
-        {/* Tab 5: Visualizations & Recommendations */}
+        {/* Tab: Data Transformation Pipeline (Feature 13) */}
+        {activeTab === "TRANSFORM" && (
+          <div className="space-y-6">
+            {/* Header Banner */}
+            <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 via-purple-50/50 to-white p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-700 mb-2">
+                    🧹 Data Cleaning & Transformation Pipeline
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Clean, Transform & Derive {dataset.name}
+                  </h2>
+                  <p className="mt-1 text-xs text-gray-600 max-w-2xl leading-relaxed">
+                    Build multi-step pipelines to filter outliers, rename columns, convert data types, handle missing values, and generate computed columns. Preview results safely in-memory before applying.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-200 shadow-2xs">
+                    Pipeline Steps: <strong>{transformSteps.length}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="mt-4 pt-3 border-t border-indigo-100/60 flex flex-wrap items-center gap-2">
+                <span className="text-2xs font-semibold uppercase tracking-wider text-gray-500">Quick Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const firstNum = dataset.columns.find((c) => c.type === "number" || c.type === "integer");
+                    if (firstNum) {
+                      setTransformSteps((prev) => [
+                        ...prev,
+                        { type: "FILL_MISSING", column: firstNum.name, strategy: "DROP_ROW" },
+                      ]);
+                      setTransformPreviewResult(null);
+                    }
+                  }}
+                  className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-2xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  + Drop Missing Rows
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTransformSteps((prev) => [
+                      ...prev,
+                      { type: "REMOVE_DUPLICATES" },
+                    ]);
+                    setTransformPreviewResult(null);
+                  }}
+                  className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-2xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  + Deduplicate All Records
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const firstText = dataset.columns.find((c) => c.type === "string" || c.type === "text");
+                    if (firstText) {
+                      setTransformSteps((prev) => [
+                        ...prev,
+                        { type: "TRIM_WHITESPACE", column: firstText.name },
+                      ]);
+                      setTransformPreviewResult(null);
+                    }
+                  }}
+                  className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-2xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  + Trim Text Columns
+                </button>
+              </div>
+            </div>
+
+            {transformError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
+                <strong>Error:</strong> {transformError}
+              </div>
+            )}
+
+            {/* Step Builder Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column: Step Builder Form */}
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800">
+                    Add Transformation Step
+                  </h3>
+                  <span className="text-[10px] text-gray-400 font-mono">Step #{transformSteps.length + 1}</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Transformation Type
+                  </label>
+                  <select
+                    value={newStepType}
+                    onChange={(e) => {
+                      setNewStepType(e.target.value as TransformationStep["type"]);
+                      setTransformError(null);
+                    }}
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                  >
+                    <option value="FILTER_ROWS">Filter Rows (By Condition)</option>
+                    <option value="RENAME_COLUMN">Rename Column</option>
+                    <option value="TYPE_CONVERSION">Convert Column Type</option>
+                    <option value="HANDLE_MISSING">Handle Missing / Null Values</option>
+                    <option value="REMOVE_DUPLICATES">Remove Duplicate Rows</option>
+                    <option value="DERIVED_COLUMN">Derived Computed Column</option>
+                    <option value="DROP_COLUMN">Drop / Remove Column</option>
+                    <option value="TRIM_WHITESPACE">Trim String Whitespace</option>
+                    <option value="CASE_CONVERT">Change Text Casing (UPPER/LOWER)</option>
+                  </select>
+                </div>
+
+                {/* Target Column Selector (unless Derived or Deduplicate All) */}
+                {newStepType !== "DERIVED_COLUMN" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      {newStepType === "REMOVE_DUPLICATES" ? "Key Column (Optional)" : "Target Column"}
+                    </label>
+                    <select
+                      value={stepColumn}
+                      onChange={(e) => setStepColumn(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                    >
+                      <option value="">{newStepType === "REMOVE_DUPLICATES" ? "-- All Columns --" : "-- Select Column --"}</option>
+                      {dataset.columns.map((c) => (
+                        <option key={c.name} value={c.name}>
+                          {c.name} ({c.type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Dynamic Configuration based on Step Type */}
+                {newStepType === "FILTER_ROWS" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Filter Operator</label>
+                      <select
+                        value={stepOperator}
+                        onChange={(e) => setStepOperator(e.target.value as any)}
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                      >
+                        <option value="EQUALS">Equals (=)</option>
+                        <option value="NOT_EQUALS">Not Equals (!=)</option>
+                        <option value="GREATER_THAN">Greater Than (&gt;)</option>
+                        <option value="LESS_THAN">Less Than (&lt;)</option>
+                        <option value="CONTAINS">Contains (text search)</option>
+                        <option value="IS_NULL">Is Null / Empty</option>
+                        <option value="IS_NOT_NULL">Is Not Null / Present</option>
+                      </select>
+                    </div>
+
+                    {stepOperator !== "IS_NULL" && stepOperator !== "IS_NOT_NULL" && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Comparison Value</label>
+                        <input
+                          type="text"
+                          value={stepValue}
+                          onChange={(e) => setStepValue(e.target.value)}
+                          placeholder="e.g. 100, active, East"
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {newStepType === "RENAME_COLUMN" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">New Column Name</label>
+                    <input
+                      type="text"
+                      value={stepNewName}
+                      onChange={(e) => setStepNewName(e.target.value)}
+                      placeholder="e.g. customer_region"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none font-mono"
+                    />
+                  </div>
+                )}
+
+                {newStepType === "TYPE_CONVERSION" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Target Data Type</label>
+                    <select
+                      value={stepTargetType}
+                      onChange={(e) => setStepTargetType(e.target.value as any)}
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                    >
+                      <option value="STRING">STRING (Text)</option>
+                      <option value="NUMBER">NUMBER (Decimal / Integer)</option>
+                      <option value="BOOLEAN">BOOLEAN (True / False)</option>
+                      <option value="DATE">DATE (Timestamp / ISO)</option>
+                    </select>
+                  </div>
+                )}
+
+                {newStepType === "HANDLE_MISSING" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Missing Value Strategy</label>
+                      <select
+                        value={stepMissingStrategy}
+                        onChange={(e) => setStepMissingStrategy(e.target.value as any)}
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                      >
+                        <option value="DROP_ROW">Drop rows with missing values</option>
+                        <option value="FILL_ZERO">Fill with 0 (numeric zero)</option>
+                        <option value="FILL_MEAN">Fill with column average / mean</option>
+                        <option value="FILL_VALUE">Fill with custom literal value</option>
+                      </select>
+                    </div>
+
+                    {stepMissingStrategy === "FILL_VALUE" && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">Fill Literal</label>
+                        <input
+                          type="text"
+                          value={stepFillValue}
+                          onChange={(e) => setStepFillValue(e.target.value)}
+                          placeholder="e.g. N/A or Unknown"
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {newStepType === "CASE_CONVERT" && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Casing Mode</label>
+                    <select
+                      value={stepCaseMode}
+                      onChange={(e) => setStepCaseMode(e.target.value as any)}
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                    >
+                      <option value="UPPER">UPPERCASE (ALL CAPS)</option>
+                      <option value="LOWER">lowercase (all small)</option>
+                    </select>
+                  </div>
+                )}
+
+                {newStepType === "DERIVED_COLUMN" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">New Column Name</label>
+                      <input
+                        type="text"
+                        value={stepDerivedName}
+                        onChange={(e) => setStepDerivedName(e.target.value)}
+                        placeholder="e.g. net_margin"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Formula Expression</label>
+                      <input
+                        type="text"
+                        value={stepDerivedExpr}
+                        onChange={(e) => setStepDerivedExpr(e.target.value)}
+                        placeholder="e.g. revenue - cost or UPPER(city)"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none font-mono"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAddTransformStep}
+                  className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 transition"
+                >
+                  + Add Step to Pipeline
+                </button>
+              </div>
+
+              {/* Right 2 Columns: Pipeline Sequence & Execution */}
+              <div className="lg:col-span-2 space-y-5">
+                {/* Current Pipeline Card */}
+                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800">
+                        Pipeline Sequence ({transformSteps.length} steps)
+                      </h3>
+                      <p className="text-2xs text-gray-500">Steps will execute sequentially top-to-bottom</p>
+                    </div>
+                    {transformSteps.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTransformSteps([]);
+                          setTransformPreviewResult(null);
+                        }}
+                        className="text-2xs font-semibold text-red-600 hover:underline"
+                      >
+                        Clear Pipeline
+                      </button>
+                    )}
+                  </div>
+
+                  {transformSteps.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center bg-gray-50/50">
+                      <span className="text-2xl mb-1.5 block">🧹</span>
+                      <p className="text-xs font-semibold text-gray-700">Pipeline is currently empty</p>
+                      <p className="text-2xs text-gray-400 mt-1 max-w-sm mx-auto">
+                        Add one or more transformation steps on the left or select a quick preset above.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {transformSteps.map((step, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50/70 p-3 text-xs hover:bg-gray-50 transition"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <span className="font-semibold text-gray-900 block">
+                                {step.type.replace(/_/g, " ")}
+                              </span>
+                              <span className="text-2xs text-gray-500 font-mono">
+                                {"column" in step && `col: ${step.column} `}
+                                {"operator" in step && `[${step.operator} ${step.value ?? ""}]`}
+                                {"newName" in step && `→ ${step.newName}`}
+                                {"targetType" in step && `→ ${step.targetType}`}
+                                {"strategy" in step && `[${step.strategy}]`}
+                                {"mode" in step && `[${step.mode}]`}
+                                {"name" in step && `${step.name} = ${step.expression}`}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTransformSteps((prev) => prev.filter((_, i) => i !== idx));
+                              setTransformPreviewResult(null);
+                            }}
+                            className="text-gray-400 hover:text-red-600 p-1 rounded"
+                            title="Remove step"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Preview Trigger */}
+                  {transformSteps.length > 0 && (
+                    <div className="pt-2 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={handlePreviewTransform}
+                        disabled={previewingTransform}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-600 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition disabled:opacity-50"
+                      >
+                        {previewingTransform ? "Processing Sample..." : "👁️ Preview Transformed Output"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Transformed Preview Results Box */}
+                {transformPreviewResult && (
+                  <div className="rounded-xl border border-indigo-100 bg-white p-5 shadow-xs space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-800">
+                          Sample Preview & Statistics
+                        </h4>
+                        <p className="text-2xs text-gray-500">Previewed on real sample rows</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-2xs font-semibold text-emerald-700 border border-emerald-200">
+                          Rows: {transformPreviewResult.originalRowCount} → {transformPreviewResult.transformedRowCount}
+                        </span>
+                        <span className="rounded bg-blue-50 px-2 py-0.5 text-2xs font-semibold text-blue-700 border border-blue-200">
+                          Cols: {transformPreviewResult.transformedColumns?.length || 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Preview Table */}
+                    <div className="max-h-64 overflow-x-auto rounded-lg border border-gray-200">
+                      <table className="min-w-full divide-y divide-gray-200 text-2xs">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            {(transformPreviewResult.transformedColumns || []).map((col) => (
+                              <th
+                                key={col.name}
+                                className="px-3 py-2 text-left font-semibold text-gray-700 uppercase whitespace-nowrap"
+                              >
+                                {col.name} <span className="text-gray-400 font-normal">({col.type})</span>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 bg-white font-mono">
+                          {((transformPreviewResult.sampleRows || transformPreviewResult.previewRows || []) as Record<string, unknown>[]).slice(0, 8).map((row: Record<string, unknown>, rIdx: number) => (
+                            <tr key={rIdx} className="hover:bg-gray-50">
+                              {(transformPreviewResult.transformedColumns || []).map((col) => (
+                                <td key={col.name} className="px-3 py-1.5 text-gray-700 whitespace-nowrap">
+                                  {row[col.name] !== undefined && row[col.name] !== null
+                                    ? String(row[col.name])
+                                    : "-"}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Apply Pipeline Action Box */}
+                    <div className="pt-4 border-t border-gray-100 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-gray-800 block">Apply Action</label>
+                          <div className="flex items-center gap-4 text-xs">
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="transformMode"
+                                checked={transformMode === "CREATE_NEW"}
+                                onChange={() => setTransformMode("CREATE_NEW")}
+                                className="text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <span className="font-medium text-gray-700">Create New Cleaned Dataset</span>
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="transformMode"
+                                checked={transformMode === "SAVE_VERSION"}
+                                onChange={() => setTransformMode("SAVE_VERSION")}
+                                className="text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <span className="font-medium text-gray-700">Save as New Version (v{(dataset.currentVersion || 1) + 1})</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {transformMode === "CREATE_NEW" && (
+                          <div className="flex-1 max-w-xs">
+                            <input
+                              type="text"
+                              value={newCleanedDatasetName}
+                              onChange={(e) => setNewCleanedDatasetName(e.target.value)}
+                              placeholder={`${dataset.name} (Cleaned)`}
+                              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <input
+                          type="text"
+                          value={transformChangeSummary}
+                          onChange={(e) => setTransformChangeSummary(e.target.value)}
+                          placeholder="Change summary / log description (e.g. Removed duplicates and cleaned null values)"
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          type="button"
+                          onClick={handleApplyTransform}
+                          disabled={applyingTransform}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition disabled:opacity-50"
+                        >
+                          {applyingTransform ? "Executing Pipeline..." : "🚀 Apply Transformations"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Dataset Versioning & Lineage (Feature 14) */}
+        {activeTab === "VERSIONS_LINEAGE" && (
+          <div className="space-y-6">
+            {/* Header Banner */}
+            <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-slate-50 via-indigo-50/30 to-white p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800 mb-2">
+                    📜 Versioning & Data Lineage
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Lineage Graph & Immutable Version History
+                  </h2>
+                  <p className="mt-1 text-xs text-gray-600 max-w-2xl leading-relaxed">
+                    Track the full provenance of your data from original ingestion to downstream visualizations. Roll back safely to any prior snapshot without losing historical records.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => dataset && loadVersionsAndLineage(dataset.id)}
+                  className="rounded-lg border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-2xs"
+                >
+                  🔄 Refresh Lineage
+                </button>
+              </div>
+            </div>
+
+            {/* SECTION 1: END-TO-END DATA LINEAGE GRAPH */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-xs space-y-4">
+              <div className="pb-3 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800">
+                    End-to-End Data Lineage Graph
+                  </h3>
+                  <p className="text-2xs text-gray-500">Upstream sources, active dataset, and downstream dependencies</p>
+                </div>
+              </div>
+
+              {loadingLineage ? (
+                <div className="py-12 text-center text-xs text-gray-500">Loading lineage provenance...</div>
+              ) : (
+                <div className="flex flex-col lg:flex-row items-stretch gap-4 py-2">
+                  {/* Upstream Card */}
+                  <div className="flex-1 rounded-xl border border-gray-200 bg-gray-50/60 p-4 space-y-2">
+                    <span className="text-2xs font-bold uppercase tracking-wider text-gray-400 block">1. Upstream Origin</span>
+                    {lineage?.parent ? (
+                      <div className="space-y-1">
+                        <span className="rounded bg-indigo-50 px-2 py-0.5 text-2xs font-bold text-indigo-700 border border-indigo-200">
+                          Derived From Dataset
+                        </span>
+                        <h4 className="text-xs font-bold text-gray-900">{lineage.parent.name}</h4>
+                        <Link
+                          href={`/datasets/${lineage.parent.id}`}
+                          className="text-2xs text-indigo-600 hover:underline font-medium inline-block"
+                        >
+                          View Parent Dataset →
+                        </Link>
+                      </div>
+                    ) : dataset.dataSource ? (
+                      <div className="space-y-1">
+                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-2xs font-bold text-emerald-700 border border-emerald-200">
+                          Connected Data Source
+                        </span>
+                        <h4 className="text-xs font-bold text-gray-900">{dataset.dataSource.name}</h4>
+                        <p className="text-2xs text-gray-500">{dataset.dataSource.type}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-2xs font-bold text-slate-700 border border-slate-200">
+                          File Upload / Demo
+                        </span>
+                        <h4 className="text-xs font-bold text-gray-900">{dataset.fileName || dataset.name}</h4>
+                        <p className="text-2xs text-gray-500">{(dataset.type as string) === "CSV" ? "CSV Ingestion" : "Raw Data"}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Flow Arrow */}
+                  <div className="hidden lg:flex items-center text-gray-300 font-bold text-xl">→</div>
+
+                  {/* Current Active Dataset Card */}
+                  <div className="flex-1 rounded-xl border-2 border-indigo-500 bg-indigo-50/40 p-4 space-y-2 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xs font-bold uppercase tracking-wider text-indigo-600 block">2. Current Dataset</span>
+                      <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-2xs font-bold text-white">
+                        v{dataset.currentVersion || 1} Active
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-gray-900">{dataset.name}</h4>
+                    <div className="text-2xs text-gray-600 space-y-0.5">
+                      <p><strong>{dataset.rowCount}</strong> records · <strong>{dataset.columns.length}</strong> columns</p>
+                      <p className="text-gray-400">ID: {dataset.id}</p>
+                    </div>
+                  </div>
+
+                  {/* Flow Arrow */}
+                  <div className="hidden lg:flex items-center text-gray-300 font-bold text-xl">→</div>
+
+                  {/* Downstream Dependencies Card */}
+                  <div className="flex-1 rounded-xl border border-gray-200 bg-gray-50/60 p-4 space-y-3">
+                    <span className="text-2xs font-bold uppercase tracking-wider text-gray-400 block">3. Downstream Impact</span>
+
+                    {/* Visualizations List */}
+                    <div className="space-y-1">
+                      <span className="text-2xs font-semibold text-gray-600 block">
+                        Linked Visualizations ({lineage?.linkedVisualizations?.length || 0}):
+                      </span>
+                      {lineage?.linkedVisualizations && lineage.linkedVisualizations.length > 0 ? (
+                        <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
+                          {lineage.linkedVisualizations.map((v) => (
+                            <Link
+                              key={v.id}
+                              href={`/visualizations?id=${v.id}`}
+                              className="flex items-center justify-between p-1.5 rounded bg-white border border-gray-200 text-2xs hover:border-indigo-300 hover:text-indigo-600 transition"
+                            >
+                              <span className="font-medium truncate">{v.title}</span>
+                              <span className="text-gray-400 uppercase text-[9px]">{v.type}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-2xs text-gray-400 italic">No visualizations built on this dataset yet</p>
+                      )}
+                    </div>
+
+                    {/* Derived Child Datasets */}
+                    {lineage?.derivedDatasets && lineage.derivedDatasets.length > 0 && (
+                      <div className="space-y-1 pt-1 border-t border-gray-200/60">
+                        <span className="text-2xs font-semibold text-gray-600 block">
+                          Derived Datasets ({lineage.derivedDatasets.length}):
+                        </span>
+                        <div className="space-y-1">
+                          {lineage.derivedDatasets.map((d) => (
+                            <Link
+                              key={d.id}
+                              href={`/datasets/${d.id}`}
+                              className="flex items-center justify-between p-1.5 rounded bg-white border border-gray-200 text-2xs hover:border-indigo-300 hover:text-indigo-600 transition"
+                            >
+                              <span className="font-medium truncate">{d.name}</span>
+                              <span className="text-gray-400 text-[9px]">v{d.currentVersion}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* SECTION 2: IMMUTABLE VERSION HISTORY */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-xs space-y-4">
+              <div className="pb-3 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800">
+                    Version History Timeline
+                  </h3>
+                  <p className="text-2xs text-gray-500">Historical snapshots and non-destructive rollbacks</p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-2xs font-semibold text-slate-700">
+                  Total Versions: {versions.length}
+                </span>
+              </div>
+
+              {loadingVersions ? (
+                <div className="py-8 text-center text-xs text-gray-500">Loading version history...</div>
+              ) : versions.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center bg-gray-50/50">
+                  <p className="text-xs font-semibold text-gray-700">Initial Version (v1)</p>
+                  <p className="text-2xs text-gray-400 mt-1">
+                    No transformation versions have been saved yet. Apply a transformation pipeline in the Transformations tab to create version checkpoints.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white overflow-hidden text-xs">
+                  {versions.map((ver) => {
+                    const isCurrent = ver.versionNumber === (dataset.currentVersion || 1);
+                    return (
+                      <div
+                        key={ver.id}
+                        className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50 transition ${
+                          isCurrent ? "bg-indigo-50/20" : ""
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-2xs font-bold ${
+                                isCurrent
+                                  ? "bg-indigo-600 text-white"
+                                  : "bg-gray-200 text-gray-700"
+                              }`}
+                            >
+                              v{ver.versionNumber}
+                            </span>
+                            <span className="font-semibold text-gray-900">
+                              {ver.changeSummary || `Version ${ver.versionNumber}`}
+                            </span>
+                            {isCurrent && (
+                              <span className="rounded bg-emerald-50 px-2 py-0.2 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                                Current Active
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-2xs text-gray-500">
+                            Created on {new Date(ver.createdAt).toLocaleString()} · Snapshot: {ver.rowCount} rows, {ver.columnCount} columns
+                          </p>
+                          {ver.creator && (
+                            <p className="text-2xs text-gray-400">By {ver.creator.name} ({ver.creator.email})</p>
+                          )}
+                        </div>
+
+                        <div>
+                          {!isCurrent && (
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreVersion(ver.versionNumber)}
+                              disabled={restoringVersion !== null}
+                              className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition shadow-2xs disabled:opacity-50"
+                            >
+                              {restoringVersion === ver.versionNumber ? "Restoring..." : `↩ Restore v${ver.versionNumber}`}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Visualizations & Recommendations */}
         {activeTab === "VISUALIZATIONS" && (
           <div className="space-y-6">
             {/* Recommendations Banner */}

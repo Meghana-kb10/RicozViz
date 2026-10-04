@@ -42,6 +42,18 @@ import {
   getDemoDatasetDetailsHandler,
   importDemoDatasetHandler,
 } from "../services/dataset/demo-dataset.service.js";
+import {
+  PreviewTransformationSchema,
+  ApplyTransformationSchema,
+  previewDatasetTransformations,
+  applyDatasetTransformations,
+} from "../services/dataset/transformation.service.js";
+import {
+  listDatasetVersions,
+  getDatasetVersion,
+  restoreDatasetVersion,
+  getDatasetLineage,
+} from "../services/dataset/versioning.service.js";
 import { multipartUpload } from "../middleware/upload.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -335,6 +347,147 @@ router.delete(
   "/:id/calculated-fields/:fieldId",
   requirePermission("DATASET_EDIT"),
   asyncHandler(deleteCalculatedField)
+);
+
+// ============================================================
+// FEATURE 13: DATA TRANSFORMATION PIPELINE
+// ============================================================
+
+/**
+ * POST /api/v1/datasets/:id/transform/preview
+ * Previews execution of transformation pipeline on dataset sample.
+ * Permission: DATASET_VIEW
+ */
+router.post(
+  "/:id/transform/preview",
+  requirePermission("DATASET_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const parsed = PreviewTransformationSchema.parse(req.body);
+    const result = await previewDatasetTransformations(
+      req.params.id as string,
+      parsed.steps,
+      parsed.limit,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, result, 200);
+  })
+);
+
+/**
+ * POST /api/v1/datasets/:id/transform/apply
+ * Applies transformation pipeline to produce new derived dataset or new version.
+ * Permission: DATASET_EDIT or DATASET_TRANSFORM
+ */
+router.post(
+  "/:id/transform/apply",
+  requireAnyPermission("DATASET_EDIT", "DATASET_TRANSFORM"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const parsed = ApplyTransformationSchema.parse(req.body);
+    const result = await applyDatasetTransformations({
+      datasetId: req.params.id as string,
+      steps: parsed.steps,
+      mode: parsed.mode,
+      newDatasetName: parsed.newDatasetName,
+      changeSummary: parsed.changeSummary,
+      workspaceId: parsed.workspaceId,
+      userId: user.userId,
+      organizationId: user.organizationId,
+      userRoleName: user.roleName,
+    });
+    sendSuccess(res, result, 201);
+  })
+);
+
+// ============================================================
+// FEATURE 14: DATASET VERSIONING & LINEAGE
+// ============================================================
+
+/**
+ * GET /api/v1/datasets/:id/versions
+ * List all versions of a dataset.
+ * Permission: DATASET_VIEW
+ */
+router.get(
+  "/:id/versions",
+  requirePermission("DATASET_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const versions = await listDatasetVersions(
+      req.params.id as string,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, versions, 200);
+  })
+);
+
+/**
+ * GET /api/v1/datasets/:id/versions/:versionNumber
+ * Retrieve a specific version snapshot.
+ * Permission: DATASET_VIEW
+ */
+router.get(
+  "/:id/versions/:versionNumber",
+  requirePermission("DATASET_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const vNum = parseInt(req.params.versionNumber as string, 10);
+    const version = await getDatasetVersion(
+      req.params.id as string,
+      vNum,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, version, 200);
+  })
+);
+
+/**
+ * POST /api/v1/datasets/:id/versions/:versionNumber/restore
+ * Restore dataset to an earlier version.
+ * Permission: DATASET_EDIT or DATASET_VERSION_MANAGE
+ */
+router.post(
+  "/:id/versions/:versionNumber/restore",
+  requireAnyPermission("DATASET_EDIT", "DATASET_VERSION_MANAGE"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const vNum = parseInt(req.params.versionNumber as string, 10);
+    const restored = await restoreDatasetVersion(
+      req.params.id as string,
+      vNum,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, restored, 200);
+  })
+);
+
+/**
+ * GET /api/v1/datasets/:id/lineage
+ * Retrieve upstream/downstream lineage graph for a dataset.
+ * Permission: DATASET_VIEW
+ */
+router.get(
+  "/:id/lineage",
+  requirePermission("DATASET_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const lineage = await getDatasetLineage(
+      req.params.id as string,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, lineage, 200);
+  })
 );
 
 export default router;

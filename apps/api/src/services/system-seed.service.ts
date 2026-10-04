@@ -105,6 +105,14 @@ export const PERMISSIONS = [
   // Exports
   { key: "DATA_EXPORT", description: "Export datasets, charts, and dashboards" },
 
+  // Transformations & Versioning
+  { key: "DATASET_TRANSFORM", description: "Clean, transform, and derive datasets" },
+  { key: "DATASET_VERSION_MANAGE", description: "Manage dataset versions and rollback" },
+
+  // Collaboration
+  { key: "COLLABORATION_MANAGE", description: "Manage workspace collaborators and resource sharing permissions" },
+  { key: "CHART_SHARE", description: "Share individual charts and visualizations" },
+
   // Audit log
   { key: "AUDIT_LOG_VIEW", description: "View the organization audit log" },
   { key: "AUDIT_LOG_EXPORT", description: "Export audit log records" },
@@ -122,6 +130,10 @@ export const ANALYST_PERMISSIONS = [
   "DATASET_VIEW",
   "DATASET_EDIT",
   "DATASET_PROFILE",
+  "DATASET_TRANSFORM",
+  "DATASET_VERSION_MANAGE",
+  "COLLABORATION_MANAGE",
+  "CHART_SHARE",
   "DASHBOARD_CREATE",
   "DASHBOARD_VIEW",
   "DASHBOARD_EDIT",

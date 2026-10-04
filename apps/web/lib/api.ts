@@ -406,6 +406,9 @@ export interface DatasetData {
   } | null;
   columns: DatasetColumn[];
   calculatedFields?: CalculatedFieldConfig[];
+  currentVersion?: number;
+  parentDatasetId?: string | null;
+  transformationSteps?: unknown;
   tableName: string | null;
   metadata?: Record<string, unknown>;
   createdAt: string;
@@ -1072,7 +1075,10 @@ export type ChartType =
   | "KPI"
   | "RADAR"
   | "FUNNEL"
-  | "HEATMAP";
+  | "HEATMAP"
+  | "GAUGE"
+  | "BUBBLE"
+  | "TREEMAP";
 
 export interface ChartPosition {
   x: number;
@@ -1102,9 +1108,52 @@ export interface ChartConfig {
   dimensions?: string[];
   measures?: ChartMeasure[];
   xAxis?: string;
+  category?: string;
   yAxis?: string | string[];
+  value?: string | string[];
+  secondaryValueCol?: string;
+  groupCol?: string;
+  aggregation?: string;
   filters?: ChartFilter[];
   sort?: ChartSort;
+  columns?: string[];
+  colorPalette?: string;
+  customColors?: string[];
+  legend?: {
+    show?: boolean;
+    position?: "top" | "bottom" | "left" | "right";
+  };
+  xAxisConfig?: {
+    title?: string;
+    showGrid?: boolean;
+    labelRotation?: number;
+    showLabels?: boolean;
+  };
+  yAxisConfig?: {
+    title?: string;
+    showGrid?: boolean;
+    min?: number | null;
+    max?: number | null;
+    format?: string;
+  };
+  dataLabels?: {
+    show?: boolean;
+    position?: "inside" | "outside" | "top";
+  };
+  numberFormat?: {
+    prefix?: string;
+    suffix?: string;
+    decimals?: number;
+    compact?: boolean;
+    formatType?: "number" | "currency" | "percentage";
+  };
+  chartOptions?: {
+    stacked?: boolean;
+    smooth?: boolean;
+    fillOpacity?: number;
+    donutHoleSize?: number;
+    showTotal?: boolean;
+  };
   options?: Record<string, unknown>;
 }
 
@@ -1967,6 +2016,324 @@ export async function apiGetAuditLogStats(workspaceId?: string): Promise<AuditLo
   const qs = q.toString();
   return apiFetch<AuditLogStatsResponse>(`/api/v1/audit-logs/stats${qs ? `?${qs}` : ""}`);
 }
+
+// ============================================================
+// FEATURE 11: ADVANCED VISUALIZATION CUSTOMIZATION
+// ============================================================
+
+export interface AdvancedCustomizationConfig {
+  colorPalette?: string;
+  customColors?: string[];
+  legend?: {
+    show: boolean;
+    position: "top" | "bottom" | "left" | "right";
+  };
+  xAxisConfig?: {
+    title?: string;
+    showGrid?: boolean;
+    labelRotation?: number;
+    showLabels?: boolean;
+  };
+  yAxisConfig?: {
+    title?: string;
+    showGrid?: boolean;
+    min?: number | null;
+    max?: number | null;
+    format?: string;
+  };
+  dataLabels?: {
+    show?: boolean;
+    position?: "inside" | "outside" | "top";
+  };
+  numberFormat?: {
+    prefix?: string;
+    suffix?: string;
+    decimals?: number;
+    compact?: boolean;
+    formatType?: "number" | "currency" | "percentage";
+  };
+  chartOptions?: {
+    stacked?: boolean;
+    smooth?: boolean;
+    fillOpacity?: number;
+    donutHoleSize?: number;
+    showTotal?: boolean;
+  };
+}
+
+// ============================================================
+// FEATURE 13: DATA TRANSFORMATION & CLEANING PIPELINE
+// ============================================================
+
+export type TransformationStep =
+  | {
+      type: "FILTER_ROWS";
+      column: string;
+      operator: "EQUALS" | "NOT_EQUALS" | "GREATER_THAN" | "LESS_THAN" | "CONTAINS" | "IS_NULL" | "IS_NOT_NULL";
+      value?: unknown;
+    }
+  | {
+      type: "RENAME_COLUMN";
+      oldName: string;
+      newName: string;
+    }
+  | {
+      type: "TYPE_CONVERSION";
+      column: string;
+      targetType: "TEXT" | "STRING" | "NUMBER" | "DATE" | "BOOLEAN";
+    }
+  | {
+      type: "FILL_MISSING" | "HANDLE_MISSING";
+      column: string;
+      strategy: "STATIC_VALUE" | "MEAN" | "MEDIAN" | "MODE" | "DROP_ROW" | "FILL_ZERO" | "FILL_MEAN" | "FILL_VALUE";
+      staticValue?: unknown;
+      fillValue?: unknown;
+    }
+  | {
+      type: "REMOVE_DUPLICATES";
+      columns?: string[];
+    }
+  | {
+      type: "DERIVED_COLUMN";
+      name: string;
+      expression: string;
+    }
+  | {
+      type: "DROP_COLUMN";
+      column: string;
+    }
+  | {
+      type: "TRIM_WHITESPACE";
+      column: string;
+    }
+  | {
+      type: "CHANGE_CASE" | "CASE_CONVERT";
+      column: string;
+      casing?: "UPPER" | "LOWER";
+      mode?: "UPPER" | "LOWER";
+    };
+
+export interface TransformationPreviewResponse {
+  previewRows: Array<Record<string, unknown>>;
+  sampleRows?: Array<Record<string, unknown>>;
+  transformedColumns: Array<{ name: string; type: string }>;
+  originalRowCount: number;
+  transformedRowCount: number;
+  sampleSize: number;
+}
+
+export interface ApplyTransformationResponse {
+  mode: "NEW_VERSION" | "DERIVED_DATASET" | "CREATE_NEW" | "SAVE_VERSION";
+  dataset: Record<string, unknown>;
+  version?: Record<string, unknown>;
+}
+
+export async function apiPreviewTransformations(
+  datasetId: string,
+  steps: TransformationStep[]
+): Promise<TransformationPreviewResponse> {
+  return apiFetch<TransformationPreviewResponse>(`/api/v1/datasets/${datasetId}/transform/preview`, {
+    method: "POST",
+    body: JSON.stringify({ steps }),
+  });
+}
+
+export async function apiApplyTransformations(
+  datasetId: string,
+  payload: {
+    steps: TransformationStep[];
+    mode: "NEW_VERSION" | "DERIVED_DATASET" | "CREATE_NEW" | "SAVE_VERSION";
+    newDatasetName?: string;
+    changeSummary?: string;
+    workspaceId?: string;
+  }
+): Promise<ApplyTransformationResponse> {
+  return apiFetch<ApplyTransformationResponse>(`/api/v1/datasets/${datasetId}/transform/apply`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ============================================================
+// FEATURE 14: DATASET VERSIONING & LINEAGE
+// ============================================================
+
+export interface DatasetVersionItem {
+  id: string;
+  datasetId: string;
+  versionNumber: number;
+  changeSummary: string | null;
+  rowCount: number;
+  columnCount: number;
+  schemaSnapshot: { columns: Array<{ name: string; type: string }> };
+  transformationConfig: TransformationStep[] | null;
+  createdAt: string;
+  createdById: string;
+  creator?: { id: string; name: string; email: string; avatarUrl: string | null };
+}
+
+export interface DatasetLineageResponse {
+  dataset: {
+    id: string;
+    name: string;
+    version: number;
+    parentDatasetId: string | null;
+  };
+  parent: { id: string; name: string } | null;
+  derivedDatasets: Array<{ id: string; name: string; currentVersion: number }>;
+  linkedVisualizations: Array<{
+    id: string;
+    title: string;
+    type: string;
+    dashboardId: string | null;
+    dashboardTitle: string | null;
+  }>;
+  versionsCount: number;
+}
+
+export async function apiListDatasetVersions(datasetId: string): Promise<DatasetVersionItem[]> {
+  return apiFetch<DatasetVersionItem[]>(`/api/v1/datasets/${datasetId}/versions`);
+}
+
+export async function apiGetDatasetVersion(
+  datasetId: string,
+  versionNumber: number
+): Promise<DatasetVersionItem> {
+  return apiFetch<DatasetVersionItem>(`/api/v1/datasets/${datasetId}/versions/${versionNumber}`);
+}
+
+export async function apiRestoreDatasetVersion(
+  datasetId: string,
+  versionNumber: number
+): Promise<{ message: string; dataset: Record<string, unknown>; restoredVersion: number; newVersion: number }> {
+  return apiFetch<{ message: string; dataset: Record<string, unknown>; restoredVersion: number; newVersion: number }>(
+    `/api/v1/datasets/${datasetId}/versions/${versionNumber}/restore`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+export async function apiGetDatasetLineage(datasetId: string): Promise<DatasetLineageResponse> {
+  return apiFetch<DatasetLineageResponse>(`/api/v1/datasets/${datasetId}/lineage`);
+}
+
+// ============================================================
+// FEATURE 15: COLLABORATION & SHARING
+// ============================================================
+
+export interface DashboardCollaboratorData {
+  id: string;
+  userId: string;
+  name?: string;
+  email?: string;
+  avatarUrl?: string | null;
+  accessLevel: "VIEW" | "EDIT" | "ADMIN";
+  grantedAt: string;
+  user?: { id: string; name: string; email: string; avatarUrl: string | null };
+}
+
+export interface DashboardCollaboratorsResponse {
+  dashboardId?: string;
+  dashboardTitle?: string;
+  isOwner?: boolean;
+  owner: { id: string; name: string; email: string };
+  collaborators: DashboardCollaboratorData[];
+  workspaceMembers: Array<{
+    userId: string;
+    roleName: string;
+    user: { id: string; name: string; email: string; avatarUrl: string | null };
+  }>;
+}
+
+export async function apiListDashboardCollaborators(
+  dashboardId: string
+): Promise<DashboardCollaboratorsResponse> {
+  return apiFetch<DashboardCollaboratorsResponse>(`/api/v1/dashboards/${dashboardId}/collaborators`);
+}
+
+export async function apiGrantDashboardCollaborator(
+  dashboardId: string,
+  data: { targetUserId: string; accessLevel: "VIEW" | "EDIT" | "ADMIN" }
+): Promise<{ collaborator: DashboardCollaboratorData; message?: string }> {
+  const result = await apiFetch<any>(
+    `/api/v1/dashboards/${dashboardId}/collaborators`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+  return {
+    collaborator: {
+      id: result.id || result.userId,
+      userId: result.userId,
+      name: result.name || result.user?.name,
+      email: result.email || result.user?.email,
+      avatarUrl: result.avatarUrl || result.user?.avatarUrl || null,
+      accessLevel: result.accessLevel,
+      grantedAt: result.grantedAt || new Date().toISOString(),
+      user: result.user || {
+        id: result.userId,
+        name: result.name || "",
+        email: result.email || "",
+        avatarUrl: result.avatarUrl || null,
+      },
+    },
+    message: "Collaborator access updated",
+  };
+}
+
+export async function apiRevokeDashboardCollaborator(
+  dashboardId: string,
+  accessId: string
+): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>(
+    `/api/v1/dashboards/${dashboardId}/collaborators/${accessId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+export async function apiShareVisualization(
+  chartId: string
+): Promise<{ shareToken: string; shareUrl: string; isPublic: boolean; sharedAt: string }> {
+  return apiFetch<{ shareToken: string; shareUrl: string; isPublic: boolean; sharedAt: string }>(
+    `/api/v1/visualizations/${chartId}/share`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+export async function apiRevokeVisualizationShare(
+  chartId: string
+): Promise<{ success: boolean; message: string }> {
+  return apiFetch<{ success: boolean; message: string }>(
+    `/api/v1/visualizations/${chartId}/share`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+export async function apiGetSharedVisualization(
+  shareToken: string
+): Promise<{ chart: Record<string, unknown> }> {
+  return apiFetch<{ chart: Record<string, unknown> }>(`/api/v1/visualizations/shared/${shareToken}`);
+}
+
+export async function apiGetSharedVisualizationData(
+  shareToken: string
+): Promise<{ rows: Array<Record<string, unknown>>; columns: Array<{ name: string; type: string }>; rowCount: number }> {
+  return apiFetch<{ rows: Array<Record<string, unknown>>; columns: Array<{ name: string; type: string }>; rowCount: number }>(
+    `/api/v1/visualizations/shared/${shareToken}/data`,
+    {
+      method: "POST",
+    }
+  );
+}
+
 
 
 

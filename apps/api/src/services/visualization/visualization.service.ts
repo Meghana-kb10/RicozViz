@@ -37,9 +37,64 @@ export const ALLOWED_VISUALIZATION_TYPES = [
   "RADAR",
   "FUNNEL",
   "HEATMAP",
+  "GAUGE",
+  "BUBBLE",
+  "TREEMAP",
 ] as const;
 
 export type VisualizationType = (typeof ALLOWED_VISUALIZATION_TYPES)[number];
+
+export const advancedCustomizationSchema = z.object({
+  colorPalette: z.string().optional(),
+  customColors: z.array(z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/, "Must be valid hex color")).optional(),
+  legend: z
+    .object({
+      show: z.boolean().default(true),
+      position: z.enum(["top", "bottom", "left", "right"]).default("top"),
+    })
+    .optional(),
+  xAxisConfig: z
+    .object({
+      title: z.string().optional(),
+      showGrid: z.boolean().default(false),
+      labelRotation: z.number().int().min(-90).max(90).default(0),
+      showLabels: z.boolean().default(true),
+    })
+    .optional(),
+  yAxisConfig: z
+    .object({
+      title: z.string().optional(),
+      showGrid: z.boolean().default(true),
+      min: z.number().optional().nullable(),
+      max: z.number().optional().nullable(),
+      format: z.string().optional(),
+    })
+    .optional(),
+  dataLabels: z
+    .object({
+      show: z.boolean().default(false),
+      position: z.enum(["inside", "outside", "top"]).default("top"),
+    })
+    .optional(),
+  numberFormat: z
+    .object({
+      prefix: z.string().default(""),
+      suffix: z.string().default(""),
+      decimals: z.number().int().min(0).max(10).default(2),
+      compact: z.boolean().default(false),
+      formatType: z.enum(["number", "currency", "percentage"]).default("number"),
+    })
+    .optional(),
+  chartOptions: z
+    .object({
+      stacked: z.boolean().default(false),
+      smooth: z.boolean().default(true),
+      fillOpacity: z.number().min(0).max(1).default(0.4),
+      donutHoleSize: z.number().min(0).max(90).default(60),
+      showTotal: z.boolean().default(false),
+    })
+    .optional(),
+});
 
 export const visualizationConfigSchema = z.object({
   xAxis: z.string().optional(),
@@ -104,6 +159,56 @@ export const visualizationConfigSchema = z.object({
     ])
     .optional(),
   limit: z.coerce.number().int().min(1).max(1000).optional(),
+  // Advanced Customization options
+  colorPalette: z.string().optional(),
+  customColors: z.array(z.string()).optional(),
+  legend: z
+    .object({
+      show: z.boolean().default(true),
+      position: z.enum(["top", "bottom", "left", "right"]).default("top"),
+    })
+    .optional(),
+  xAxisConfig: z
+    .object({
+      title: z.string().optional(),
+      showGrid: z.boolean().default(false),
+      labelRotation: z.number().int().min(-90).max(90).default(0),
+      showLabels: z.boolean().default(true),
+    })
+    .optional(),
+  yAxisConfig: z
+    .object({
+      title: z.string().optional(),
+      showGrid: z.boolean().default(true),
+      min: z.number().optional().nullable(),
+      max: z.number().optional().nullable(),
+      format: z.string().optional(),
+    })
+    .optional(),
+  dataLabels: z
+    .object({
+      show: z.boolean().default(false),
+      position: z.enum(["inside", "outside", "top"]).default("top"),
+    })
+    .optional(),
+  numberFormat: z
+    .object({
+      prefix: z.string().default(""),
+      suffix: z.string().default(""),
+      decimals: z.number().int().min(0).max(10).default(2),
+      compact: z.boolean().default(false),
+      formatType: z.enum(["number", "currency", "percentage"]).default("number"),
+    })
+    .optional(),
+  chartOptions: z
+    .object({
+      stacked: z.boolean().default(false),
+      smooth: z.boolean().default(true),
+      fillOpacity: z.number().min(0).max(1).default(0.4),
+      donutHoleSize: z.number().min(0).max(90).default(60),
+      showTotal: z.boolean().default(false),
+    })
+    .optional(),
   options: z.record(z.unknown()).default({}).optional(),
 });
 
