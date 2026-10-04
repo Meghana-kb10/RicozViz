@@ -405,9 +405,9 @@ export async function applyDatasetTransformations(params: {
         columns: {
           create: preview.transformedColumns.map((col, idx) => ({
             name: col.name,
-            dataType: (col.type === "NUMBER" ? "DECIMAL" : col.type === "DATE" ? "TIMESTAMP" : "TEXT") as any,
-            isNullable: true,
-            sortOrder: idx,
+            dataType: (col.type === "NUMBER" ? "NUMBER" : col.type === "DATE" ? "DATE" : col.type === "BOOLEAN" ? "BOOLEAN" : "STRING") as any,
+            nullable: true,
+            ordinalPosition: idx,
           })),
         },
         versions: {
@@ -457,9 +457,9 @@ export async function applyDatasetTransformations(params: {
         columns: {
           create: preview.transformedColumns.map((col, idx) => ({
             name: col.name,
-            dataType: (col.type === "NUMBER" ? "DECIMAL" : col.type === "DATE" ? "TIMESTAMP" : "TEXT") as any,
-            isNullable: true,
-            sortOrder: idx,
+            dataType: (col.type === "NUMBER" ? "NUMBER" : col.type === "DATE" ? "DATE" : col.type === "BOOLEAN" ? "BOOLEAN" : "STRING") as any,
+            nullable: true,
+            ordinalPosition: idx,
           })),
         },
         versions: {

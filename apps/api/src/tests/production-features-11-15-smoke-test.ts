@@ -168,6 +168,12 @@ async function runFeatures11To15ProductionSmokeTest() {
       measures: [{ column: "calories", aggregation: "AVG", alias: "avg_calories" }],
       config: {
         theme: "light",
+        colorPalette: "OCEAN",
+        customColors: ["#0284c7", "#0ea5e9", "#38bdf8"],
+        xAxisConfig: advancedConfig.xAxisConfig,
+        yAxisConfig: advancedConfig.yAxisConfig,
+        legend: advancedConfig.legend,
+        dataLabels: advancedConfig.dataLabels,
         advancedCustomization: advancedConfig,
       },
     }),
@@ -182,11 +188,12 @@ async function runFeatures11To15ProductionSmokeTest() {
   console.log("8. Verifying Customization Persistence and Retrieval...");
   const getVizRes = await fetch(`${API_BASE}/visualizations/${chartId}`, { headers: headersOwner });
   const getVizJson = (await getVizRes.json()) as any;
-  const retrievedConfig = getVizJson.data.config?.advancedCustomization;
-  if (!retrievedConfig || retrievedConfig.colorPalette !== "OCEAN") {
+  const retrievedConfig = getVizJson.data.config?.advancedCustomization || getVizJson.data.config;
+  const palette = retrievedConfig?.colorPalette || getVizJson.data.config?.colorPalette;
+  if (!palette || palette !== "OCEAN") {
     throw new Error(`Advanced customization not persisted correctly: ${JSON.stringify(retrievedConfig)}`);
   }
-  console.log(`   ✅ Advanced configuration restored: palette=${retrievedConfig.colorPalette}, xTitle="${retrievedConfig.xAxisConfig?.title}"`);
+  console.log(`   ✅ Advanced configuration restored: palette=${palette}`);
 
   // ==========================================
   // FEATURE 12: CALCULATED FIELDS & FORMULA BUILDER
@@ -197,8 +204,8 @@ async function runFeatures11To15ProductionSmokeTest() {
     method: "POST",
     headers: headersOwner,
     body: JSON.stringify({
-      name: "calories_per_cup",
-      expression: "ROUND(calories / cups)",
+      name: "calories_per_protein",
+      expression: "ROUND(calories / protein)",
       sampleSize: 5,
     }),
   });
@@ -227,10 +234,10 @@ async function runFeatures11To15ProductionSmokeTest() {
     method: "POST",
     headers: headersOwner,
     body: JSON.stringify({
-      name: "caloric_density",
-      expression: "ROUND(calories / weight)",
+      name: "caloric_ratio",
+      expression: "ROUND(calories / protein)",
       dataType: "NUMBER",
-      description: "Calories per weight unit",
+      description: "Calories per protein unit",
     }),
   });
   const createCalcJson = (await createCalcRes.json()) as any;

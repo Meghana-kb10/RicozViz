@@ -210,7 +210,9 @@ export const visualizationConfigSchema = z.object({
     })
     .optional(),
   options: z.record(z.unknown()).default({}).optional(),
-});
+  theme: z.string().optional(),
+  advancedCustomization: advancedCustomizationSchema.optional(),
+}).passthrough();
 
 export const createVisualizationSchema = z.preprocess(
   (raw: any) => {
