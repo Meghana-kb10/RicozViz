@@ -1306,12 +1306,14 @@ export async function apiDeleteVisualization(
 // DASHBOARD REPORT SCHEDULE & SNAPSHOT
 // ============================================================
 
-export type ReportFrequency = "DAILY" | "WEEKLY";
+export type ReportFrequency = "DAILY" | "WEEKLY" | "MONTHLY";
+export type ReportFormat = "PDF" | "CSV" | "PNG" | "EXCEL";
 
 export interface DashboardScheduleData {
   id: string;
   dashboardId: string;
   frequency: ReportFrequency;
+  format?: ReportFormat;
   enabled: boolean;
   nextRunAt: string | null;
   lastRunAt: string | null;
@@ -1323,6 +1325,22 @@ export interface DashboardScheduleData {
   lastDeliveryError?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ReportExecutionData {
+  id: string;
+  reportId: string;
+  dashboardId: string;
+  status: "SUCCESS" | "FAILED" | "SKIPPED";
+  executedAt: string;
+  durationMs: number;
+  chartCount: number;
+  totalRecords: number;
+  summary: Record<string, unknown>;
+  errorMessage?: string | null;
+  format?: string;
+  triggeredBy?: string;
+  snapshotUrl?: string;
 }
 
 export interface DashboardReportSnapshot {
@@ -1356,6 +1374,7 @@ export async function apiSaveDashboardSchedule(
   dashboardId: string,
   payload: {
     frequency: ReportFrequency;
+    format?: ReportFormat;
     enabled?: boolean;
     recipients?: string[];
     webhookUrl?: string;
@@ -1383,6 +1402,300 @@ export async function apiGenerateDashboardReport(
   dashboardId: string
 ): Promise<DashboardReportSnapshot> {
   return apiFetch<DashboardReportSnapshot>(`/api/v1/dashboards/${dashboardId}/reports/generate`, {
+    method: "POST",
+  });
+}
+
+export async function apiGetDashboardReportHistory(
+  dashboardId: string
+): Promise<ReportExecutionData[]> {
+  return apiFetch<ReportExecutionData[]>(`/api/v1/dashboards/${dashboardId}/reports/history`);
+}
+
+export async function apiRunDashboardReport(
+  dashboardId: string,
+  reportIdOrFormat?: string
+): Promise<{
+  id: string;
+  reportId: string;
+  executionId: string;
+  execution: {
+    id: string;
+    format: string;
+    status: string;
+    executedAt: string;
+    durationMs: number;
+  };
+  status: string;
+  executedAt: string;
+  durationMs: number;
+  chartCount: number;
+  totalRecords: number;
+  snapshot: DashboardReportSnapshot;
+}> {
+  return apiFetch(`/api/v1/dashboards/${dashboardId}/reports/${reportIdOrFormat || "PDF"}/run`, {
+    method: "POST",
+  });
+}
+
+// ============================================================
+// KPI / METRICS LAYER API
+// ============================================================
+
+export type MetricAggregation = "SUM" | "AVG" | "COUNT" | "MIN" | "MAX";
+export type MetricFormat = "NUMBER" | "CURRENCY" | "PERCENT";
+
+export interface MetricData {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  datasetId: string;
+  name: string;
+  description: string | null;
+  calculation: MetricAggregation;
+  aggregation?: MetricAggregation;
+  field: string;
+  column?: string;
+  format: MetricFormat;
+  targetValue: number | null;
+  createdAt: string;
+  updatedAt: string;
+  dataset?: {
+    id: string;
+    name: string;
+    rowCount?: number;
+    columns?: DatasetColumn[];
+  };
+  createdBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  _count?: {
+    alerts: number;
+  };
+}
+
+export interface CreateMetricPayload {
+  name: string;
+  description?: string;
+  workspaceId?: string;
+  datasetId: string;
+  calculation?: MetricAggregation;
+  aggregation?: MetricAggregation;
+  field?: string;
+  column?: string;
+  format?: MetricFormat;
+  targetValue?: number | null;
+}
+
+export interface CalculatedMetricResult {
+  metricId: string;
+  name: string;
+  calculation: MetricAggregation;
+  field: string;
+  format: MetricFormat;
+  rawValue: number;
+  formattedValue: string;
+  targetValue: number | null;
+  targetDelta: number | null;
+  targetPercentage: number | null;
+  progressPercent?: number | null;
+  targetMet: boolean | null;
+  executionTimeMs: number;
+  calculatedAt: string;
+}
+
+export type MetricCalculationResult = CalculatedMetricResult;
+
+export async function apiCreateMetric(payload: CreateMetricPayload): Promise<MetricData> {
+  return apiFetch<MetricData>("/api/v1/metrics", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiListMetrics(
+  workspaceId?: string,
+  datasetId?: string
+): Promise<MetricData[]> {
+  const params = new URLSearchParams();
+  if (workspaceId) params.set("workspaceId", workspaceId);
+  if (datasetId) params.set("datasetId", datasetId);
+  const qs = params.toString();
+  return apiFetch<MetricData[]>(`/api/v1/metrics${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetMetric(id: string): Promise<MetricData> {
+  return apiFetch<MetricData>(`/api/v1/metrics/${id}`);
+}
+
+export async function apiUpdateMetric(
+  id: string,
+  payload: Partial<CreateMetricPayload>
+): Promise<MetricData> {
+  return apiFetch<MetricData>(`/api/v1/metrics/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiDeleteMetric(id: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/v1/metrics/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function apiCalculateMetric(id: string): Promise<CalculatedMetricResult> {
+  return apiFetch<CalculatedMetricResult>(`/api/v1/metrics/${id}/calculate`, {
+    method: "POST",
+  });
+}
+
+// ============================================================
+// SMART DATA ALERTS API
+// ============================================================
+
+export type AlertCondition =
+  | "GREATER_THAN"
+  | "LESS_THAN"
+  | "EQUALS"
+  | "GREATER_THAN_OR_EQUAL"
+  | "LESS_THAN_OR_EQUAL";
+
+export type AlertStatus = "OK" | "TRIGGERED" | "PENDING";
+
+export interface AlertHistoryEntry {
+  id: string;
+  alertId: string;
+  value: number;
+  metricValue?: number;
+  threshold: number;
+  condition: string;
+  status: "TRIGGERED" | "OK";
+  message: string;
+  triggeredAt: string;
+  evaluatedAt?: string;
+  triggered?: boolean;
+  notified?: boolean;
+}
+
+export type AlertHistoryData = AlertHistoryEntry;
+
+export interface AlertData {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  metricId: string;
+  name: string;
+  description: string | null;
+  condition: AlertCondition;
+  threshold: number;
+  enabled: boolean;
+  isEnabled?: boolean;
+  status: AlertStatus;
+  lastEvaluatedAt: string | null;
+  lastTriggeredAt: string | null;
+  lastValue: number | null;
+  createdAt: string;
+  updatedAt: string;
+  metric?: {
+    id: string;
+    name: string;
+    format: MetricFormat;
+    calculation: MetricAggregation;
+    aggregation?: MetricAggregation;
+    field: string;
+    column?: string;
+    dataset?: { id: string; name: string };
+  };
+  history?: AlertHistoryEntry[];
+  createdBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface CreateAlertPayload {
+  name: string;
+  description?: string;
+  workspaceId?: string;
+  metricId: string;
+  condition: AlertCondition;
+  threshold: number;
+  enabled?: boolean;
+  isEnabled?: boolean;
+}
+
+export interface AlertEvaluationResult {
+  alertId: string;
+  alertName: string;
+  metricName: string;
+  condition: AlertCondition;
+  conditionSymbol: string;
+  threshold: number;
+  formattedThreshold: string;
+  currentValue: number;
+  formattedCurrent: string;
+  isTriggered: boolean;
+  triggered?: boolean;
+  status: AlertStatus;
+  lastEvaluatedAt: string;
+  historyId: string;
+  message: string;
+  notificationDelivery: string;
+  alert?: AlertData;
+}
+
+export async function apiCreateAlert(payload: CreateAlertPayload): Promise<AlertData> {
+  return apiFetch<AlertData>("/api/v1/alerts", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiListAlerts(
+  workspaceId?: string,
+  metricId?: string
+): Promise<AlertData[]> {
+  const params = new URLSearchParams();
+  if (workspaceId) params.set("workspaceId", workspaceId);
+  if (metricId) params.set("metricId", metricId);
+  const qs = params.toString();
+  return apiFetch<AlertData[]>(`/api/v1/alerts${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetAlert(id: string): Promise<AlertData> {
+  return apiFetch<AlertData>(`/api/v1/alerts/${id}`);
+}
+
+export async function apiUpdateAlert(
+  id: string,
+  payload: Partial<CreateAlertPayload>
+): Promise<AlertData> {
+  return apiFetch<AlertData>(`/api/v1/alerts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiDeleteAlert(id: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/v1/alerts/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function apiEvaluateAlert(id: string): Promise<AlertEvaluationResult> {
+  return apiFetch<AlertEvaluationResult>(`/api/v1/alerts/${id}/evaluate`, {
+    method: "POST",
+  });
+}
+
+export async function apiEvaluateAllWorkspaceAlerts(
+  workspaceId: string
+): Promise<{ totalEvaluated: number; triggeredCount: number; results: unknown[] }> {
+  return apiFetch(`/api/v1/alerts/workspace/${workspaceId}/evaluate-all`, {
     method: "POST",
   });
 }

@@ -466,7 +466,7 @@ export default function WorkspacePage() {
             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">
               Platform Features in this Workspace
             </h3>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
               <Link
                 href="/dashboards"
                 className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
@@ -490,6 +490,22 @@ export default function WorkspacePage() {
                 <span className="text-xl mb-2 block">🔌</span>
                 <p className="font-semibold text-sm text-gray-900">Data Sources</p>
                 <p className="text-xs text-gray-500 mt-1">Connect PostgreSQL, CSV, and REST APIs</p>
+              </Link>
+              <Link
+                href="/metrics"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <span className="text-xl mb-2 block">📈</span>
+                <p className="font-semibold text-sm text-gray-900">Metrics & KPIs</p>
+                <p className="text-xs text-gray-500 mt-1">Define reusable calculations & targets</p>
+              </Link>
+              <Link
+                href="/alerts"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <span className="text-xl mb-2 block">🔔</span>
+                <p className="font-semibold text-sm text-gray-900">Smart Alerts</p>
+                <p className="text-xs text-gray-500 mt-1">Monitor metric thresholds and logs</p>
               </Link>
             </div>
           </div>

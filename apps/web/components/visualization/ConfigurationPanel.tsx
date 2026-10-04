@@ -368,6 +368,118 @@ export function ConfigurationPanel({
                 ))}
               </select>
             </div>
+
+            {/* DRILL-DOWN HIERARCHY */}
+            <div className="pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                  <span className="flex h-4 w-4 items-center justify-center rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold">
+                    ↓
+                  </span>
+                  Drill-Down Hierarchy
+                </span>
+                <span className="text-[10px] text-gray-400 font-mono">
+                  {Array.isArray(options.drillPath) ? (options.drillPath as string[]).length : 0} levels
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-500 mb-2">
+                Define the sequence of categories when users click into data points (e.g. Region → State → City).
+              </p>
+
+              {(() => {
+                const drillPath = Array.isArray(options.drillPath) ? (options.drillPath as string[]) : [];
+                return (
+                  <div className="space-y-2">
+                    {drillPath.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-gray-200 p-3 text-center">
+                        <p className="text-[11px] text-gray-400">
+                          No drill-down configured. Add at least 2 levels to enable interactive hierarchy exploration.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {drillPath.map((field, idx) => (
+                          <div
+                            key={`${field}-${idx}`}
+                            className="flex items-center justify-between px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50/80 text-xs font-medium text-gray-800"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white text-[9px] font-bold">
+                                {idx + 1}
+                              </span>
+                              <span>{field}</span>
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {idx > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = [...drillPath];
+                                    const temp = next[idx - 1];
+                                    next[idx - 1] = next[idx];
+                                    next[idx] = temp;
+                                    onChangeOption("drillPath", next);
+                                  }}
+                                  className="text-gray-400 hover:text-gray-700 px-1 text-[10px]"
+                                  title="Move Up"
+                                >
+                                  ▲
+                                </button>
+                              )}
+                              {idx < drillPath.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = [...drillPath];
+                                    const temp = next[idx + 1];
+                                    next[idx + 1] = next[idx];
+                                    next[idx] = temp;
+                                    onChangeOption("drillPath", next);
+                                  }}
+                                  className="text-gray-400 hover:text-gray-700 px-1 text-[10px]"
+                                  title="Move Down"
+                                >
+                                  ▼
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = drillPath.filter((_, i) => i !== idx);
+                                  onChangeOption("drillPath", next.length > 0 ? next : undefined);
+                                }}
+                                className="text-gray-400 hover:text-red-600 transition ml-1"
+                                title="Remove Level"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) return;
+                        const next = [...drillPath, val];
+                        onChangeOption("drillPath", next);
+                      }}
+                      className="w-full text-xs rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-700 focus:border-indigo-500 focus:outline-none"
+                    >
+                      <option value="">+ Add Drill-Down Level...</option>
+                      {columns.map((col) => (
+                        <option key={col.name} value={col.name}>
+                          {col.name} ({col.type})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 

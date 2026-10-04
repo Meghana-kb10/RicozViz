@@ -8,6 +8,8 @@ const PROTECTED_ROUTES = [
   "/data-sources",
   "/workspace",
   "/settings",
+  "/metrics",
+  "/alerts",
 ];
 
 export function middleware(request: NextRequest) {
@@ -41,5 +43,7 @@ export const config = {
     "/data-sources/:path*",
     "/workspace/:path*",
     "/settings/:path*",
+    "/metrics/:path*",
+    "/alerts/:path*",
   ],
 };

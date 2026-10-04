@@ -24,6 +24,7 @@ import {
   generateDashboardReport,
   createDashboardReport,
   runDashboardReport,
+  getDashboardReportHistory,
 } from "../services/dashboard/dashboard.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import chartRouter from "./chart.routes.js";
@@ -139,6 +140,17 @@ router.post(
   "/:id/reports/:reportId/run",
   requirePermission("DASHBOARD_VIEW"),
   asyncHandler(runDashboardReport)
+);
+
+/**
+ * GET /api/v1/dashboards/:id/reports/history
+ * List historical report executions.
+ * Permission: DASHBOARD_VIEW
+ */
+router.get(
+  "/:id/reports/history",
+  requirePermission("DASHBOARD_VIEW"),
+  asyncHandler(getDashboardReportHistory)
 );
 
 /**

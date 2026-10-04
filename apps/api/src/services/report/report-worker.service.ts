@@ -194,6 +194,21 @@ export class ScheduledReportWorker {
           });
 
           const durationMs = Date.now() - jobStartTime;
+
+          // Record report execution history
+          await prisma.reportExecution.create({
+            data: {
+              reportId: report.id,
+              dashboardId: report.dashboardId,
+              status: deliverySummary.success ? "SUCCESS" : "FAILED",
+              durationMs,
+              chartCount: snapshot.chartCount,
+              totalRecords: snapshot.summary.totalRecords,
+              summary: snapshot.summary as any,
+              errorMessage: deliverySummary.error || null,
+            },
+          }).catch(() => null);
+
           runs.push({
             reportId: report.id,
             dashboardId: report.dashboardId,

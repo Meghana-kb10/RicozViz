@@ -22,9 +22,12 @@ import {
   apiSaveDashboardSchedule,
   apiDeleteDashboardSchedule,
   apiGenerateDashboardReport,
+  apiGetDashboardReportHistory,
+  apiRunDashboardReport,
   type DashboardScheduleData,
   type DashboardReportSnapshot,
   type ReportFrequency,
+  type ReportExecutionData,
   type DashboardData,
   type DashboardStatus,
   type DashboardVisibility,
@@ -184,6 +187,9 @@ export default function DashboardDetailPage({
   const [scheduleWebhookUrl, setScheduleWebhookUrl] = useState("");
   const [generatingReport, setGeneratingReport] = useState(false);
   const [lastGeneratedReport, setLastGeneratedReport] = useState<DashboardReportSnapshot | null>(null);
+  const [reportExecutions, setReportExecutions] = useState<ReportExecutionData[]>([]);
+  const [reportFormat, setReportFormat] = useState<string>("PDF");
+  const [scheduleModalTab, setScheduleModalTab] = useState<"CONFIG" | "HISTORY">("CONFIG");
 
   useEffect(() => {
     if (!isLoading && !auth) {
@@ -724,9 +730,14 @@ export default function DashboardDetailPage({
   const handleOpenScheduleModal = async () => {
     setIsScheduleModalOpen(true);
     setLoadingSchedule(true);
+    setScheduleModalTab("CONFIG");
     try {
-      const res = await apiGetDashboardSchedule(id);
+      const [res, historyRes] = await Promise.all([
+        apiGetDashboardSchedule(id).catch(() => null),
+        apiGetDashboardReportHistory(id).catch(() => []),
+      ]);
       setScheduleData(res);
+      setReportExecutions(historyRes);
       if (res) {
         setScheduleFrequency(res.frequency);
         setScheduleEnabled(res.enabled);
@@ -791,9 +802,13 @@ export default function DashboardDetailPage({
     setGeneratingReport(true);
     setErrorMsg(null);
     try {
-      const snapshot = await apiGenerateDashboardReport(id);
-      setLastGeneratedReport(snapshot);
-      setSuccessMsg(`Report generated for ${snapshot.chartCount} charts (${snapshot.summary.totalRecords} records).`);
+      const runResult = await apiRunDashboardReport(id, reportFormat);
+      setLastGeneratedReport(runResult.snapshot);
+      setSuccessMsg(
+        `Report generated successfully (${runResult.execution?.format || reportFormat}, ${runResult.snapshot.chartCount} charts).`
+      );
+      const historyRes = await apiGetDashboardReportHistory(id).catch(() => []);
+      setReportExecutions(historyRes);
     } catch (err) {
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to generate report snapshot");
     } finally {
@@ -2015,7 +2030,7 @@ export default function DashboardDetailPage({
       {/* ============================================================ */}
       {isScheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 no-print">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 max-h-[90vh]">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-100 p-5 bg-gray-50/50">
               <div className="flex items-center gap-2.5">
@@ -2023,9 +2038,9 @@ export default function DashboardDetailPage({
                   <Clock className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Dashboard Report Schedule</h3>
+                  <h3 className="text-sm font-bold text-gray-900">Dashboard Report Schedule & Exports</h3>
                   <p className="text-xs text-gray-500">
-                    Automated periodic dashboard snapshot generation
+                    Automated snapshots, periodic delivery, and format exports
                   </p>
                 </div>
               </div>
@@ -2038,14 +2053,40 @@ export default function DashboardDetailPage({
               </button>
             </div>
 
+            {/* Modal Navigation Tabs */}
+            <div className="flex border-b border-gray-200 bg-gray-50/70 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setScheduleModalTab("CONFIG")}
+                className={`flex-1 py-2.5 text-center border-b-2 transition ${
+                  scheduleModalTab === "CONFIG"
+                    ? "border-purple-600 text-purple-700 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                Schedule & Format
+              </button>
+              <button
+                type="button"
+                onClick={() => setScheduleModalTab("HISTORY")}
+                className={`flex-1 py-2.5 text-center border-b-2 transition ${
+                  scheduleModalTab === "HISTORY"
+                    ? "border-purple-600 text-purple-700 bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                Execution History ({reportExecutions.length})
+              </button>
+            </div>
+
             {/* Modal Content */}
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
               {loadingSchedule ? (
                 <div className="flex items-center justify-center py-8 text-xs text-gray-500 gap-2">
                   <RefreshCw className="h-4 w-4 animate-spin text-purple-600" />
                   <span>Loading schedule...</span>
                 </div>
-              ) : (
+              ) : scheduleModalTab === "CONFIG" ? (
                 <>
                   {/* Current Schedule Summary */}
                   <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-3.5 text-xs">
@@ -2079,10 +2120,9 @@ export default function DashboardDetailPage({
                         </span>
                       </div>
                     )}
-                    {/* Delivery Status Indicator */}
                     {scheduleData?.lastDeliveryStatus && (
                       <div className="flex items-center justify-between mt-1 pt-2 border-t border-gray-200/60 text-[11px]">
-                        <span className="text-gray-400">Delivery status:</span>
+                        <span className="text-gray-400">Last delivery:</span>
                         <span
                           className={`font-semibold px-1.5 py-0.5 rounded text-[10px] ${
                             scheduleData.lastDeliveryStatus === "SUCCESS"
@@ -2091,7 +2131,7 @@ export default function DashboardDetailPage({
                           }`}
                         >
                           {scheduleData.lastDeliveryStatus === "SUCCESS"
-                            ? `✓ Delivered${scheduleData.lastDeliveryAt ? ` (${new Date(scheduleData.lastDeliveryAt).toLocaleTimeString()})` : ""}`
+                            ? `✓ Success${scheduleData.lastDeliveryAt ? ` (${new Date(scheduleData.lastDeliveryAt).toLocaleTimeString()})` : ""}`
                             : `✗ Failed: ${scheduleData.lastDeliveryError || "Error"}`}
                         </span>
                       </div>
@@ -2104,31 +2144,66 @@ export default function DashboardDetailPage({
                       <label className="text-xs font-semibold text-gray-700 block mb-1">
                         Report Frequency
                       </label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => setScheduleFrequency("DAILY")}
-                          className={`p-2.5 rounded-xl border text-xs font-medium text-center transition ${
+                          className={`p-2 rounded-xl border text-xs font-medium text-center transition ${
                             scheduleFrequency === "DAILY"
                               ? "border-purple-600 bg-purple-50 text-purple-700 font-bold"
                               : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                           }`}
                         >
                           <p>Daily</p>
-                          <span className="text-[10px] text-gray-400 font-normal">Every 24 hours</span>
+                          <span className="text-[10px] text-gray-400 font-normal">Every 24h</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setScheduleFrequency("WEEKLY")}
-                          className={`p-2.5 rounded-xl border text-xs font-medium text-center transition ${
+                          className={`p-2 rounded-xl border text-xs font-medium text-center transition ${
                             scheduleFrequency === "WEEKLY"
                               ? "border-purple-600 bg-purple-50 text-purple-700 font-bold"
                               : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                           }`}
                         >
                           <p>Weekly</p>
-                          <span className="text-[10px] text-gray-400 font-normal">Every 7 days</span>
+                          <span className="text-[10px] text-gray-400 font-normal">Every 7d</span>
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setScheduleFrequency("MONTHLY")}
+                          className={`p-2 rounded-xl border text-xs font-medium text-center transition ${
+                            scheduleFrequency === "MONTHLY"
+                              ? "border-purple-600 bg-purple-50 text-purple-700 font-bold"
+                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <p>Monthly</p>
+                          <span className="text-[10px] text-gray-400 font-normal">Every 30d</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Report Format Selection */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-700 block mb-1">
+                        Export Format
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {(["PDF", "CSV", "PNG", "EXCEL"] as const).map((fmt) => (
+                          <button
+                            key={fmt}
+                            type="button"
+                            onClick={() => setReportFormat(fmt)}
+                            className={`py-1.5 px-2 rounded-lg border text-xs font-semibold text-center transition ${
+                              reportFormat === fmt
+                                ? "border-purple-600 bg-purple-50 text-purple-700"
+                                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                            }`}
+                          >
+                            {fmt}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
@@ -2163,6 +2238,11 @@ export default function DashboardDetailPage({
                       </div>
                     </div>
 
+                    {/* Delivery notice */}
+                    <div className="rounded-lg bg-gray-50 p-2.5 text-[11px] text-gray-500 border border-gray-100">
+                      ℹ️ Snapshots & queries are automatically executed on schedule and recorded in Execution History. External SMTP email delivery requires organization email provider credentials.
+                    </div>
+
                     <label className="flex items-center gap-2 cursor-pointer pt-1">
                       <input
                         type="checkbox"
@@ -2171,7 +2251,7 @@ export default function DashboardDetailPage({
                         className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                       />
                       <span className="text-xs font-medium text-gray-700">
-                        Enable automated report generation & delivery
+                        Enable automated report generation on schedule
                       </span>
                     </label>
                   </div>
@@ -2180,7 +2260,7 @@ export default function DashboardDetailPage({
                   {lastGeneratedReport && (
                     <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-xs space-y-1">
                       <div className="flex items-center justify-between font-semibold text-indigo-900">
-                        <span>Latest Report Snapshot</span>
+                        <span>Latest Report Snapshot ({reportFormat})</span>
                         <span className="text-[10px] text-indigo-500">
                           {lastGeneratedReport.summary.executionTimeMs}ms
                         </span>
@@ -2201,7 +2281,7 @@ export default function DashboardDetailPage({
                           disabled={deletingSchedule}
                           className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
                         >
-                          {deletingSchedule ? "Deleting..." : "Delete"}
+                          {deletingSchedule ? "Deleting..." : "Delete Schedule"}
                         </button>
                       )}
                     </div>
@@ -2226,6 +2306,76 @@ export default function DashboardDetailPage({
                     </div>
                   </div>
                 </>
+              ) : (
+                /* Execution History Tab */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700">
+                      Report Execution Log ({reportExecutions.length} runs)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const h = await apiGetDashboardReportHistory(id).catch(() => []);
+                        setReportExecutions(h);
+                      }}
+                      className="text-[11px] text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+
+                  {reportExecutions.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center text-xs text-gray-400">
+                      No report executions logged yet. Click &quot;Generate Now&quot; to run an immediate snapshot.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white overflow-hidden text-xs">
+                      {reportExecutions.map((exec) => (
+                        <div key={exec.id} className="p-3 flex items-center justify-between hover:bg-gray-50">
+                          <div>
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  exec.status === "SUCCESS"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {exec.status}
+                              </span>
+                              <span className="font-semibold text-gray-900">{exec.format}</span>
+                              <span className="text-gray-400 text-[10px]">
+                                {exec.triggeredBy || "SCHEDULED"}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500">
+                              {new Date(exec.executedAt).toLocaleString()}
+                              {exec.durationMs ? ` · ${exec.durationMs}ms` : ""}
+                            </p>
+                            {exec.errorMessage && (
+                              <p className="text-[10px] text-red-600 mt-1">{exec.errorMessage}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            {exec.snapshotUrl ? (
+                              <a
+                                href={exec.snapshotUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-purple-600 hover:underline text-xs font-semibold"
+                              >
+                                View Snapshot
+                              </a>
+                            ) : (
+                              <span className="text-gray-400 text-[11px]">Archived</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

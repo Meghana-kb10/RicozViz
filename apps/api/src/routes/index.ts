@@ -10,6 +10,8 @@ import datasetRouter from "./dataset.routes.js";
 import dashboardRouter from "./dashboard.routes.js";
 import workspaceRouter from "./workspace.routes.js";
 import visualizationRouter from "./visualization.routes.js";
+import metricRouter from "./metric.routes.js";
+import alertRouter from "./alert.routes.js";
 
 const v1Router = Router();
 
@@ -21,6 +23,8 @@ v1Router.use("/data-sources", dataSourceRouter);
 v1Router.use("/datasets", datasetRouter);
 v1Router.use("/dashboards", dashboardRouter);
 v1Router.use("/visualizations", visualizationRouter);
+v1Router.use("/metrics", metricRouter);
+v1Router.use("/alerts", alertRouter);
 
 // Future routes will be added here:
 // v1Router.use("/users",        usersRouter);
@@ -40,6 +44,8 @@ v1Router.get("/", (_req: Request, res: Response) => {
         "/api/v1/datasets",
         "/api/v1/dashboards",
         "/api/v1/visualizations",
+        "/api/v1/metrics",
+        "/api/v1/alerts",
       ],
     },
   });

@@ -817,8 +817,8 @@ export async function upsertDashboardSchedule(req: Request, res: Response): Prom
   }
 
   const normalizedFreq = String(frequency || "DAILY").toUpperCase();
-  if (normalizedFreq !== "DAILY" && normalizedFreq !== "WEEKLY") {
-    throw AppError.badRequest("Frequency must be DAILY or WEEKLY");
+  if (normalizedFreq !== "DAILY" && normalizedFreq !== "WEEKLY" && normalizedFreq !== "MONTHLY") {
+    throw AppError.badRequest("Frequency must be DAILY, WEEKLY, or MONTHLY");
   }
 
   // Validate recipients if provided
@@ -854,8 +854,18 @@ export async function upsertDashboardSchedule(req: Request, res: Response): Prom
   }
 
   const isEnabled = enabled !== undefined ? Boolean(enabled) : true;
-  const cronExpression = normalizedFreq === "WEEKLY" ? "0 9 * * 1" : "0 9 * * *";
-  const intervalMs = normalizedFreq === "WEEKLY" ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  const cronExpression =
+    normalizedFreq === "MONTHLY"
+      ? "0 9 1 * *"
+      : normalizedFreq === "WEEKLY"
+      ? "0 9 * * 1"
+      : "0 9 * * *";
+  const intervalMs =
+    normalizedFreq === "MONTHLY"
+      ? 30 * 24 * 60 * 60 * 1000
+      : normalizedFreq === "WEEKLY"
+      ? 7 * 24 * 60 * 60 * 1000
+      : 24 * 60 * 60 * 1000;
   const nextRunAt = new Date(Date.now() + intervalMs).toISOString();
 
   const existing = await prisma.report.findFirst({
@@ -1262,7 +1272,7 @@ export async function createDashboardReport(req: Request, res: Response): Promis
  * Run an existing report manually and return execution status.
  */
 export async function runDashboardReport(req: Request, res: Response): Promise<void> {
-  const { organizationId } = req.user!;
+  const { organizationId, userId } = req.user!;
   const { id, reportId } = req.params;
 
   if (!id || !reportId) {
@@ -1289,12 +1299,97 @@ export async function runDashboardReport(req: Request, res: Response): Promise<v
     throw AppError.notFound("Report");
   }
 
+  const startTime = Date.now();
+  const snapshot = await generateDashboardReportSnapshot(id, organizationId);
+  const durationMs = Date.now() - startTime;
+
+  const execution = await prisma.reportExecution.create({
+    data: {
+      reportId: report.id,
+      dashboardId: id,
+      status: "SUCCESS",
+      durationMs,
+      chartCount: snapshot.chartCount,
+      totalRecords: snapshot.summary.totalRecords,
+      summary: snapshot.summary as any,
+    },
+  });
+
+  const delivery = (report.deliveryConfig || {}) as Record<string, unknown>;
+  await prisma.report
+    .update({
+      where: { id: report.id },
+      data: {
+        deliveryConfig: {
+          ...delivery,
+          lastRunAt: new Date().toISOString(),
+          lastDeliveryStatus: "SUCCESS",
+          lastDeliveryAt: new Date().toISOString(),
+        },
+      },
+    })
+    .catch(() => null);
+
+  await logAuditEvent({
+    organizationId,
+    userId,
+    action: "REPORT_RUN_MANUAL",
+    resourceType: "Report",
+    resourceId: report.id,
+    metadata: {
+      durationMs,
+      chartCount: snapshot.chartCount,
+      totalRecords: snapshot.summary.totalRecords,
+    },
+    ipAddress: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
   sendSuccess(res, {
     id: report.id,
     reportId: report.id,
+    executionId: execution.id,
     status: "COMPLETED",
-    executedAt: new Date().toISOString(),
+    executedAt: execution.executedAt.toISOString(),
+    durationMs,
+    chartCount: snapshot.chartCount,
+    totalRecords: snapshot.summary.totalRecords,
+    snapshot,
   });
+}
+
+/**
+ * GET /api/v1/dashboards/:id/reports/history
+ * List historical report executions for a dashboard.
+ */
+export async function getDashboardReportHistory(req: Request, res: Response): Promise<void> {
+  const { organizationId } = req.user!;
+  const { id } = req.params;
+
+  if (!id) {
+    throw AppError.badRequest("Dashboard ID is required");
+  }
+
+  const dashboard = await prisma.dashboard.findUnique({
+    where: { id },
+    select: { id: true, organizationId: true },
+  });
+
+  if (!dashboard) {
+    throw AppError.notFound("Dashboard");
+  }
+
+  if (dashboard.organizationId !== organizationId) {
+    throw AppError.forbidden("Access denied: dashboard belongs to a different organization");
+  }
+
+  const executions = await prisma.reportExecution.findMany({
+    where: { dashboardId: id },
+    orderBy: { executedAt: "desc" },
+    take: 50,
+  });
+
+  sendSuccess(res, executions);
 }
 
 

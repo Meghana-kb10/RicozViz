@@ -72,6 +72,18 @@ export const PERMISSIONS = [
   { key: "REPORT_VIEW", description: "View scheduled reports and their history" },
   { key: "REPORT_DELETE", description: "Delete a report schedule" },
 
+  // KPI / Metrics layer
+  { key: "METRIC_CREATE", description: "Create business metrics and KPIs" },
+  { key: "METRIC_VIEW", description: "View metrics and their values" },
+  { key: "METRIC_EDIT", description: "Update metric configuration or targets" },
+  { key: "METRIC_DELETE", description: "Delete a metric" },
+
+  // Smart data alerts
+  { key: "ALERT_CREATE", description: "Create threshold alerts for metrics" },
+  { key: "ALERT_VIEW", description: "View alerts and alert trigger history" },
+  { key: "ALERT_EDIT", description: "Update alert thresholds and conditions" },
+  { key: "ALERT_DELETE", description: "Delete an alert" },
+
   // Audit log
   { key: "AUDIT_LOG_VIEW", description: "View the organization audit log" },
 ] as const;
@@ -99,6 +111,14 @@ export const ANALYST_PERMISSIONS = [
   "REPORT_CREATE",
   "REPORT_VIEW",
   "REPORT_DELETE",
+  "METRIC_CREATE",
+  "METRIC_VIEW",
+  "METRIC_EDIT",
+  "METRIC_DELETE",
+  "ALERT_CREATE",
+  "ALERT_VIEW",
+  "ALERT_EDIT",
+  "ALERT_DELETE",
 ] as const;
 
 export const BUSINESS_USER_PERMISSIONS = [
@@ -106,6 +126,8 @@ export const BUSINESS_USER_PERMISSIONS = [
   "CHART_VIEW",
   "DATASET_VIEW",
   "REPORT_VIEW",
+  "METRIC_VIEW",
+  "ALERT_VIEW",
 ] as const;
 
 const ROLE_PERMISSION_MAP: Record<string, readonly string[]> = {

@@ -126,6 +126,40 @@ enum DashboardAccessLevel {
   ADMIN
 }
 
+enum MetricFormat {
+  NUMBER
+  CURRENCY
+  PERCENT
+}
+
+enum MetricAggregation {
+  SUM
+  AVG
+  COUNT
+  MIN
+  MAX
+}
+
+enum AlertCondition {
+  GREATER_THAN
+  LESS_THAN
+  EQUALS
+  GREATER_THAN_OR_EQUAL
+  LESS_THAN_OR_EQUAL
+}
+
+enum AlertStatus {
+  OK
+  TRIGGERED
+  PENDING
+}
+
+enum ReportExecutionStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
 // ============================================================
 // USER
 // ============================================================
@@ -148,6 +182,8 @@ model User {
   createdDataSources   DataSource[]         @relation("DataSourceCreator")
   createdDatasets      Dataset[]            @relation("DatasetCreator")
   createdReports       Report[]             @relation("ReportCreator")
+  createdMetrics       Metric[]             @relation("MetricCreator")
+  createdAlerts        Alert[]              @relation("AlertCreator")
   dashboardAccess      DashboardAccess[]
   auditLogs            AuditLog[]
 
@@ -174,6 +210,8 @@ model Organization {
   datasets    Dataset[]
   dashboards  Dashboard[]
   reports     Report[]
+  metrics     Metric[]
+  alerts      Alert[]
   auditLogs   AuditLog[]
 
   @@map("organizations")
@@ -280,6 +318,8 @@ model Workspace {
   members        WorkspaceMember[]
   dataSources    DataSource[]
   datasets       Dataset[]
+  metrics        Metric[]
+  alerts         Alert[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -387,6 +427,7 @@ model Dataset {
 
   columns DatasetColumn[]
   charts  Chart[]
+  metrics Metric[]
 
   @@index([organizationId])
   @@index([workspaceId])
@@ -541,6 +582,8 @@ model Report {
   dashboard    Dashboard    @relation(fields: [dashboardId], references: [id])
   createdBy    User         @relation("ReportCreator", fields: [createdById], references: [id])
 
+  executions ReportExecution[]
+
   @@index([organizationId])
   @@index([dashboardId])
   @@index([createdById])
@@ -573,4 +616,114 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@index([resourceType, resourceId])
   @@map("audit_logs")
+}
+
+// ============================================================
+// METRIC / KPI LAYER
+// ============================================================
+
+model Metric {
+  id             String            @id @default(uuid())
+  organizationId String
+  workspaceId    String
+  datasetId      String
+  name           String
+  description    String?
+  calculation    MetricAggregation @default(SUM)
+  field          String
+  format         MetricFormat      @default(NUMBER)
+  targetValue    Float?
+  createdById    String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  dataset      Dataset      @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("MetricCreator", fields: [createdById], references: [id])
+
+  alerts Alert[]
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([datasetId])
+  @@index([createdById])
+  @@map("metrics")
+}
+
+// ============================================================
+// SMART DATA ALERTS
+// ============================================================
+
+model Alert {
+  id              String         @id @default(uuid())
+  organizationId  String
+  workspaceId     String
+  metricId        String
+  name            String
+  description     String?
+  condition       AlertCondition
+  threshold       Float
+  enabled         Boolean        @default(true)
+  status          AlertStatus    @default(PENDING)
+  lastEvaluatedAt DateTime?
+  lastTriggeredAt DateTime?
+  lastValue       Float?
+  createdById     String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  metric       Metric       @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("AlertCreator", fields: [createdById], references: [id])
+
+  history AlertHistory[]
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([metricId])
+  @@index([createdById])
+  @@map("alerts")
+}
+
+model AlertHistory {
+  id          String   @id @default(uuid())
+  alertId     String
+  value       Float
+  threshold   Float
+  condition   String
+  status      String
+  message     String
+  triggeredAt DateTime @default(now())
+
+  alert Alert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  @@index([alertId])
+  @@index([triggeredAt])
+  @@map("alert_history")
+}
+
+// ============================================================
+// REPORT EXECUTION HISTORY
+// ============================================================
+
+model ReportExecution {
+  id           String                @id @default(uuid())
+  reportId     String
+  dashboardId  String
+  status       ReportExecutionStatus @default(SUCCESS)
+  executedAt   DateTime              @default(now())
+  durationMs   Int                   @default(0)
+  chartCount   Int                   @default(0)
+  totalRecords Int                   @default(0)
+  summary      Json                  @default("{}")
+  errorMessage String?
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([dashboardId])
+  @@index([executedAt])
+  @@map("report_executions")
 }
