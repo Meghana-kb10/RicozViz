@@ -6,7 +6,10 @@ import { Router } from "express";
 import {
   requireAuth,
   requirePermission,
+  requireAnyPermission,
 } from "../middleware/auth.middleware.js";
+import { sendSuccess } from "../utils/response.js";
+import { profileDataset } from "../services/dataset/data-quality.service.js";
 import {
   createDataset,
   uploadDataset,
@@ -244,6 +247,28 @@ router.get(
   "/:id/preview",
   requirePermission("DATASET_VIEW"),
   asyncHandler(previewDataset)
+);
+
+/**
+ * GET /api/v1/datasets/:id/profile
+ * Data Quality & Profiling endpoint.
+ * Returns completeness, duplicate rows, IQR outliers, distinct counts, sample values, and warnings.
+ * Permission: DATASET_VIEW or DATASET_PROFILE
+ */
+router.get(
+  "/:id/profile",
+  requireAnyPermission("DATASET_VIEW", "DATASET_PROFILE"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const datasetId = req.params.id as string;
+    const profile = await profileDataset(
+      datasetId,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+    sendSuccess(res, profile, 200);
+  })
 );
 
 /**

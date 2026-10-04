@@ -32,6 +32,18 @@ export const SYSTEM_ROLES = [
       "Business consumer. Can view published dashboards and run reports.",
     isSystem: true,
   },
+  {
+    name: "EDITOR",
+    description:
+      "Content editor. Can create and edit dashboards, manage datasets, metrics, alerts, and templates.",
+    isSystem: true,
+  },
+  {
+    name: "VIEWER",
+    description:
+      "Read-only viewer. Can view dashboards, charts, metrics, alerts, reports, and export allowed views.",
+    isSystem: true,
+  },
 ] as const;
 
 // ---- Initial Permissions ----
@@ -52,6 +64,7 @@ export const PERMISSIONS = [
   { key: "DATASET_VIEW", description: "Browse and preview datasets" },
   { key: "DATASET_EDIT", description: "Modify dataset schema or configuration" },
   { key: "DATASET_DELETE", description: "Remove a dataset" },
+  { key: "DATASET_PROFILE", description: "Profile dataset schema, statistics and data quality" },
 
   // Dashboard management
   { key: "DASHBOARD_CREATE", description: "Create a new dashboard" },
@@ -84,8 +97,17 @@ export const PERMISSIONS = [
   { key: "ALERT_EDIT", description: "Update alert thresholds and conditions" },
   { key: "ALERT_DELETE", description: "Delete an alert" },
 
+  // Templates
+  { key: "TEMPLATE_VIEW", description: "Browse and preview dashboard templates" },
+  { key: "TEMPLATE_CREATE", description: "Save a dashboard as a template" },
+  { key: "TEMPLATE_APPLY", description: "Create a dashboard from a template" },
+
+  // Exports
+  { key: "DATA_EXPORT", description: "Export datasets, charts, and dashboards" },
+
   // Audit log
   { key: "AUDIT_LOG_VIEW", description: "View the organization audit log" },
+  { key: "AUDIT_LOG_EXPORT", description: "Export audit log records" },
 ] as const;
 
 export const ADMIN_PERMISSIONS = PERMISSIONS.map((p) => p.key);
@@ -99,6 +121,7 @@ export const ANALYST_PERMISSIONS = [
   "DATASET_CREATE",
   "DATASET_VIEW",
   "DATASET_EDIT",
+  "DATASET_PROFILE",
   "DASHBOARD_CREATE",
   "DASHBOARD_VIEW",
   "DASHBOARD_EDIT",
@@ -108,6 +131,7 @@ export const ANALYST_PERMISSIONS = [
   "CHART_CREATE",
   "CHART_VIEW",
   "CHART_EDIT",
+  "CHART_DELETE",
   "REPORT_CREATE",
   "REPORT_VIEW",
   "REPORT_DELETE",
@@ -119,7 +143,13 @@ export const ANALYST_PERMISSIONS = [
   "ALERT_VIEW",
   "ALERT_EDIT",
   "ALERT_DELETE",
+  "TEMPLATE_VIEW",
+  "TEMPLATE_CREATE",
+  "TEMPLATE_APPLY",
+  "DATA_EXPORT",
 ] as const;
+
+export const EDITOR_PERMISSIONS = ANALYST_PERMISSIONS;
 
 export const BUSINESS_USER_PERMISSIONS = [
   "DASHBOARD_VIEW",
@@ -128,12 +158,18 @@ export const BUSINESS_USER_PERMISSIONS = [
   "REPORT_VIEW",
   "METRIC_VIEW",
   "ALERT_VIEW",
+  "TEMPLATE_VIEW",
+  "DATA_EXPORT",
 ] as const;
+
+export const VIEWER_PERMISSIONS = BUSINESS_USER_PERMISSIONS;
 
 const ROLE_PERMISSION_MAP: Record<string, readonly string[]> = {
   ADMIN: ADMIN_PERMISSIONS,
   ANALYST: ANALYST_PERMISSIONS,
+  EDITOR: EDITOR_PERMISSIONS,
   BUSINESS_USER: BUSINESS_USER_PERMISSIONS,
+  VIEWER: VIEWER_PERMISSIONS,
 };
 
 let initPromise: Promise<void> | null = null;
@@ -154,24 +190,30 @@ export async function ensureSystemRolesAndPermissions(
 
   const run = async () => {
     try {
-      // 1. Fast check: Do all 3 system roles exist with permissions?
+      // 1. Fast check: Do all 5 system roles exist with permissions?
       const existingRoles = await db.role.findMany({
-        where: { name: { in: ["ADMIN", "ANALYST", "BUSINESS_USER"] } },
+        where: { name: { in: ["ADMIN", "ANALYST", "BUSINESS_USER", "EDITOR", "VIEWER"] } },
         include: { _count: { select: { permissions: true } } },
       });
 
       const adminRole = existingRoles.find((r) => r.name === "ADMIN");
       const analystRole = existingRoles.find((r) => r.name === "ANALYST");
       const businessUserRole = existingRoles.find((r) => r.name === "BUSINESS_USER");
+      const editorRole = existingRoles.find((r) => r.name === "EDITOR");
+      const viewerRole = existingRoles.find((r) => r.name === "VIEWER");
 
       if (
-        existingRoles.length === 3 &&
+        existingRoles.length === 5 &&
         adminRole &&
         adminRole._count.permissions >= ADMIN_PERMISSIONS.length &&
         analystRole &&
         analystRole._count.permissions >= ANALYST_PERMISSIONS.length &&
         businessUserRole &&
-        businessUserRole._count.permissions >= BUSINESS_USER_PERMISSIONS.length
+        businessUserRole._count.permissions >= BUSINESS_USER_PERMISSIONS.length &&
+        editorRole &&
+        editorRole._count.permissions >= EDITOR_PERMISSIONS.length &&
+        viewerRole &&
+        viewerRole._count.permissions >= VIEWER_PERMISSIONS.length
       ) {
         return; // All roles and permissions are already properly initialized
       }
@@ -202,7 +244,7 @@ export async function ensureSystemRolesAndPermissions(
 
       // 4. Fetch updated roles & permissions
       const allRoles = await db.role.findMany({
-        where: { name: { in: ["ADMIN", "ANALYST", "BUSINESS_USER"] } },
+        where: { name: { in: ["ADMIN", "ANALYST", "BUSINESS_USER", "EDITOR", "VIEWER"] } },
       });
       const allPermissions = await db.permission.findMany();
       const permMap = new Map(allPermissions.map((p) => [p.key, p.id]));

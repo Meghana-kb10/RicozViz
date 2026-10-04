@@ -507,6 +507,38 @@ export default function WorkspacePage() {
                 <p className="font-semibold text-sm text-gray-900">Smart Alerts</p>
                 <p className="text-xs text-gray-500 mt-1">Monitor metric thresholds and logs</p>
               </Link>
+              <Link
+                href="/data-quality"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <span className="text-xl mb-2 block">🛡️</span>
+                <p className="font-semibold text-sm text-gray-900">Data Quality & Profiling</p>
+                <p className="text-xs text-gray-500 mt-1">Outliers, distributions, nulls & health scores</p>
+              </Link>
+              <Link
+                href="/exports"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <span className="text-xl mb-2 block">📥</span>
+                <p className="font-semibold text-sm text-gray-900">Export Center</p>
+                <p className="text-xs text-gray-500 mt-1">Export CSV, Excel (.xlsx), PDF, and PNG</p>
+              </Link>
+              <Link
+                href="/templates"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <span className="text-xl mb-2 block">📑</span>
+                <p className="font-semibold text-sm text-gray-900">Dashboard Templates</p>
+                <p className="text-xs text-gray-500 mt-1">Sales, Marketing, Finance & Executive templates</p>
+              </Link>
+              <Link
+                href="/audit"
+                className="rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-400 hover:shadow-sm transition"
+              >
+                <span className="text-xl mb-2 block">📜</span>
+                <p className="font-semibold text-sm text-gray-900">Audit Logs & Governance</p>
+                <p className="text-xs text-gray-500 mt-1">Immutable security & compliance audit trail</p>
+              </Link>
             </div>
           </div>
         </main>

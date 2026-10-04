@@ -10,6 +10,10 @@ const PROTECTED_ROUTES = [
   "/settings",
   "/metrics",
   "/alerts",
+  "/data-quality",
+  "/exports",
+  "/templates",
+  "/audit",
 ];
 
 export function middleware(request: NextRequest) {
@@ -45,5 +49,9 @@ export const config = {
     "/settings/:path*",
     "/metrics/:path*",
     "/alerts/:path*",
+    "/data-quality/:path*",
+    "/exports/:path*",
+    "/templates/:path*",
+    "/audit/:path*",
   ],
 };

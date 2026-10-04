@@ -42,6 +42,8 @@ enum WorkspaceRole {
   OWNER
   ADMIN
   MEMBER
+  EDITOR
+  VIEWER
 }
 
 enum DataSourceType {
@@ -184,6 +186,8 @@ model User {
   createdReports       Report[]             @relation("ReportCreator")
   createdMetrics       Metric[]             @relation("MetricCreator")
   createdAlerts        Alert[]              @relation("AlertCreator")
+  createdTemplates     DashboardTemplate[]  @relation("TemplateCreator")
+  exportJobs           ExportJob[]
   dashboardAccess      DashboardAccess[]
   auditLogs            AuditLog[]
 
@@ -212,6 +216,8 @@ model Organization {
   reports     Report[]
   metrics     Metric[]
   alerts      Alert[]
+  templates   DashboardTemplate[]
+  exportJobs  ExportJob[]
   auditLogs   AuditLog[]
 
   @@map("organizations")
@@ -320,6 +326,9 @@ model Workspace {
   datasets       Dataset[]
   metrics        Metric[]
   alerts         Alert[]
+  templates      DashboardTemplate[]
+  exportJobs     ExportJob[]
+  auditLogs      AuditLog[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -598,19 +607,23 @@ model Report {
 model AuditLog {
   id             String   @id @default(uuid())
   organizationId String
+  workspaceId    String?
   userId         String
   action         String // e.g. "DASHBOARD_CREATED", "DATA_SOURCE_DELETED"
   resourceType   String // e.g. "Dashboard", "DataSource"
   resourceId     String? // UUID of the affected resource
+  status         String   @default("SUCCESS") // "SUCCESS", "FAILURE", "WARNING"
   ipAddress      String?
   userAgent      String?
   metadata       Json     @default("{}") // additional context
   createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id])
+  workspace    Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   user         User         @relation(fields: [userId], references: [id])
 
   @@index([organizationId])
+  @@index([workspaceId])
   @@index([userId])
   @@index([createdAt])
   @@index([organizationId, createdAt])
@@ -727,3 +740,80 @@ model ReportExecution {
   @@index([executedAt])
   @@map("report_executions")
 }
+
+// ============================================================
+// EXPORT CENTER
+// ============================================================
+
+enum ExportFormat {
+  CSV
+  EXCEL
+  PDF
+  PNG
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ExportJob {
+  id             String       @id @default(uuid())
+  organizationId String
+  workspaceId    String
+  userId         String
+  resourceType   String       // "DATASET", "VISUALIZATION", "DASHBOARD"
+  resourceId     String
+  resourceName   String
+  format         ExportFormat
+  status         ExportStatus @default(COMPLETED)
+  rowCount       Int?
+  fileSize       Int?
+  downloadUrl    String?
+  errorMessage   String?
+  metadata       Json         @default("{}")
+  createdAt      DateTime     @default(now())
+  completedAt    DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("export_jobs")
+}
+
+// ============================================================
+// DASHBOARD TEMPLATES
+// ============================================================
+
+model DashboardTemplate {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  category       String   // "Sales", "Marketing", "Finance", "Operations", "Executive"
+  thumbnailUrl   String?
+  layoutConfig   Json     @default("{}")
+  chartsConfig   Json     @default("[]")
+  isSystem       Boolean  @default(false)
+  organizationId String?
+  workspaceId    String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy    User?         @relation("TemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@index([category])
+  @@map("dashboard_templates")
+}
+

@@ -186,7 +186,7 @@ export async function apiLogout(): Promise<void> {
 // WORKSPACE TYPES & API METHODS
 // ============================================================
 
-export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER";
+export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER" | "EDITOR" | "VIEWER";
 
 export interface WorkspaceData {
   id: string;
@@ -1699,6 +1699,275 @@ export async function apiEvaluateAllWorkspaceAlerts(
     method: "POST",
   });
 }
+
+// ============================================================
+// FEATURE 6: DATA QUALITY & PROFILING
+// ============================================================
+
+export interface ColumnProfile {
+  name: string;
+  type: string;
+  totalCount: number;
+  nullCount: number;
+  nullPercentage: number;
+  uniqueCount: number;
+  uniquePercentage: number;
+  sampleValues: unknown[];
+  min?: number | null;
+  max?: number | null;
+  avg?: number | null;
+  median?: number | null;
+  stdDev?: number | null;
+  outliersCount?: number;
+  minLength?: number | null;
+  maxLength?: number | null;
+  blankCount?: number;
+}
+
+export interface DataQualityWarning {
+  column?: string;
+  severity: "HIGH" | "MEDIUM" | "LOW" | "INFO";
+  rule: string;
+  message: string;
+}
+
+export interface DatasetProfileResult {
+  datasetId: string;
+  datasetName: string;
+  totalRows: number;
+  totalColumns: number;
+  duplicateRowsCount: number;
+  qualityScore: number;
+  columns: ColumnProfile[];
+  warnings: DataQualityWarning[];
+  evaluatedAt: string;
+}
+
+export async function apiProfileDataset(datasetId: string): Promise<DatasetProfileResult> {
+  return apiFetch<DatasetProfileResult>(`/api/v1/datasets/${datasetId}/profile`);
+}
+
+// ============================================================
+// FEATURE 7: ADVANCED EXPORT CENTER
+// ============================================================
+
+export type ExportResourceType = "DATASET" | "VISUALIZATION" | "DASHBOARD";
+export type ExportFormat = "CSV" | "EXCEL" | "PDF" | "PNG";
+
+export interface ExportRequestPayload {
+  resourceType: ExportResourceType;
+  resourceId: string;
+  format: ExportFormat;
+  workspaceId?: string;
+  options?: {
+    includeHeaders?: boolean;
+    rowLimit?: number;
+    title?: string;
+  };
+}
+
+export interface ExportResult {
+  jobId: string;
+  resourceType: ExportResourceType;
+  resourceId: string;
+  resourceName: string;
+  format: ExportFormat;
+  contentType: string;
+  filename: string;
+  dataBase64?: string;
+  textContent?: string;
+  rowCount: number;
+  fileSizeBytes: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ExportJobData {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  userId: string;
+  resourceType: ExportResourceType;
+  resourceId: string;
+  resourceName: string;
+  format: ExportFormat;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+  rowCount?: number;
+  fileSize?: number;
+  downloadUrl?: string;
+  errorMessage?: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  completedAt?: string;
+  user?: { id: string; name: string; email: string };
+}
+
+export async function apiExportResource(payload: ExportRequestPayload): Promise<ExportResult> {
+  return apiFetch<ExportResult>("/api/v1/exports", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiListExportHistory(
+  workspaceId?: string,
+  limit: number = 50
+): Promise<ExportJobData[]> {
+  const params = new URLSearchParams();
+  if (workspaceId) params.set("workspaceId", workspaceId);
+  params.set("limit", String(limit));
+  return apiFetch<ExportJobData[]>(`/api/v1/exports/history?${params.toString()}`);
+}
+
+// ============================================================
+// FEATURE 8: DASHBOARD TEMPLATES
+// ============================================================
+
+export interface TemplateChartDef {
+  title: string;
+  chartType: string;
+  description?: string;
+  config: Record<string, unknown>;
+  position: { x: number; y: number; w: number; h: number };
+}
+
+export interface DashboardTemplateData {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  thumbnailUrl: string | null;
+  layoutConfig: Record<string, unknown>;
+  chartsConfig: TemplateChartDef[];
+  isSystem: boolean;
+  organizationId: string | null;
+  workspaceId: string | null;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTemplateFromDashboardPayload {
+  dashboardId: string;
+  name: string;
+  description?: string;
+  category: string;
+  workspaceId?: string;
+}
+
+export interface InstantiateDashboardPayload {
+  name: string;
+  description?: string;
+  workspaceId?: string;
+  targetDatasetId?: string;
+}
+
+export async function apiListTemplates(
+  category?: string,
+  workspaceId?: string
+): Promise<DashboardTemplateData[]> {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (workspaceId) params.set("workspaceId", workspaceId);
+  const qs = params.toString();
+  return apiFetch<DashboardTemplateData[]>(`/api/v1/templates${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetTemplate(id: string): Promise<DashboardTemplateData> {
+  return apiFetch<DashboardTemplateData>(`/api/v1/templates/${id}`);
+}
+
+export async function apiCreateTemplateFromDashboard(
+  payload: CreateTemplateFromDashboardPayload
+): Promise<DashboardTemplateData> {
+  return apiFetch<DashboardTemplateData>("/api/v1/templates/from-dashboard", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiInstantiateDashboardFromTemplate(
+  templateId: string,
+  payload: InstantiateDashboardPayload
+): Promise<DashboardData> {
+  return apiFetch<DashboardData>(`/api/v1/templates/${templateId}/instantiate`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ============================================================
+// FEATURE 10: AUDIT LOGS
+// ============================================================
+
+export interface AuditLogItem {
+  id: string;
+  organizationId: string;
+  workspaceId: string | null;
+  userId: string;
+  action: string;
+  resourceType: string;
+  resourceId: string | null;
+  status: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  user?: { id: string; name: string; email: string; avatarUrl: string | null };
+  workspace?: { id: string; name: string; slug: string } | null;
+}
+
+export interface QueryAuditLogsParams {
+  workspaceId?: string;
+  action?: string;
+  resourceType?: string;
+  userId?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface QueryAuditLogsResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  logs: AuditLogItem[];
+}
+
+export interface AuditLogStatsResponse {
+  total: number;
+  successCount: number;
+  failureCount: number;
+  recentLogs: AuditLogItem[];
+}
+
+export async function apiQueryAuditLogs(
+  params?: QueryAuditLogsParams
+): Promise<QueryAuditLogsResponse> {
+  const q = new URLSearchParams();
+  if (params?.workspaceId) q.set("workspaceId", params.workspaceId);
+  if (params?.action) q.set("action", params.action);
+  if (params?.resourceType) q.set("resourceType", params.resourceType);
+  if (params?.userId) q.set("userId", params.userId);
+  if (params?.status) q.set("status", params.status);
+  if (params?.startDate) q.set("startDate", params.startDate);
+  if (params?.endDate) q.set("endDate", params.endDate);
+  if (params?.search) q.set("search", params.search);
+  if (params?.limit) q.set("limit", String(params.limit));
+  if (params?.offset) q.set("offset", String(params.offset));
+  const qs = q.toString();
+  return apiFetch<QueryAuditLogsResponse>(`/api/v1/audit-logs${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetAuditLogStats(workspaceId?: string): Promise<AuditLogStatsResponse> {
+  const q = new URLSearchParams();
+  if (workspaceId) q.set("workspaceId", workspaceId);
+  const qs = q.toString();
+  return apiFetch<AuditLogStatsResponse>(`/api/v1/audit-logs/stats${qs ? `?${qs}` : ""}`);
+}
+
 
 
 

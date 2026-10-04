@@ -46,7 +46,8 @@ export async function verifyResourceWorkspaceAccess(
   resource: { workspaceId?: string | null; organizationId: string },
   userId: string,
   organizationId: string,
-  userRoleName?: string
+  userRoleName?: string,
+  requiredAction: "READ" | "WRITE" = "READ"
 ): Promise<void> {
   // 1. Organization tenant isolation
   if (resource.organizationId !== organizationId) {
@@ -55,6 +56,9 @@ export async function verifyResourceWorkspaceAccess(
 
   // 2. Workspace scoping
   if (resource.workspaceId) {
-    await resolveWorkspaceAccess(resource.workspaceId, userId, organizationId, userRoleName);
+    const access = await resolveWorkspaceAccess(resource.workspaceId, userId, organizationId, userRoleName);
+    if (requiredAction === "WRITE" && access.userRole === "VIEWER" && !access.isOrgAdmin) {
+      throw AppError.forbidden("Access denied: Viewers have read-only access to this workspace");
+    }
   }
 }

@@ -47,6 +47,8 @@ export function testAlertCondition(
   }
 }
 
+export const evaluateAlertCondition = testAlertCondition;
+
 /**
  * Human-readable operator representation.
  */

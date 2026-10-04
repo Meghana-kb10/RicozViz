@@ -22,6 +22,7 @@ import { logger } from "../utils/logger.js";
 import type { Request, Response } from "express";
 import { sendSuccess } from "../utils/response.js";
 import { ensureSystemRolesAndPermissions } from "./system-seed.service.js";
+import { logAuditEvent } from "./audit.service.js";
 
 // ---- Validation schemas ----
 
@@ -269,6 +270,16 @@ export async function register(req: Request, res: Response): Promise<void> {
       workspaceId: result.workspace.id,
     });
 
+    await logAuditEvent({
+      organizationId: result.organization.id,
+      workspaceId: result.workspace.id,
+      userId: result.user.id,
+      action: "USER_REGISTER",
+      resourceType: "User",
+      resourceId: result.user.id,
+      metadata: { email: result.user.email },
+    });
+
     // ---- Issue tokens ----
     const membershipWithDetails = {
       organization: { id: result.organization.id },
@@ -355,6 +366,17 @@ export async function login(req: Request, res: Response): Promise<void> {
   );
 
   if (!user || !passwordMatch) {
+    if (user) {
+      await logAuditEvent({
+        organizationId: user.id,
+        userId: user.id,
+        action: "LOGIN_FAILED",
+        resourceType: "User",
+        resourceId: user.id,
+        status: "FAILURE",
+        metadata: { email: input.email },
+      });
+    }
     throw AppError.unauthorized("Invalid email or password");
   }
 
@@ -375,6 +397,15 @@ export async function login(req: Request, res: Response): Promise<void> {
     membership,
     user.tokenVersion
   );
+
+  await logAuditEvent({
+    organizationId: membership.organization.id,
+    userId: user.id,
+    action: "USER_LOGIN",
+    resourceType: "User",
+    resourceId: user.id,
+    metadata: { email: user.email },
+  });
 
   // ---- Never log password or hash ----
   // Strip sensitive fields before building response
@@ -515,6 +546,14 @@ export async function logout(req: Request, res: Response): Promise<void> {
         // Non-fatal — cookie is still cleared
         logger.warn("Failed to increment tokenVersion on logout", { err });
       });
+
+    await logAuditEvent({
+      organizationId: user.organizationId,
+      userId: user.userId,
+      action: "USER_LOGOUT",
+      resourceType: "User",
+      resourceId: user.userId,
+    });
   }
 
   // Clear the refresh cookie regardless of whether a valid token is present

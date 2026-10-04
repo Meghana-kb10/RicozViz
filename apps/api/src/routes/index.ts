@@ -12,6 +12,9 @@ import workspaceRouter from "./workspace.routes.js";
 import visualizationRouter from "./visualization.routes.js";
 import metricRouter from "./metric.routes.js";
 import alertRouter from "./alert.routes.js";
+import exportRouter from "./export.routes.js";
+import templateRouter from "./template.routes.js";
+import auditRouter from "./audit.routes.js";
 
 const v1Router = Router();
 
@@ -25,6 +28,9 @@ v1Router.use("/dashboards", dashboardRouter);
 v1Router.use("/visualizations", visualizationRouter);
 v1Router.use("/metrics", metricRouter);
 v1Router.use("/alerts", alertRouter);
+v1Router.use("/exports", exportRouter);
+v1Router.use("/templates", templateRouter);
+v1Router.use("/audit-logs", auditRouter);
 
 // Future routes will be added here:
 // v1Router.use("/users",        usersRouter);
@@ -46,6 +52,9 @@ v1Router.get("/", (_req: Request, res: Response) => {
         "/api/v1/visualizations",
         "/api/v1/metrics",
         "/api/v1/alerts",
+        "/api/v1/exports",
+        "/api/v1/templates",
+        "/api/v1/audit-logs",
       ],
     },
   });

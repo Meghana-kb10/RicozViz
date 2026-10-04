@@ -47,7 +47,7 @@ export const updateWorkspaceSchema = z.object({
 
 export const addWorkspaceMemberSchema = z.object({
   userId: z.string().uuid("Invalid user ID format"),
-  role: z.enum(["ADMIN", "MEMBER"]).default("MEMBER"),
+  role: z.enum(["OWNER", "ADMIN", "MEMBER", "EDITOR", "VIEWER"]).default("MEMBER"),
 });
 
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
