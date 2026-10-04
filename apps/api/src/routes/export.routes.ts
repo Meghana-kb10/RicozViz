@@ -18,6 +18,7 @@ const exportRequestSchema = z.object({
   resourceId: z.string().min(1, "Resource ID is required"),
   format: z.enum(["CSV", "EXCEL", "PDF", "PNG"]),
   workspaceId: z.string().optional(),
+  rowLimit: z.number().int().positive().max(25000).optional(),
   options: z
     .object({
       includeHeaders: z.boolean().optional(),
@@ -39,12 +40,16 @@ router.post(
   asyncHandler(async (req, res) => {
     const user = req.user!;
     const parsed = exportRequestSchema.parse(req.body);
+    const effectiveRowLimit = parsed.options?.rowLimit ?? parsed.rowLimit;
 
     const result = await exportResource({
       resourceType: parsed.resourceType,
       resourceId: parsed.resourceId,
       format: parsed.format,
-      options: parsed.options,
+      options: {
+        ...parsed.options,
+        rowLimit: effectiveRowLimit,
+      },
       userId: user.userId,
       organizationId: user.organizationId,
       workspaceId: parsed.workspaceId,

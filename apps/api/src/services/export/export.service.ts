@@ -107,13 +107,21 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
     resourceName = dataset.name;
     columns = dataset.columns.map((c) => c.name);
 
-    const queryRes = await datasetQueryEngine.executeQuery(dataset, {
-      limit: maxRows,
-      offset: 0,
-    });
-    rows = queryRes.rows || [];
-    if (columns.length === 0 && queryRes.columns.length > 0) {
-      columns = queryRes.columns.map((c) => c.name);
+    let currentOffset = 0;
+    while (rows.length < maxRows) {
+      const batchLimit = Math.min(1000, maxRows - rows.length);
+      const queryRes = await datasetQueryEngine.executeQuery(dataset, {
+        limit: batchLimit,
+        offset: currentOffset,
+      });
+      const batchRows = queryRes.rows || [];
+      if (batchRows.length === 0) break;
+      rows.push(...batchRows);
+      currentOffset += batchRows.length;
+      if (columns.length === 0 && queryRes.columns.length > 0) {
+        columns = queryRes.columns.map((c) => c.name);
+      }
+      if (batchRows.length < batchLimit) break;
     }
     sheets.push({ name: dataset.name.slice(0, 31), rows });
   } else if (resourceType === "VISUALIZATION") {
@@ -142,13 +150,21 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
       );
 
       columns = chart.dataset.columns.map((c) => c.name);
-      const queryRes = await datasetQueryEngine.executeQuery(chart.dataset, {
-        limit: maxRows,
-        offset: 0,
-      });
-      rows = queryRes.rows || [];
-      if (columns.length === 0 && queryRes.columns.length > 0) {
-        columns = queryRes.columns.map((c) => c.name);
+      let currentOffset = 0;
+      while (rows.length < maxRows) {
+        const batchLimit = Math.min(1000, maxRows - rows.length);
+        const queryRes = await datasetQueryEngine.executeQuery(chart.dataset, {
+          limit: batchLimit,
+          offset: currentOffset,
+        });
+        const batchRows = queryRes.rows || [];
+        if (batchRows.length === 0) break;
+        rows.push(...batchRows);
+        currentOffset += batchRows.length;
+        if (columns.length === 0 && queryRes.columns.length > 0) {
+          columns = queryRes.columns.map((c) => c.name);
+        }
+        if (batchRows.length < batchLimit) break;
       }
     } else {
       // In-memory or synthetic config rows
