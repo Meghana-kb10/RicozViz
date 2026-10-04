@@ -193,7 +193,7 @@ async function runFeatures6To10ProductionSmokeTest() {
   console.log(`   ✅ Found template: "${salesTmpl.name}" (Category: ${salesTmpl.category})`);
 
   console.log("13. Instantiating Dashboard From Template...");
-  const applyRes = await fetch(`${API_BASE}/templates/${salesTmpl.id}/apply`, {
+  const applyRes = await fetch(`${API_BASE}/templates/${salesTmpl.id}/instantiate`, {
     method: "POST",
     headers,
     body: JSON.stringify({

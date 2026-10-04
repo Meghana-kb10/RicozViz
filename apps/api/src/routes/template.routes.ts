@@ -99,7 +99,7 @@ router.post(
  * Permission: TEMPLATE_APPLY or DASHBOARD_CREATE
  */
 router.post(
-  "/:id/instantiate",
+  ["/:id/instantiate", "/:id/apply"],
   requireAnyPermission("TEMPLATE_APPLY", "DASHBOARD_CREATE"),
   asyncHandler(async (req, res) => {
     const user = req.user!;
