@@ -278,7 +278,7 @@ export async function apiRemoveWorkspaceMember(
 // DATA SOURCE TYPES & API METHODS
 // ============================================================
 
-export type DataSourceType = "POSTGRESQL" | "CSV" | "REST_API" | "XLSX" | "JSON";
+export type DataSourceType = "POSTGRESQL" | "MYSQL" | "CSV" | "REST_API" | "XLSX" | "JSON";
 export type DataSourceStatus = "CONNECTED" | "PENDING" | "FAILED" | "INACTIVE";
 
 export interface DataSourceData {
@@ -1844,9 +1844,14 @@ export interface ColumnProfile {
   median?: number | null;
   stdDev?: number | null;
   outliersCount?: number;
+  outlierPercentage?: number;
+  minDate?: string | null;
+  maxDate?: string | null;
   minLength?: number | null;
   maxLength?: number | null;
   blankCount?: number;
+  invalidCount?: number;
+  invalidPercentage?: number;
 }
 
 export interface DataQualityWarning {
@@ -1856,6 +1861,17 @@ export interface DataQualityWarning {
   message: string;
 }
 
+export interface DatasetQualitySummary {
+  dataQualityScore: number;
+  missingDataCount: number;
+  missingDataPercentage: number;
+  duplicateRowsCount: number;
+  duplicateRowsPercentage: number;
+  typeIssuesCount: number;
+  potentialOutliersCount: number;
+  grade: "EXCELLENT" | "GOOD" | "FAIR" | "POOR";
+}
+
 export interface DatasetProfileResult {
   datasetId: string;
   datasetName: string;
@@ -1863,13 +1879,29 @@ export interface DatasetProfileResult {
   totalColumns: number;
   duplicateRowsCount: number;
   qualityScore: number;
+  summary?: DatasetQualitySummary;
   columns: ColumnProfile[];
   warnings: DataQualityWarning[];
   evaluatedAt: string;
 }
 
-export async function apiProfileDataset(datasetId: string): Promise<DatasetProfileResult> {
-  return apiFetch<DatasetProfileResult>(`/api/v1/datasets/${datasetId}/profile`);
+export async function apiProfileDataset(
+  datasetId: string,
+  refresh = false
+): Promise<DatasetProfileResult> {
+  return apiFetch<DatasetProfileResult>(
+    `/api/v1/datasets/${datasetId}/profile${refresh ? "?refresh=true" : ""}`
+  );
+}
+
+export async function apiTestRawConnection(payload: {
+  type: string;
+  connection: Record<string, unknown>;
+}): Promise<{ success: boolean; status: string; message: string; details?: Record<string, unknown> }> {
+  return apiFetch("/api/v1/data-sources/test-connection", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 // ============================================================

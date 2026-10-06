@@ -17,6 +17,7 @@ import { logger } from "../../utils/logger.js";
 import { logAuditEvent } from "../audit.service.js";
 import { resolveWorkspaceAccess } from "../workspace.service.js";
 import { schemaDiscoveryService } from "./schema-discovery.service.js";
+import { computeDatasetProfile } from "./data-quality.service.js";
 import {
   compileCalculatedField,
   evaluateExpression,
@@ -493,7 +494,7 @@ export async function executeDatasetRefresh(
       history: newHistory,
     };
 
-    const updatedMeta = {
+    const updatedMeta: Record<string, any> = {
       ...existingMeta,
       sampleData: sampleRows,
       rowCount: updatedRowCount,
@@ -501,6 +502,18 @@ export async function executeDatasetRefresh(
       lastRefreshedAt: now.toISOString(),
       refreshSchedule: newSchedule,
     };
+
+    if (sampleRows.length > 0) {
+      try {
+        const refreshedProfile = computeDatasetProfile(
+          { id: dataset.id, name: dataset.name, schemaMeta: updatedMeta, columns: dataset.columns },
+          sampleRows
+        );
+        updatedMeta.dataQualityProfile = refreshedProfile;
+      } catch {
+        // Non-blocking profiling failure
+      }
+    }
 
     // 3. Persist refreshed state in database
     await prisma.dataset.update({

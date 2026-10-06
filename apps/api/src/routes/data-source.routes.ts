@@ -14,6 +14,7 @@ import {
   updateDataSource,
   deleteDataSource,
   testDataSourceConnection,
+  testRawConnection,
 } from "../services/data-source/data-source.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -23,6 +24,17 @@ const router = Router();
  * All data-source endpoints require authentication.
  */
 router.use(requireAuth);
+
+/**
+ * POST /api/v1/data-sources/test-connection
+ * Test connection credentials before saving.
+ * Permissions: DATA_SOURCE_TEST or DATA_SOURCE_CREATE
+ */
+router.post(
+  "/test-connection",
+  requirePermission("DATA_SOURCE_TEST"),
+  asyncHandler(testRawConnection)
+);
 
 /**
  * POST /api/v1/data-sources

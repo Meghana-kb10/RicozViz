@@ -29,6 +29,7 @@ import {
   discoverXlsxSchema,
 } from "./type-inference.js";
 import { schemaDiscoveryService } from "./schema-discovery.service.js";
+import { computeDatasetProfile } from "./data-quality.service.js";
 import {
   datasetQueryEngine,
   ALLOWED_AGGREGATIONS,
@@ -403,6 +404,18 @@ export async function createDataset(req: Request, res: Response): Promise<void> 
     fileSize: input.fileSize || null,
   };
 
+  if (sampleRows.length > 0) {
+    try {
+      const generatedProfile = computeDatasetProfile(
+        { id: "pending", name: input.name, schemaMeta },
+        sampleRows
+      );
+      schemaMeta.dataQualityProfile = generatedProfile;
+    } catch {
+      // Non-blocking profiling failure
+    }
+  }
+
   const finalRowCount = input.rowCount || Number(schemaMeta["rowCount"]) || 0;
   const finalColumnCount = input.columnCount || Number(schemaMeta["columnCount"]) || schemaColumns.length || 0;
 
@@ -622,6 +635,18 @@ export async function uploadDataset(req: Request, res: Response): Promise<void> 
     sourceType: detectedSourceType,
     uploadedAt: new Date().toISOString(),
   };
+
+  if (sampleRows.length > 0) {
+    try {
+      const generatedProfile = computeDatasetProfile(
+        { id: "pending", name: datasetName, schemaMeta },
+        sampleRows
+      );
+      schemaMeta.dataQualityProfile = generatedProfile;
+    } catch {
+      // Non-blocking profiling failure
+    }
+  }
 
   const dataset = await prisma.dataset.create({
     data: {
@@ -1033,7 +1058,7 @@ export async function listSourceTables(req: Request, res: Response): Promise<voi
   if (!ds) throw AppError.notFound("Data source");
   await verifyResourceWorkspaceAccess(ds, userId, organizationId, roleName);
 
-  const tables = await schemaDiscoveryService.listPostgresTables(
+  const tables = await schemaDiscoveryService.listTables(
     dataSourceId,
     organizationId
   );
@@ -1043,7 +1068,7 @@ export async function listSourceTables(req: Request, res: Response): Promise<voi
 
 /**
  * GET /api/v1/datasets/source/:dataSourceId/tables/:tableName/schema
- * Discovers column schema for a specific table in a PostgreSQL DataSource.
+ * Discovers column schema for a specific table in a DataSource (PostgreSQL, MySQL, etc).
  */
 export async function getSourceTableSchema(req: Request, res: Response): Promise<void> {
   const { organizationId, userId, roleName } = req.user!;
@@ -1058,7 +1083,7 @@ export async function getSourceTableSchema(req: Request, res: Response): Promise
   if (!ds) throw AppError.notFound("Data source");
   await verifyResourceWorkspaceAccess(ds, userId, organizationId, roleName);
 
-  const columns = await schemaDiscoveryService.discoverPostgresTableSchema(
+  const columns = await schemaDiscoveryService.discoverTableSchema(
     dataSourceId,
     organizationId,
     tableName

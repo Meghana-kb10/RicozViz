@@ -279,11 +279,13 @@ router.get(
   asyncHandler(async (req, res) => {
     const user = req.user!;
     const datasetId = req.params.id as string;
+    const forceRefresh = req.query.refresh === "true" || req.query.force === "true";
     const profile = await profileDataset(
       datasetId,
       user.userId,
       user.organizationId,
-      user.roleName
+      user.roleName,
+      forceRefresh
     );
     sendSuccess(res, profile, 200);
   })

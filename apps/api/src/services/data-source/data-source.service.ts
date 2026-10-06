@@ -33,6 +33,15 @@ const postgresConnectionSchema = z.object({
   ssl: z.boolean().optional().default(false),
 });
 
+const mysqlConnectionSchema = z.object({
+  host: z.string().min(1, "Host is required"),
+  port: z.coerce.number().int().min(1).max(65535).default(3306),
+  database: z.string().min(1, "Database name is required"),
+  username: z.string().min(1, "Username is required"),
+  password: z.string().optional(),
+  ssl: z.boolean().optional().default(false),
+});
+
 const csvConnectionSchema = z.object({
   fileName: z.string().min(1, "File name is required"),
   delimiter: z.string().min(1).default(","),
@@ -65,12 +74,19 @@ export const createDataSourceSchema = z.object({
   workspaceId: z.string().uuid("Invalid workspace ID").optional().nullable(),
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
-  type: z.enum(["POSTGRESQL", "CSV", "CSV_UPLOAD", "REST_API", "XLSX", "JSON"]),
+  type: z.enum(["POSTGRESQL", "MYSQL", "CSV", "CSV_UPLOAD", "REST_API", "XLSX", "JSON"]),
   connection: z.record(z.unknown()),
 }).superRefine((data, ctx) => {
   const normalizedType = data.type === "CSV" ? "CSV_UPLOAD" : data.type;
   if (normalizedType === "POSTGRESQL") {
     const res = postgresConnectionSchema.safeParse(data.connection);
+    if (!res.success) {
+      for (const issue of res.error.issues) {
+        ctx.addIssue({ ...issue, path: ["connection", ...issue.path] });
+      }
+    }
+  } else if (normalizedType === "MYSQL") {
+    const res = mysqlConnectionSchema.safeParse(data.connection);
     if (!res.success) {
       for (const issue of res.error.issues) {
         ctx.addIssue({ ...issue, path: ["connection", ...issue.path] });
@@ -166,14 +182,14 @@ export function buildSafeDataSource(ds: DataSource) {
 /**
  * Extracts and separates sensitive credentials from connection configuration.
  */
-function separateCredentials(
+export function separateCredentials(
   type: string,
   connection: Record<string, unknown>
 ): { nonSecretMeta: Record<string, unknown>; credentials: Record<string, unknown> } {
   const nonSecretMeta = { ...connection };
   const credentials: Record<string, unknown> = {};
 
-  if (type === "POSTGRESQL") {
+  if (type === "POSTGRESQL" || type === "MYSQL") {
     if (nonSecretMeta.password) {
       credentials.password = nonSecretMeta.password;
       delete nonSecretMeta.password;
@@ -537,5 +553,32 @@ export async function testDataSourceConnection(req: Request, res: Response): Pro
     userAgent: req.get("user-agent"),
   });
 
+  sendSuccess(res, testResult);
+}
+
+export const testRawConnectionSchema = z.object({
+  type: z.enum(["POSTGRESQL", "MYSQL", "CSV", "CSV_UPLOAD", "REST_API", "XLSX", "JSON"]),
+  connection: z.record(z.unknown()),
+});
+
+/**
+ * POST /api/v1/data-sources/test-connection
+ * Tests raw connection configuration and credentials before creating a DataSource.
+ * Enforces secure credentials handling and never leaks secrets.
+ */
+export async function testRawConnection(req: Request, res: Response): Promise<void> {
+  const input = testRawConnectionSchema.parse(req.body);
+  const connector = getConnector(input.type);
+  if (!connector) {
+    throw AppError.badRequest(`Unsupported connector type: ${input.type}`);
+  }
+
+  const { nonSecretMeta, credentials } = separateCredentials(input.type, input.connection);
+  const valResult = connector.validateConfiguration(nonSecretMeta, credentials);
+  if (!valResult.valid) {
+    throw AppError.badRequest(valResult.error || "Invalid connection configuration", valResult.fieldErrors);
+  }
+
+  const testResult = await connector.testConnection(nonSecretMeta, credentials);
   sendSuccess(res, testResult);
 }

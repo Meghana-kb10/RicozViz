@@ -610,6 +610,12 @@ export default function DatasetDetailPage({
             {!isEditing && (
               <div className="flex items-center gap-2">
                 <Link
+                  href={`/data-quality?datasetId=${dataset.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-100 transition"
+                >
+                  <span>🛡️ Data Quality Profile</span>
+                </Link>
+                <Link
                   href={`/visualizations?datasetId=${dataset.id}`}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 transition"
                 >
@@ -657,10 +663,16 @@ export default function DatasetDetailPage({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 mb-6 gap-2">
+        <div className="flex border-b border-gray-200 mb-6 gap-2 overflow-x-auto">
+          <Link
+            href={`/data-quality?datasetId=${dataset.id}`}
+            className="pb-3 px-4 text-xs font-bold transition border-b-2 border-transparent text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <span>🛡️ Quality & Profiling</span>
+          </Link>
           <button
             onClick={() => setActiveTab("SCHEMA")}
-            className={`pb-3 px-4 text-xs font-bold transition border-b-2 ${
+            className={`pb-3 px-4 text-xs font-bold transition border-b-2 whitespace-nowrap ${
               activeTab === "SCHEMA"
                 ? "border-indigo-600 text-indigo-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"

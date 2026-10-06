@@ -18,6 +18,9 @@ import {
   Copy,
   Hash,
   Database,
+  Calendar,
+  AlertOctagon,
+  Sparkles,
 } from "lucide-react";
 import {
   apiListDatasets,
@@ -44,6 +47,15 @@ export default function DataQualityPage() {
         const data = await apiListDatasets();
         setDatasets(data);
         if (data.length > 0) {
+          // Check URL query param ?datasetId=...
+          if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const queryDsId = params.get("datasetId");
+            if (queryDsId && data.some((d) => d.id === queryDsId)) {
+              setSelectedDatasetId(queryDsId);
+              return;
+            }
+          }
           setSelectedDatasetId(data[0].id);
         }
       } catch (err) {
@@ -57,15 +69,15 @@ export default function DataQualityPage() {
 
   useEffect(() => {
     if (selectedDatasetId) {
-      runProfiling(selectedDatasetId);
+      runProfiling(selectedDatasetId, false);
     }
   }, [selectedDatasetId]);
 
-  async function runProfiling(datasetId: string) {
+  async function runProfiling(datasetId: string, force = false) {
     try {
       setProfiling(true);
       setError(null);
-      const res = await apiProfileDataset(datasetId);
+      const res = await apiProfileDataset(datasetId, force);
       setProfile(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to profile dataset");
@@ -80,6 +92,10 @@ export default function DataQualityPage() {
     const matchesType = typeFilter === "ALL" || col.type.toLowerCase() === typeFilter.toLowerCase();
     return matchesSearch && matchesType;
   });
+
+  const summary = profile?.summary;
+  const qualityScore = profile?.qualityScore ?? summary?.dataQualityScore ?? 100;
+  const grade = summary?.grade ?? (qualityScore >= 90 ? "EXCELLENT" : qualityScore >= 75 ? "GOOD" : qualityScore >= 50 ? "FAIR" : "POOR");
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10">
@@ -101,7 +117,7 @@ export default function DataQualityPage() {
               </h1>
             </div>
             <p className="text-sm text-slate-400">
-              Deep structural profiling, null distribution, uniqueness, statistical outliers, and health scoring.
+              Automated data intelligence: structural profiling, completeness, duplicate detection, type integrity, and statistical anomaly scores.
             </p>
           </div>
 
@@ -125,12 +141,12 @@ export default function DataQualityPage() {
             </select>
 
             <button
-              onClick={() => selectedDatasetId && runProfiling(selectedDatasetId)}
+              onClick={() => selectedDatasetId && runProfiling(selectedDatasetId, true)}
               disabled={!selectedDatasetId || profiling}
               className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-medium rounded-lg text-sm transition-colors shadow-lg shadow-emerald-950/40"
             >
               <RefreshCw className={`w-4 h-4 ${profiling ? "animate-spin" : ""}`} />
-              {profiling ? "Profiling..." : "Re-run Profile"}
+              {profiling ? "Profiling..." : "Refresh Profile"}
             </button>
           </div>
         </div>
@@ -153,83 +169,87 @@ export default function DataQualityPage() {
 
         {profile && (
           <>
-            {/* Summary KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Quality Score */}
+            {/* Overall Dataset Quality View (5 Primary Pillars) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* 1. Data Quality Score */}
               <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-                  <span>OVERALL QUALITY SCORE</span>
-                  <ShieldCheck
-                    className={`w-4 h-4 ${
-                      profile.qualityScore >= 80
-                        ? "text-emerald-400"
-                        : profile.qualityScore >= 60
-                        ? "text-amber-400"
-                        : "text-rose-400"
+                  <span>DATA QUALITY SCORE</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      grade === "EXCELLENT"
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                        : grade === "GOOD"
+                        ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                        : grade === "FAIR"
+                        ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                        : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
                     }`}
-                  />
+                  >
+                    {grade}
+                  </span>
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span
                     className={`text-3xl font-extrabold ${
-                      profile.qualityScore >= 80
+                      qualityScore >= 80
                         ? "text-emerald-400"
-                        : profile.qualityScore >= 60
+                        : qualityScore >= 60
                         ? "text-amber-400"
                         : "text-rose-400"
                     }`}
                   >
-                    {profile.qualityScore}%
+                    {qualityScore}
                   </span>
-                  <span className="text-xs text-slate-500">
-                    {profile.qualityScore >= 80
-                      ? "Healthy"
-                      : profile.qualityScore >= 60
-                      ? "Fair"
-                      : "Degraded"}
-                  </span>
+                  <span className="text-xs text-slate-500">/ 100</span>
                 </div>
                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all duration-500 ${
-                      profile.qualityScore >= 80
+                      qualityScore >= 80
                         ? "bg-emerald-500"
-                        : profile.qualityScore >= 60
+                        : qualityScore >= 60
                         ? "bg-amber-500"
                         : "bg-rose-500"
                     }`}
-                    style={{ width: `${profile.qualityScore}%` }}
+                    style={{ width: `${qualityScore}%` }}
                   />
                 </div>
+                <div className="text-[11px] text-slate-500">
+                  {profile.totalRows.toLocaleString()} rows · {profile.totalColumns} cols
+                </div>
               </div>
 
-              {/* Total Sampled Rows */}
+              {/* 2. Missing Data */}
               <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-                  <span>TOTAL ROWS ANALYZED</span>
-                  <Database className="w-4 h-4 text-cyan-400" />
+                  <span>MISSING DATA</span>
+                  <Percent className="w-4 h-4 text-amber-400" />
                 </div>
-                <div className="text-3xl font-extrabold text-white">
-                  {profile.totalRows.toLocaleString()}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-white">
+                    {summary ? `${summary.missingDataPercentage}%` : "0%"}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    ({summary?.missingDataCount.toLocaleString() ?? 0} nulls)
+                  </span>
                 </div>
-                <div className="text-xs text-slate-500">Full dataset / safe sample batch</div>
+                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-500 transition-all duration-500"
+                    style={{ width: `${Math.min(summary?.missingDataPercentage ?? 0, 100)}%` }}
+                  />
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {(summary?.missingDataPercentage ?? 0) === 0 ? "Complete data records" : "Sparse cells detected"}
+                </div>
               </div>
 
-              {/* Total Columns */}
+              {/* 3. Duplicates */}
               <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-                  <span>TOTAL COLUMNS</span>
-                  <Layers className="w-4 h-4 text-indigo-400" />
-                </div>
-                <div className="text-3xl font-extrabold text-white">{profile.totalColumns}</div>
-                <div className="text-xs text-slate-500">Schema attributes profiled</div>
-              </div>
-
-              {/* Duplicate Records */}
-              <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-                  <span>DUPLICATE ROWS</span>
-                  <Copy className="w-4 h-4 text-amber-400" />
+                  <span>DUPLICATES</span>
+                  <Copy className="w-4 h-4 text-cyan-400" />
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span
@@ -241,13 +261,67 @@ export default function DataQualityPage() {
                   </span>
                   {profile.totalRows > 0 && (
                     <span className="text-xs text-slate-500">
-                      ({Math.round((profile.duplicateRowsCount / profile.totalRows) * 100)}%)
+                      ({summary ? summary.duplicateRowsPercentage : Math.round((profile.duplicateRowsCount / profile.totalRows) * 100)}%)
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-500">
-                  {profile.duplicateRowsCount === 0 ? "Zero redundant rows" : "Potential deduplication needed"}
+                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-cyan-500 transition-all duration-500"
+                    style={{ width: `${Math.min((summary?.duplicateRowsPercentage ?? 0) * 5, 100)}%` }}
+                  />
                 </div>
+                <div className="text-[11px] text-slate-500">
+                  {profile.duplicateRowsCount === 0 ? "Zero redundant records" : "Identical rows detected"}
+                </div>
+              </div>
+
+              {/* 4. Type Issues */}
+              <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                  <span>TYPE ISSUES</span>
+                  <AlertOctagon className="w-4 h-4 text-rose-400" />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className={`text-3xl font-extrabold ${
+                      (summary?.typeIssuesCount ?? 0) > 0 ? "text-rose-400" : "text-emerald-400"
+                    }`}
+                  >
+                    {summary?.typeIssuesCount ?? 0}
+                  </span>
+                  <span className="text-xs text-slate-500">invalid values</span>
+                </div>
+                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-rose-500 transition-all duration-500"
+                    style={{ width: `${Math.min((summary?.typeIssuesCount ?? 0) * 10, 100)}%` }}
+                  />
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {(summary?.typeIssuesCount ?? 0) === 0 ? "All types strictly valid" : "Type mismatch detected"}
+                </div>
+              </div>
+
+              {/* 5. Potential Outliers */}
+              <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                  <span>POTENTIAL OUTLIERS</span>
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-indigo-300">
+                    {summary?.potentialOutliersCount ?? 0}
+                  </span>
+                  <span className="text-xs text-slate-500">records</span>
+                </div>
+                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-indigo-500 transition-all duration-500"
+                    style={{ width: `${Math.min((summary?.potentialOutliersCount ?? 0) * 5, 100)}%` }}
+                  />
+                </div>
+                <div className="text-[11px] text-slate-500">1.5x IQR statistical fence rule</div>
               </div>
             </div>
 
@@ -322,22 +396,23 @@ export default function DataQualityPage() {
                     <option value="string">String</option>
                     <option value="number">Number</option>
                     <option value="boolean">Boolean</option>
-                    <option value="date">Date</option>
+                    <option value="date">Date / Time</option>
                   </select>
                 </div>
               </div>
 
               {/* Column Table */}
-              <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+              <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden shadow-xl">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
                         <th className="py-3 px-4">Column Name</th>
-                        <th className="py-3 px-4">Data Type</th>
+                        <th className="py-3 px-4">Type</th>
                         <th className="py-3 px-4">Missing / Nulls</th>
-                        <th className="py-3 px-4">Distinct Values</th>
-                        <th className="py-3 px-4">Numeric Distribution (Min / Max / Avg / Median)</th>
+                        <th className="py-3 px-4">Unique Values</th>
+                        <th className="py-3 px-4">Statistics (Min / Max / Mean / Median)</th>
+                        <th className="py-3 px-4">Invalid Values</th>
                         <th className="py-3 px-4">Outliers</th>
                         <th className="py-3 px-4">Sample Values</th>
                       </tr>
@@ -389,8 +464,17 @@ export default function DataQualityPage() {
                                   <span className="text-slate-500 ml-1">Max:</span> {col.max}
                                 </div>
                                 <div>
-                                  <span className="text-slate-500">Avg:</span> {col.avg}{" "}
+                                  <span className="text-slate-500">Mean:</span> {col.avg}{" "}
                                   <span className="text-slate-500 ml-1">Med:</span> {col.median}
+                                </div>
+                              </div>
+                            ) : col.minDate ? (
+                              <div className="text-[11px] space-y-0.5 font-sans">
+                                <div className="truncate max-w-[150px]">
+                                  <span className="text-slate-500">Min:</span> {col.minDate.slice(0, 10)}
+                                </div>
+                                <div className="truncate max-w-[150px]">
+                                  <span className="text-slate-500">Max:</span> {col.maxDate?.slice(0, 10)}
                                 </div>
                               </div>
                             ) : (
@@ -398,8 +482,17 @@ export default function DataQualityPage() {
                             )}
                           </td>
                           <td className="py-3 px-4">
-                            {col.outliersCount !== undefined && col.outliersCount > 0 ? (
+                            {col.invalidCount !== undefined && col.invalidCount > 0 ? (
                               <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold border border-rose-500/40 text-[10px]">
+                                {col.invalidCount} invalid ({col.invalidPercentage}%)
+                              </span>
+                            ) : (
+                              <span className="text-slate-600 text-[11px] font-sans">0</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {col.outliersCount !== undefined && col.outliersCount > 0 ? (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40 text-[10px]">
                                 {col.outliersCount} outliers
                               </span>
                             ) : (
