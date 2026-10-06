@@ -48,6 +48,9 @@ import { buildChartQueryParams } from "../../../lib/chart-query-mapper";
 import { ChartRenderer } from "../../../components/visualization/ChartRenderer";
 import { VisualizationStudio } from "../../../components/visualization/VisualizationStudio";
 import { DashboardFilterBar } from "../../../components/dashboard/DashboardFilterBar";
+import { DashboardAiSummary } from "../../../components/ai/DashboardAiSummary";
+import { AiAnalyticsModal } from "../../../components/ai/AiAnalyticsModal";
+import type { NlToChartResponse } from "../../../lib/api";
 import {
   type DashboardFilter,
   type DrillDownState,
@@ -98,6 +101,7 @@ import {
   Users,
   UserPlus,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 
 const QUICK_CHART_TYPES: { value: ChartType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -206,6 +210,30 @@ export default function DashboardDetailPage({
   const [reportExecutions, setReportExecutions] = useState<ReportExecutionData[]>([]);
   const [reportFormat, setReportFormat] = useState<string>("PDF");
   const [scheduleModalTab, setScheduleModalTab] = useState<"CONFIG" | "HISTORY">("CONFIG");
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
+  const handleAddAiGeneratedChart = async (chartSpec: NlToChartResponse) => {
+    if (!dashboard) return;
+    try {
+      const targetDatasetId = datasets[0]?.id;
+      if (!targetDatasetId) {
+        setErrorMsg("No dataset available to save chart");
+        return;
+      }
+      const created = await apiCreateChart(dashboard.id, {
+        title: chartSpec.title,
+        chartType: chartSpec.chartType as ChartType,
+        datasetId: targetDatasetId,
+        config: chartSpec.config as any,
+        position: { x: 0, y: 0, w: 6, h: 4 },
+      });
+      setCharts((prev) => [...prev, created]);
+      setIsAiModalOpen(false);
+      setSuccessMsg(`Added "${chartSpec.title}" to dashboard.`);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to add chart to dashboard");
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && !auth) {
@@ -1255,8 +1283,25 @@ export default function DashboardDetailPage({
               </p>
             </div>
 
+            {/* AI Analyst & NL Chart Trigger */}
+            <div className="p-3 pb-1">
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(true)}
+                className="w-full flex items-center justify-between rounded-xl p-2.5 text-left text-xs font-bold text-indigo-700 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 transition border border-indigo-200/70 shadow-2xs group"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-indigo-600 animate-pulse" />
+                  <span>AI Analyst & NL Chart</span>
+                </div>
+                <span className="text-[10px] font-mono bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">
+                  AI
+                </span>
+              </button>
+            </div>
+
             {/* Quick Chart Type Buttons */}
-            <div className="p-3 space-y-1">
+            <div className="p-3 pt-1 space-y-1">
               {QUICK_CHART_TYPES.map((type) => {
                 const Icon = type.icon;
                 return (
@@ -1465,6 +1510,21 @@ export default function DashboardDetailPage({
               )}
             </div>
           </div>
+
+          {/* AI Dashboard Summary Banner */}
+          {charts.length > 0 && dashboard && (
+            <div className="mb-6">
+              <DashboardAiSummary
+                dashboardId={dashboard.id}
+                activeFilters={dashboardFilters.map((df) => ({
+                  column: df.field,
+                  operator: df.operator || "=",
+                  value: df.value,
+                }))}
+                onOpenAnalyst={() => setIsAiModalOpen(true)}
+              />
+            </div>
+          )}
 
           {/* Empty State */}
           {charts.length === 0 ? (
@@ -2631,6 +2691,21 @@ export default function DashboardDetailPage({
           </div>
         </div>
       )}
+
+      {/* AI Analytics Modal */}
+      <AiAnalyticsModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        datasets={datasets}
+        defaultDatasetId={charts[0]?.datasetId || datasets[0]?.id}
+        activeFilters={dashboardFilters.map((df) => ({
+          column: df.field,
+          operator: df.operator || "=",
+          value: df.value,
+        }))}
+        dashboardId={dashboard?.id}
+        onAddGeneratedChart={handleAddAiGeneratedChart}
+      />
 
       {/* Print Media Query Rules */}
       <style jsx global>{`

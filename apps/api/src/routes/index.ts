@@ -15,6 +15,7 @@ import alertRouter from "./alert.routes.js";
 import exportRouter from "./export.routes.js";
 import templateRouter from "./template.routes.js";
 import auditRouter from "./audit.routes.js";
+import aiRouter from "./ai.routes.js";
 
 const v1Router = Router();
 
@@ -31,6 +32,7 @@ v1Router.use("/alerts", alertRouter);
 v1Router.use("/exports", exportRouter);
 v1Router.use("/templates", templateRouter);
 v1Router.use("/audit-logs", auditRouter);
+v1Router.use("/ai", aiRouter);
 
 // Future routes will be added here:
 // v1Router.use("/users",        usersRouter);
@@ -55,6 +57,10 @@ v1Router.get("/", (_req: Request, res: Response) => {
         "/api/v1/exports",
         "/api/v1/templates",
         "/api/v1/audit-logs",
+        "/api/v1/ai/ask",
+        "/api/v1/ai/nl-to-chart",
+        "/api/v1/ai/insights",
+        "/api/v1/ai/dashboard-summary",
       ],
     },
   });

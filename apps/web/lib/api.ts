@@ -2343,6 +2343,125 @@ export async function apiGetSharedVisualizationData(
   );
 }
 
+// ============================================================
+// PHASE 2: AI ANALYTICS API
+// ============================================================
+
+export interface AnalystQueryResponse {
+  answer: string;
+  question: string;
+  queryExecuted: DatasetQueryParams;
+  resultSummary: {
+    rowCount: number;
+    primaryMetric?: { name: string; value: number; formatted: string };
+    topEntity?: { dimension: string; value: string; metricValue: number };
+  };
+  data: Array<Record<string, unknown>>;
+  chartSuggestion?: {
+    title: string;
+    chartType: string;
+    dimension: string;
+    measure: string;
+    aggregation: string;
+  };
+  groundingVerification: {
+    isGrounded: boolean;
+    datasetName: string;
+    datasetId: string;
+    executionTimeMs: number;
+  };
+}
+
+export interface NlToChartResponse {
+  title: string;
+  chartType: string;
+  explanation: string;
+  config: {
+    dimensions: string[];
+    measures: Array<{ column: string; aggregation: string; alias?: string }>;
+    sort?: { column: string; direction: "asc" | "desc" };
+    limit?: number;
+    filters?: DatasetQueryFilter[];
+  };
+  data: Array<Record<string, unknown>>;
+  columns: Array<{ name: string; type: string }>;
+  rowCount: number;
+}
+
+export interface AutoInsight {
+  id: string;
+  type: "PERFORMER_TOP" | "PERFORMER_BOTTOM" | "DOMINANCE" | "TREND" | "ANOMALY";
+  title: string;
+  description: string;
+  metric: string;
+  value?: number;
+  formattedValue?: string;
+  dimensionValue?: string;
+  isAnomaly: boolean;
+  detectionMethod?: "Z_SCORE" | "IQR" | "PERCENTAGE_CHANGE" | "DISTRIBUTION";
+  score?: number;
+}
+
+export interface DashboardSummaryResponse {
+  dashboardId: string;
+  dashboardName: string;
+  summaryBullets: string[];
+  keyMetrics: Array<{ label: string; value: string | number; change?: string }>;
+  filterContextText: string;
+  comparisonNote: string;
+  generatedAt: string;
+}
+
+export async function apiAskDataAnalyst(params: {
+  datasetId: string;
+  question: string;
+  filters?: DatasetQueryFilter[];
+  dashboardId?: string;
+}): Promise<AnalystQueryResponse> {
+  return apiFetch<AnalystQueryResponse>("/api/v1/ai/ask", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
+export async function apiNlToChart(params: {
+  datasetId: string;
+  prompt: string;
+  filters?: DatasetQueryFilter[];
+}): Promise<NlToChartResponse> {
+  return apiFetch<NlToChartResponse>("/api/v1/ai/nl-to-chart", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
+export async function apiGetInsights(params: {
+  datasetId: string;
+  dimension?: string;
+  measure?: string;
+  filters?: DatasetQueryFilter[];
+  data?: Array<Record<string, unknown>>;
+}): Promise<{ insights: AutoInsight[]; summary: string; analyzedRows: number }> {
+  return apiFetch<{ insights: AutoInsight[]; summary: string; analyzedRows: number }>(
+    "/api/v1/ai/insights",
+    {
+      method: "POST",
+      body: JSON.stringify(params),
+    }
+  );
+}
+
+export async function apiGetDashboardSummary(params: {
+  dashboardId: string;
+  activeFilters?: DatasetQueryFilter[];
+}): Promise<DashboardSummaryResponse> {
+  return apiFetch<DashboardSummaryResponse>("/api/v1/ai/dashboard-summary", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
+
 
 
 
