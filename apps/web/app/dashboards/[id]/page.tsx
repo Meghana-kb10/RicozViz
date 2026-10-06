@@ -1019,28 +1019,28 @@ export default function DashboardDetailPage({
       {/* 1. TOP BAR — Enterprise Dashboard Studio Header */}
       {/* ============================================================ */}
       <header className="border-b border-gray-200 bg-white sticky top-0 z-20 no-print">
-        <div className="mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 font-bold text-gray-900">
+        <div className="mx-auto flex h-14 items-center justify-between px-3 sm:px-5 gap-2">
+          <div className="flex items-center gap-2 min-w-0 shrink">
+            <Link href="/" className="flex items-center gap-1.5 font-bold text-gray-900 shrink-0">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-sm">
                 R
               </span>
-              <span className="text-sm tracking-tight">RicozViz</span>
+              <span className="text-sm tracking-tight hidden sm:inline">RicozViz</span>
             </Link>
 
             <span className="text-gray-300">/</span>
-            <Link href="/dashboards" className="text-xs text-gray-500 hover:text-gray-900">
+            <Link href="/dashboards" className="text-xs text-gray-500 hover:text-gray-900 shrink-0 hidden md:inline">
               Dashboards
             </Link>
-            <span className="text-gray-300">/</span>
+            <span className="text-gray-300 hidden md:inline">/</span>
 
             {/* Dashboard Title & Badge */}
-            <div className="flex items-center gap-2">
-              <h1 className="text-xs font-bold text-gray-900 line-clamp-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h1 className="text-xs font-bold text-gray-900 truncate max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]" title={dashboard.name}>
                 {dashboard.name}
               </h1>
               <span
-                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
                   dashboard.status === "PUBLISHED"
                     ? "bg-green-50 text-green-700 border border-green-200"
                     : dashboard.status === "ARCHIVED"
@@ -1053,9 +1053,9 @@ export default function DashboardDetailPage({
             </div>
           </div>
 
-          {/* Right Controls: Mode Toggle, Add Visualization, Profile */}
-          <div className="flex items-center gap-2.5">
-            {/* View Mode Switch */}
+          {/* Right Controls: Streamlined Mode Toggle, Sync, Actions, Profile */}
+          <div className="flex items-center gap-2">
+            {/* View Mode Switch (Studio / Preview) */}
             <div className="flex rounded-lg bg-gray-100 p-0.5 text-xs font-medium">
               <button
                 type="button"
@@ -1087,147 +1087,124 @@ export default function DashboardDetailPage({
               </button>
             </div>
 
-            {/* Reload Dashboard Button */}
-            <button
-              type="button"
-              onClick={handleReloadDashboard}
-              disabled={reloadingDashboard}
-              title="Reload Dashboard from Database"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+            {/* Refresh & Live Sync Controls */}
+            <div
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50/80 px-2 py-1 text-xs"
+              title={`Last updated: ${lastUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`}
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${reloadingDashboard ? "animate-spin text-indigo-600" : "text-gray-500"}`} />
-              <span className="hidden sm:inline">{reloadingDashboard ? "Reloading..." : "Reload"}</span>
-            </button>
-
-            {/* Auto-Refresh & Manual Visualizations Refresh Controls */}
-            <div className="flex items-center gap-1 bg-gray-100/90 border border-gray-200 rounded-lg p-1 text-xs">
               <button
                 type="button"
                 onClick={handleManualRefresh}
-                disabled={isRefreshingCharts}
-                title="Refresh Visualizations Now"
-                className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 transition disabled:opacity-50"
+                disabled={isRefreshingCharts || reloadingDashboard}
+                title="Refresh visualizations from data source"
+                className="text-gray-500 hover:text-indigo-600 transition disabled:opacity-50"
               >
-                <RefreshCw className={`h-3 w-3 ${isRefreshingCharts ? "animate-spin text-indigo-600" : "text-gray-500"}`} />
-                <span className="hidden md:inline">Refresh</span>
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingCharts || reloadingDashboard ? "animate-spin text-indigo-600" : ""}`} />
               </button>
               <select
                 value={autoRefreshInterval}
                 onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
                 title="Auto-refresh interval"
-                className="bg-transparent text-[11px] font-medium text-gray-600 focus:outline-none cursor-pointer py-0.5"
+                className="bg-transparent text-[11px] font-medium text-gray-600 focus:outline-none cursor-pointer"
               >
                 <option value={0}>Auto: Off</option>
                 <option value={30}>Auto: 30s</option>
                 <option value={60}>Auto: 1m</option>
                 <option value={300}>Auto: 5m</option>
               </select>
-              <span className="text-[10px] text-gray-400 pl-1 border-l border-gray-300 hidden xl:inline" title="Last updated time">
-                Updated {lastUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-              </span>
-            </div>
-
-            {/* Save Status Indicator */}
-            <div className="hidden lg:flex items-center">
+              <div className="h-3 w-px bg-gray-300" />
               {savingDashboard ? (
-                <span className="inline-flex items-center gap-1 text-[11px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 font-medium">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" />
-                  Saving...
-                </span>
+                <span className="text-[11px] text-blue-600 font-medium animate-pulse">Saving...</span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-medium">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                  Saved
+                <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-0.5" title="All changes saved">
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span className="hidden xl:inline">Saved</span>
                 </span>
               )}
             </div>
 
-            {/* Filter Count Badge */}
-            {dashboardFilters.length > 0 && (
-              <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                <Filter className="h-3 w-3" />
-                {dashboardFilters.length} active
-              </span>
-            )}
+            {/* Action Group: Schedule, Share, Export */}
+            <div className="flex items-center rounded-lg border border-gray-200 bg-white shadow-2xs divide-x divide-gray-100">
+              <button
+                type="button"
+                onClick={handleOpenScheduleModal}
+                title="Configure Automated Report Schedule"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-purple-700 transition"
+              >
+                <Clock className="h-3.5 w-3.5 text-purple-600" />
+                <span className="hidden md:inline">Schedule</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenShareModal}
+                title="Share Dashboard via Link"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-indigo-700 transition"
+              >
+                <Share2 className="h-3.5 w-3.5 text-indigo-600" />
+                <span className="hidden md:inline">Share</span>
+              </button>
+              <button
+                type="button"
+                onClick={handlePrintDashboard}
+                title="Export or Print Dashboard as PDF"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                <Printer className="h-3.5 w-3.5 text-gray-500" />
+                <span className="hidden md:inline">Export</span>
+              </button>
+            </div>
 
-            {/* Export / Print Dashboard Button */}
-            <button
-              type="button"
-              onClick={handlePrintDashboard}
-              title="Export / Print Dashboard as PDF"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
-            >
-              <Printer className="h-3.5 w-3.5 text-gray-500" />
-              <span className="hidden sm:inline">Export / Print</span>
-            </button>
-
-            {/* Share Dashboard Button */}
-            <button
-              type="button"
-              onClick={handleOpenShareModal}
-              title="Share Dashboard via Secure Link"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/60 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition shadow-2xs"
-            >
-              <Share2 className="h-3.5 w-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">Share</span>
-            </button>
-
-            {/* Schedule Report Button */}
-            <button
-              type="button"
-              onClick={handleOpenScheduleModal}
-              title="Configure Automated Report Schedule"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50/60 px-2.5 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition shadow-2xs"
-            >
-              <Clock className="h-3.5 w-3.5 text-purple-600" />
-              <span className="hidden sm:inline">Schedule</span>
-            </button>
-
+            {/* Editor Primary Actions */}
             {canEdit && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleOpenAddSavedModal}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-2xs hover:bg-indigo-100 transition"
-                >
-                  <FolderPlus className="h-3.5 w-3.5" />
-                  <span>Add Saved Chart</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleOpenNewStudio()}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>New Chart</span>
-                </button>
+              <div className="flex items-center gap-1.5">
+                <div className="inline-flex rounded-lg shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenNewStudio()}
+                    className="inline-flex items-center gap-1.5 rounded-l-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>New Chart</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddSavedModal}
+                    title="Add from Saved Charts Library"
+                    className="inline-flex items-center gap-1 rounded-r-lg bg-indigo-700 px-2 py-1.5 text-xs font-semibold text-white hover:bg-indigo-800 border-l border-indigo-500 transition"
+                  >
+                    <FolderPlus className="h-3.5 w-3.5" />
+                    <span className="hidden xl:inline text-[11px]">Library</span>
+                  </button>
+                </div>
 
                 <button
                   type="button"
                   onClick={handleSaveDashboard}
                   disabled={savingDashboard}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition disabled:opacity-70"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-500 transition disabled:opacity-70"
                 >
                   <Save className="h-3.5 w-3.5" />
-                  <span>{savingDashboard ? "Saving..." : "Save Dashboard"}</span>
+                  <span>{savingDashboard ? "Saving..." : "Save"}</span>
                 </button>
-              </>
+              </div>
             )}
 
-            <div className="h-5 w-px bg-gray-200" />
+            <div className="h-4 w-px bg-gray-200" />
 
             {/* Profile Avatar */}
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100">
-                <span className="text-[11px] font-semibold text-indigo-700">{userInitials}</span>
+              <div
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-semibold text-indigo-700"
+                title={auth?.user?.name || "User"}
+              >
+                {userInitials}
               </div>
               <button
                 onClick={() => {
                   void logout();
                   router.replace("/login");
                 }}
-                className="text-xs text-gray-500 hover:text-gray-900 font-medium"
+                className="text-xs text-gray-500 hover:text-gray-900 font-medium hidden sm:inline"
               >
                 Sign out
               </button>
