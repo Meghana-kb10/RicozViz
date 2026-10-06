@@ -54,6 +54,12 @@ import {
   restoreDatasetVersion,
   getDatasetLineage,
 } from "../services/dataset/versioning.service.js";
+import {
+  getDatasetRefreshSchedule,
+  configureDatasetRefreshSchedule,
+  deleteDatasetRefreshSchedule,
+  executeDatasetRefresh,
+} from "../services/dataset/dataset-refresh.service.js";
 import { multipartUpload } from "../middleware/upload.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -487,6 +493,91 @@ router.get(
       user.roleName
     );
     sendSuccess(res, lineage, 200);
+  })
+);
+
+// ============================================================
+// PHASE 3: SCHEDULED DATA REFRESH
+// ============================================================
+
+/**
+ * GET /api/v1/datasets/:id/refresh-schedule
+ * Retrieve scheduled refresh configuration & history.
+ * Permission: DATASET_VIEW
+ */
+router.get(
+  "/:id/refresh-schedule",
+  requirePermission("DATASET_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const schedule = await getDatasetRefreshSchedule(
+      req.params.id as string,
+      user.organizationId,
+      user.userId,
+      user.roleName
+    );
+    sendSuccess(res, schedule, 200);
+  })
+);
+
+/**
+ * POST /api/v1/datasets/:id/refresh-schedule
+ * Configure or update scheduled refresh for a dataset.
+ * Permission: DATASET_EDIT
+ */
+router.post(
+  "/:id/refresh-schedule",
+  requirePermission("DATASET_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const schedule = await configureDatasetRefreshSchedule(
+      req.params.id as string,
+      user.organizationId,
+      user.userId,
+      user.roleName,
+      req.body
+    );
+    sendSuccess(res, schedule, 200);
+  })
+);
+
+/**
+ * DELETE /api/v1/datasets/:id/refresh-schedule
+ * Disable/delete scheduled refresh for a dataset.
+ * Permission: DATASET_EDIT
+ */
+router.delete(
+  "/:id/refresh-schedule",
+  requirePermission("DATASET_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const result = await deleteDatasetRefreshSchedule(
+      req.params.id as string,
+      user.organizationId,
+      user.userId,
+      user.roleName
+    );
+    sendSuccess(res, result, 200);
+  })
+);
+
+/**
+ * POST /api/v1/datasets/:id/refresh
+ * Execute on-demand or scheduled dataset refresh.
+ * Permission: DATASET_EDIT
+ */
+router.post(
+  "/:id/refresh",
+  requirePermission("DATASET_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const result = await executeDatasetRefresh(
+      req.params.id as string,
+      user.organizationId,
+      "MANUAL",
+      { userId: user.userId, roleName: user.roleName }
+    );
+    sendSuccess(res, result, 200);
   })
 );
 

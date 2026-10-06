@@ -10,6 +10,8 @@ import { config } from "./config/env.js";
 import { createApp } from "./app.js";
 import { logger } from "./utils/logger.js";
 import { scheduledReportWorker } from "./services/report/report-worker.service.js";
+import { scheduledAlertWorker } from "./services/alert/alert-worker.service.js";
+import { scheduledRefreshWorker } from "./services/dataset/refresh-worker.service.js";
 import { ensureSystemRolesAndPermissions } from "./services/system-seed.service.js";
 
 const app = createApp();
@@ -28,14 +30,18 @@ const server = app.listen(config.PORT, () => {
     });
   });
 
-  // Start background scheduled report worker
+  // Start background automation & monitoring workers (Phase 3)
   scheduledReportWorker.start(60_000);
+  scheduledAlertWorker.start(60_000);
+  scheduledRefreshWorker.start(60_000);
 });
 
 // ---- Graceful shutdown ----
 function shutdown(signal: string): void {
   logger.info(`Received ${signal} — shutting down gracefully...`);
   scheduledReportWorker.stop();
+  scheduledAlertWorker.stop();
+  scheduledRefreshWorker.stop();
   server.close(() => {
     logger.info("HTTP server closed");
     process.exit(0);

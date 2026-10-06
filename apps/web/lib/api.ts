@@ -539,6 +539,63 @@ export async function apiGetSourceTableSchema(
   );
 }
 
+// ---- Scheduled Dataset Refresh ----
+export interface DatasetRefreshSchedule {
+  enabled: boolean;
+  frequency: "1H" | "6H" | "12H" | "DAILY" | "WEEKLY" | string;
+  intervalMinutes?: number;
+  nextRunAt?: string | null;
+  lastRunAt?: string | null;
+  lastStatus?: "IDLE" | "SUCCESS" | "FAILED" | "RUNNING" | string;
+  lastError?: string | null;
+  history?: Array<{
+    executedAt: string;
+    status: "SUCCESS" | "FAILED";
+    durationMs: number;
+    rowsAffected?: number;
+    errorMessage?: string | null;
+  }>;
+}
+
+export async function apiGetDatasetRefreshSchedule(
+  datasetId: string
+): Promise<DatasetRefreshSchedule> {
+  return apiFetch<DatasetRefreshSchedule>(`/api/v1/datasets/${datasetId}/refresh-schedule`);
+}
+
+export async function apiSaveDatasetRefreshSchedule(
+  datasetId: string,
+  schedule: {
+    enabled: boolean;
+    frequency: string;
+    intervalMinutes?: number;
+  }
+): Promise<DatasetRefreshSchedule> {
+  return apiFetch<DatasetRefreshSchedule>(`/api/v1/datasets/${datasetId}/refresh-schedule`, {
+    method: "POST",
+    body: JSON.stringify(schedule),
+  });
+}
+
+export async function apiDeleteDatasetRefreshSchedule(
+  datasetId: string
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/v1/datasets/${datasetId}/refresh-schedule`, {
+    method: "DELETE",
+  });
+}
+
+export async function apiTriggerDatasetRefresh(
+  datasetId: string
+): Promise<{ success: boolean; durationMs: number; rowCount?: number; message?: string }> {
+  return apiFetch<{ success: boolean; durationMs: number; rowCount?: number; message?: string }>(
+    `/api/v1/datasets/${datasetId}/refresh`,
+    {
+      method: "POST",
+    }
+  );
+}
+
 // ============================================================
 // DEMO DATASET TYPES & API METHODS
 // ============================================================
@@ -1619,7 +1676,11 @@ export type AlertCondition =
   | "LESS_THAN"
   | "EQUALS"
   | "GREATER_THAN_OR_EQUAL"
-  | "LESS_THAN_OR_EQUAL";
+  | "LESS_THAN_OR_EQUAL"
+  | "INCREASE_PERCENT"
+  | "DECREASE_PERCENT"
+  | "INCREASE_PCT"
+  | "DECREASE_PCT";
 
 export type AlertStatus = "OK" | "TRIGGERED" | "PENDING";
 
@@ -1746,6 +1807,12 @@ export async function apiDeleteAlert(id: string): Promise<{ message: string }> {
 
 export async function apiEvaluateAlert(id: string): Promise<AlertEvaluationResult> {
   return apiFetch<AlertEvaluationResult>(`/api/v1/alerts/${id}/evaluate`, {
+    method: "POST",
+  });
+}
+
+export async function apiClearAlert(id: string): Promise<AlertData> {
+  return apiFetch<AlertData>(`/api/v1/alerts/${id}/clear`, {
     method: "POST",
   });
 }

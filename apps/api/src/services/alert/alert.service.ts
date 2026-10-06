@@ -2,7 +2,8 @@
 // Smart Data Alerts Engine & Service
 // ============================================================
 // Provides automated metric threshold evaluation, trigger detection,
-// status management, alert history auditing, and tenant isolation.
+// status management, alert history auditing, duplicate spam prevention,
+// clearing notifications, and tenant isolation.
 // ============================================================
 
 import type { Request, Response } from "express";
@@ -15,7 +16,7 @@ import { resolveWorkspaceAccess } from "../workspace.service.js";
 import { formatMetricValue } from "../metric/metric.service.js";
 import type { AlertCondition, AlertStatus } from "@prisma/client";
 
-const VALID_CONDITIONS: AlertCondition[] = [
+export const VALID_CONDITIONS: AlertCondition[] = [
   "GREATER_THAN",
   "LESS_THAN",
   "EQUALS",
@@ -24,24 +25,133 @@ const VALID_CONDITIONS: AlertCondition[] = [
 ];
 
 /**
- * Pure evaluation function for comparing metric value against threshold.
+ * Normalizes user input operators into system canonical format.
+ * Supports >, <, >=, <=, =, increase %, decrease %.
+ */
+export function normalizeConditionInput(condition: string): {
+  prismaCondition: AlertCondition;
+  isPercentIncrease: boolean;
+  isPercentDecrease: boolean;
+  canonicalName: string;
+} {
+  const norm = String(condition || "").trim().toUpperCase();
+
+  if (norm === ">" || norm === "GT" || norm === "GREATER_THAN") {
+    return { prismaCondition: "GREATER_THAN", isPercentIncrease: false, isPercentDecrease: false, canonicalName: "GREATER_THAN" };
+  }
+  if (norm === "<" || norm === "LT" || norm === "LESS_THAN") {
+    return { prismaCondition: "LESS_THAN", isPercentIncrease: false, isPercentDecrease: false, canonicalName: "LESS_THAN" };
+  }
+  if (norm === ">=" || norm === "GTE" || norm === "GREATER_THAN_OR_EQUAL") {
+    return { prismaCondition: "GREATER_THAN_OR_EQUAL", isPercentIncrease: false, isPercentDecrease: false, canonicalName: "GREATER_THAN_OR_EQUAL" };
+  }
+  if (norm === "<=" || norm === "LTE" || norm === "LESS_THAN_OR_EQUAL") {
+    return { prismaCondition: "LESS_THAN_OR_EQUAL", isPercentIncrease: false, isPercentDecrease: false, canonicalName: "LESS_THAN_OR_EQUAL" };
+  }
+  if (norm === "=" || norm === "==" || norm === "EQ" || norm === "EQUALS") {
+    return { prismaCondition: "EQUALS", isPercentIncrease: false, isPercentDecrease: false, canonicalName: "EQUALS" };
+  }
+  if (
+    norm === "INCREASE %" ||
+    norm === "PERCENT_INCREASE" ||
+    norm === "INCREASE_PERCENT" ||
+    norm === "INCREASE_PCT" ||
+    norm === "INCREASE"
+  ) {
+    return { prismaCondition: "GREATER_THAN", isPercentIncrease: true, isPercentDecrease: false, canonicalName: "PERCENT_INCREASE" };
+  }
+  if (
+    norm === "DECREASE %" ||
+    norm === "PERCENT_DECREASE" ||
+    norm === "DECREASE_PERCENT" ||
+    norm === "DECREASE_PCT" ||
+    norm === "DECREASE"
+  ) {
+    return { prismaCondition: "LESS_THAN", isPercentIncrease: false, isPercentDecrease: true, canonicalName: "PERCENT_DECREASE" };
+  }
+
+  throw AppError.badRequest(
+    `Invalid alert condition: "${condition}". Supported conditions: >, <, >=, <=, =, increase %, decrease %`
+  );
+}
+
+/**
+ * Extracts true condition if stored with percentage tag.
+ */
+export function extractEffectiveCondition(
+  prismaCondition: AlertCondition | string,
+  description?: string | null
+): string {
+  if (description) {
+    if (description.includes("[CONDITION:PERCENT_INCREASE]")) return "PERCENT_INCREASE";
+    if (description.includes("[CONDITION:PERCENT_DECREASE]")) return "PERCENT_DECREASE";
+  }
+  return String(prismaCondition);
+}
+
+/**
+ * Pure evaluation function for comparing metric value against threshold,
+ * supporting standard operators (> < >= <= =) and percentage trends.
  */
 export function testAlertCondition(
   value: number,
-  condition: AlertCondition,
-  threshold: number
+  condition: AlertCondition | string,
+  threshold: number,
+  previousValue?: number | null
 ): boolean {
-  switch (condition) {
+  const norm = String(condition || "").trim().toUpperCase();
+
+  switch (norm) {
     case "GREATER_THAN":
+    case ">":
+    case "GT":
       return value > threshold;
+
     case "LESS_THAN":
+    case "<":
+    case "LT":
       return value < threshold;
+
     case "EQUALS":
+    case "=":
+    case "==":
+    case "EQ":
       return Math.abs(value - threshold) < 0.0001;
+
     case "GREATER_THAN_OR_EQUAL":
+    case ">=":
+    case "GTE":
       return value >= threshold;
+
     case "LESS_THAN_OR_EQUAL":
+    case "<=":
+    case "LTE":
       return value <= threshold;
+
+    case "PERCENT_INCREASE":
+    case "INCREASE %":
+    case "INCREASE_PERCENT":
+    case "INCREASE_PCT":
+    case "INCREASE": {
+      if (previousValue === null || previousValue === undefined || previousValue === 0) {
+        return false;
+      }
+      const diffPct = ((value - previousValue) / Math.abs(previousValue)) * 100;
+      return diffPct >= threshold;
+    }
+
+    case "PERCENT_DECREASE":
+    case "DECREASE %":
+    case "DECREASE_PERCENT":
+    case "DECREASE_PCT":
+    case "DECREASE": {
+      if (previousValue === null || previousValue === undefined || previousValue === 0) {
+        return false;
+      }
+      const dropPct = ((previousValue - value) / Math.abs(previousValue)) * 100;
+      return dropPct >= threshold;
+    }
+
     default:
       return false;
   }
@@ -52,8 +162,9 @@ export const evaluateAlertCondition = testAlertCondition;
 /**
  * Human-readable operator representation.
  */
-export function getConditionSymbol(condition: AlertCondition): string {
-  switch (condition) {
+export function getConditionSymbol(condition: AlertCondition | string): string {
+  const norm = String(condition || "").toUpperCase().trim();
+  switch (norm) {
     case "GREATER_THAN":
       return ">";
     case "LESS_THAN":
@@ -64,9 +175,31 @@ export function getConditionSymbol(condition: AlertCondition): string {
       return "≥";
     case "LESS_THAN_OR_EQUAL":
       return "≤";
+    case "PERCENT_INCREASE":
+      return "increase >=";
+    case "PERCENT_DECREASE":
+      return "decrease >=";
     default:
-      return condition;
+      return norm;
   }
+}
+
+export function formatAlertResponse(alert: any) {
+  const effectiveCondition = extractEffectiveCondition(alert.condition, alert.description);
+  const cleanDescription = alert.description
+    ? alert.description
+        .replace("[CONDITION:PERCENT_INCREASE]", "")
+        .replace("[CONDITION:PERCENT_DECREASE]", "")
+        .trim()
+    : null;
+
+  return {
+    ...alert,
+    description: cleanDescription,
+    condition: effectiveCondition,
+    conditionSymbol: getConditionSymbol(effectiveCondition),
+    isEnabled: Boolean(alert.enabled),
+  };
 }
 
 /**
@@ -82,7 +215,8 @@ export async function createAlert(req: Request, res: Response): Promise<void> {
     metricId,
     condition,
     threshold,
-    enabled = true,
+    enabled,
+    isEnabled,
   } = req.body;
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -114,28 +248,32 @@ export async function createAlert(req: Request, res: Response): Promise<void> {
     throw AppError.notFound("Metric not found in specified workspace");
   }
 
-  const normCondition = String(condition).toUpperCase() as AlertCondition;
-  if (!VALID_CONDITIONS.includes(normCondition)) {
-    throw AppError.badRequest(
-      `Invalid alert condition. Must be one of: ${VALID_CONDITIONS.join(", ")}`
-    );
-  }
+  const norm = normalizeConditionInput(condition);
 
   const numThreshold = Number(threshold);
   if (threshold === undefined || threshold === null || isNaN(numThreshold) || !isFinite(numThreshold)) {
     throw AppError.badRequest("Alert threshold must be a valid finite number");
   }
 
+  const alertEnabled = enabled !== undefined ? Boolean(enabled) : isEnabled !== undefined ? Boolean(isEnabled) : true;
+
+  let finalDescription = typeof description === "string" ? description.trim() : "";
+  if (norm.isPercentIncrease) {
+    finalDescription = `[CONDITION:PERCENT_INCREASE] ${finalDescription}`.trim();
+  } else if (norm.isPercentDecrease) {
+    finalDescription = `[CONDITION:PERCENT_DECREASE] ${finalDescription}`.trim();
+  }
+
   const alert = await prisma.alert.create({
     data: {
       name: name.trim(),
-      description: typeof description === "string" ? description.trim() : null,
+      description: finalDescription.length > 0 ? finalDescription : null,
       organizationId,
       workspaceId,
       metricId,
-      condition: normCondition,
+      condition: norm.prismaCondition,
       threshold: numThreshold,
-      enabled: Boolean(enabled),
+      enabled: alertEnabled,
       status: "PENDING",
       createdById: userId,
     },
@@ -155,14 +293,14 @@ export async function createAlert(req: Request, res: Response): Promise<void> {
     metadata: {
       name: alert.name,
       metricId,
-      condition: alert.condition,
+      condition: norm.canonicalName,
       threshold: alert.threshold,
     },
     ipAddress: req.ip,
     userAgent: req.get("user-agent"),
   });
 
-  sendSuccess(res, alert, 201);
+  sendSuccess(res, formatAlertResponse(alert), 201);
 }
 
 /**
@@ -211,7 +349,7 @@ export async function listAlerts(req: Request, res: Response): Promise<void> {
     },
   });
 
-  sendSuccess(res, alerts);
+  sendSuccess(res, alerts.map(formatAlertResponse));
 }
 
 /**
@@ -254,7 +392,7 @@ export async function getAlert(req: Request, res: Response): Promise<void> {
 
   await resolveWorkspaceAccess(alert.workspaceId, userId, organizationId, roleName);
 
-  sendSuccess(res, alert);
+  sendSuccess(res, formatAlertResponse(alert));
 }
 
 /**
@@ -264,7 +402,7 @@ export async function getAlert(req: Request, res: Response): Promise<void> {
 export async function updateAlert(req: Request, res: Response): Promise<void> {
   const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
-  const { name, description, condition, threshold, enabled } = req.body;
+  const { name, description, condition, threshold, enabled, isEnabled } = req.body;
 
   if (!id) {
     throw AppError.badRequest("Alert ID is required");
@@ -293,16 +431,23 @@ export async function updateAlert(req: Request, res: Response): Promise<void> {
     dataToUpdate.name = name.trim();
   }
 
-  if (description !== undefined) {
-    dataToUpdate.description = typeof description === "string" ? description.trim() : null;
-  }
+  let finalDesc = typeof description === "string" ? description.trim() : (existing.description || "");
 
   if (condition !== undefined) {
-    const norm = String(condition).toUpperCase() as AlertCondition;
-    if (!VALID_CONDITIONS.includes(norm)) {
-      throw AppError.badRequest(`Invalid condition: ${condition}`);
+    const norm = normalizeConditionInput(condition);
+    dataToUpdate.condition = norm.prismaCondition;
+    finalDesc = finalDesc
+      .replace("[CONDITION:PERCENT_INCREASE]", "")
+      .replace("[CONDITION:PERCENT_DECREASE]", "")
+      .trim();
+    if (norm.isPercentIncrease) {
+      finalDesc = `[CONDITION:PERCENT_INCREASE] ${finalDesc}`.trim();
+    } else if (norm.isPercentDecrease) {
+      finalDesc = `[CONDITION:PERCENT_DECREASE] ${finalDesc}`.trim();
     }
-    dataToUpdate.condition = norm;
+    dataToUpdate.description = finalDesc.length > 0 ? finalDesc : null;
+  } else if (description !== undefined) {
+    dataToUpdate.description = typeof description === "string" && description.trim().length > 0 ? description.trim() : null;
   }
 
   if (threshold !== undefined) {
@@ -313,8 +458,8 @@ export async function updateAlert(req: Request, res: Response): Promise<void> {
     dataToUpdate.threshold = num;
   }
 
-  if (enabled !== undefined) {
-    dataToUpdate.enabled = Boolean(enabled);
+  if (enabled !== undefined || isEnabled !== undefined) {
+    dataToUpdate.enabled = Boolean(enabled ?? isEnabled);
   }
 
   const updated = await prisma.alert.update({
@@ -338,7 +483,7 @@ export async function updateAlert(req: Request, res: Response): Promise<void> {
     userAgent: req.get("user-agent"),
   });
 
-  sendSuccess(res, updated);
+  sendSuccess(res, formatAlertResponse(updated));
 }
 
 /**
@@ -386,8 +531,80 @@ export async function deleteAlert(req: Request, res: Response): Promise<void> {
 }
 
 /**
+ * POST /api/v1/alerts/:id/clear
+ * Clear / acknowledge a triggered alert notification and reset status to OK.
+ */
+export async function clearAlert(req: Request, res: Response): Promise<void> {
+  const { organizationId, userId, roleName, email } = req.user!;
+  const { id } = req.params;
+
+  if (!id) {
+    throw AppError.badRequest("Alert ID is required");
+  }
+
+  const alert = await prisma.alert.findUnique({
+    where: { id },
+    include: { metric: true },
+  });
+
+  if (!alert) {
+    throw AppError.notFound("Alert not found");
+  }
+
+  if (alert.organizationId !== organizationId) {
+    throw AppError.forbidden("Access denied: alert belongs to a different organization");
+  }
+
+  await resolveWorkspaceAccess(alert.workspaceId, userId, organizationId, roleName);
+
+  const now = new Date();
+  const [updatedAlert, historyEntry] = await prisma.$transaction([
+    prisma.alert.update({
+      where: { id },
+      data: {
+        status: "OK",
+        lastTriggeredAt: null,
+      },
+      include: {
+        metric: {
+          select: { id: true, name: true, format: true },
+        },
+      },
+    }),
+    prisma.alertHistory.create({
+      data: {
+        alertId: id,
+        value: alert.lastValue ?? 0,
+        threshold: alert.threshold,
+        condition: String(alert.condition),
+        status: "OK",
+        message: `Alert notification cleared and acknowledged by ${email || "user"}. Status reset to OK.`,
+        triggeredAt: now,
+      },
+    }),
+  ]);
+
+  await logAuditEvent({
+    organizationId,
+    userId,
+    action: "ALERT_CLEARED",
+    resourceType: "Alert",
+    resourceId: id,
+    metadata: { alertName: alert.name, clearedAt: now.toISOString() },
+    ipAddress: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
+  sendSuccess(res, {
+    message: `Alert "${alert.name}" notification cleared successfully.`,
+    alert: formatAlertResponse(updatedAlert),
+    historyId: historyEntry.id,
+  });
+}
+
+/**
  * POST /api/v1/alerts/:id/evaluate
- * Execute backend alert evaluation against real dataset metric.
+ * Execute backend alert evaluation against real dataset metric with duplicate spam prevention.
  */
 export async function evaluateAlert(req: Request, res: Response): Promise<void> {
   const { organizationId, userId, roleName } = req.user!;
@@ -432,48 +649,65 @@ export async function evaluateAlert(req: Request, res: Response): Promise<void> 
 
   const rawRow = queryResult.rows[0];
   const currentValue = rawRow ? Number(rawRow["metric_val"]) || 0 : 0;
-  const formattedCurrent = formatMetricValue(currentValue, alert.metric.format);
-  const formattedThreshold = formatMetricValue(alert.threshold, alert.metric.format);
+  const previousValue = alert.lastValue;
+  const effectiveCondition = extractEffectiveCondition(alert.condition, alert.description);
 
   // 2. Evaluate condition
-  const isTriggered = testAlertCondition(currentValue, alert.condition, alert.threshold);
-  const symbol = getConditionSymbol(alert.condition);
+  const isTriggered = testAlertCondition(currentValue, effectiveCondition, alert.threshold, previousValue);
+  const symbol = getConditionSymbol(effectiveCondition);
 
   const status: AlertStatus = isTriggered ? "TRIGGERED" : "OK";
   const now = new Date();
 
-  const message = isTriggered
-    ? `Alert TRIGGERED: Metric "${alert.metric.name}" value (${formattedCurrent}) is ${alert.condition} threshold (${formattedThreshold})`
-    : `Normal: Metric "${alert.metric.name}" value (${formattedCurrent}) satisfies threshold (${formattedThreshold})`;
+  const formattedCurrent = formatMetricValue(currentValue, alert.metric.format);
+  const formattedThreshold = formatMetricValue(alert.threshold, alert.metric.format);
 
-  // 3. Persist evaluation history and update alert status
-  const [updatedAlert, historyEntry] = await prisma.$transaction([
-    prisma.alert.update({
+  const stateChanged = alert.status !== status;
+  const isInitialEval = !alert.lastEvaluatedAt;
+  const shouldLogHistory = stateChanged || isInitialEval;
+
+  let message = "";
+  if (isTriggered) {
+    message = `Alert TRIGGERED: Metric "${alert.metric.name}" value (${formattedCurrent}) meets condition ${symbol} threshold (${formattedThreshold})`;
+  } else if (stateChanged && alert.status === "TRIGGERED") {
+    message = `Alert RECOVERED: Metric "${alert.metric.name}" value (${formattedCurrent}) has returned to normal (${symbol} ${formattedThreshold})`;
+  } else {
+    message = `Normal: Metric "${alert.metric.name}" value (${formattedCurrent}) satisfies threshold (${formattedThreshold})`;
+  }
+
+  // 3. Persist evaluation history and update alert status (prevent duplicate spam)
+  const [updatedAlert, historyEntry] = await prisma.$transaction(async (tx) => {
+    const updated = await tx.alert.update({
       where: { id },
       data: {
         status,
         lastEvaluatedAt: now,
         lastValue: currentValue,
-        ...(isTriggered ? { lastTriggeredAt: now } : {}),
+        ...(isTriggered && stateChanged ? { lastTriggeredAt: now } : {}),
       },
       include: {
         metric: {
           select: { id: true, name: true, format: true },
         },
       },
-    }),
-    prisma.alertHistory.create({
-      data: {
-        alertId: id,
-        value: currentValue,
-        threshold: alert.threshold,
-        condition: alert.condition,
-        status,
-        message,
-        triggeredAt: now,
-      },
-    }),
-  ]);
+    });
+
+    const history = shouldLogHistory
+      ? await tx.alertHistory.create({
+          data: {
+            alertId: id,
+            value: currentValue,
+            threshold: alert.threshold,
+            condition: effectiveCondition,
+            status,
+            message,
+            triggeredAt: now,
+          },
+        })
+      : null;
+
+    return [updated, history];
+  });
 
   await logAuditEvent({
     organizationId,
@@ -485,8 +719,10 @@ export async function evaluateAlert(req: Request, res: Response): Promise<void> 
       alertName: alert.name,
       currentValue,
       threshold: alert.threshold,
-      condition: alert.condition,
+      condition: effectiveCondition,
       isTriggered,
+      stateChanged,
+      duplicatePrevented: isTriggered && !stateChanged,
     },
     ipAddress: req.ip,
     userAgent: req.get("user-agent"),
@@ -496,7 +732,7 @@ export async function evaluateAlert(req: Request, res: Response): Promise<void> 
     alertId: alert.id,
     alertName: alert.name,
     metricName: alert.metric.name,
-    condition: alert.condition,
+    condition: effectiveCondition,
     conditionSymbol: symbol,
     threshold: alert.threshold,
     formattedThreshold,
@@ -504,17 +740,20 @@ export async function evaluateAlert(req: Request, res: Response): Promise<void> 
     formattedCurrent,
     isTriggered,
     status: updatedAlert.status,
+    stateChanged,
+    duplicatePrevented: isTriggered && !stateChanged,
     lastEvaluatedAt: now.toISOString(),
-    historyId: historyEntry.id,
+    historyId: historyEntry?.id || null,
     message,
-    notificationDelivery:
-      "Evaluation completed. Notification recorded in alert history log. (External email delivery requires SMTP provider configuration).",
+    notificationDelivery: isTriggered
+      ? "Alert triggered! Notification recorded in alert history log."
+      : "Metric in normal bounds.",
   });
 }
 
 /**
  * POST /api/v1/alerts/workspace/:workspaceId/evaluate-all
- * Evaluates all active alerts in a workspace.
+ * Evaluates all active alerts in a workspace with duplicate spam prevention.
  */
 export async function evaluateAllWorkspaceAlerts(req: Request, res: Response): Promise<void> {
   const { organizationId, userId, roleName } = req.user!;
@@ -556,34 +795,42 @@ export async function evaluateAllWorkspaceAlerts(req: Request, res: Response): P
 
       const rawRow = queryResult.rows[0];
       const currentValue = rawRow ? Number(rawRow["metric_val"]) || 0 : 0;
-      const isTriggered = testAlertCondition(currentValue, alert.condition, alert.threshold);
+      const previousValue = alert.lastValue;
+      const effectiveCondition = extractEffectiveCondition(alert.condition, alert.description);
+
+      const isTriggered = testAlertCondition(currentValue, effectiveCondition, alert.threshold, previousValue);
       const status: AlertStatus = isTriggered ? "TRIGGERED" : "OK";
       const now = new Date();
 
-      await prisma.$transaction([
-        prisma.alert.update({
-          where: { id: alert.id },
-          data: {
-            status,
-            lastEvaluatedAt: now,
-            lastValue: currentValue,
-            ...(isTriggered ? { lastTriggeredAt: now } : {}),
-          },
-        }),
-        prisma.alertHistory.create({
+      const stateChanged = alert.status !== status;
+      const isInitialEval = !alert.lastEvaluatedAt;
+      const shouldLogHistory = stateChanged || isInitialEval;
+
+      await prisma.alert.update({
+        where: { id: alert.id },
+        data: {
+          status,
+          lastEvaluatedAt: now,
+          lastValue: currentValue,
+          ...(isTriggered && stateChanged ? { lastTriggeredAt: now } : {}),
+        },
+      });
+
+      if (shouldLogHistory) {
+        await prisma.alertHistory.create({
           data: {
             alertId: alert.id,
             value: currentValue,
             threshold: alert.threshold,
-            condition: alert.condition,
+            condition: effectiveCondition,
             status,
             message: isTriggered
-              ? `Alert condition met: ${currentValue} ${alert.condition} ${alert.threshold}`
+              ? `Alert condition met: ${currentValue} ${effectiveCondition} ${alert.threshold}`
               : `Normal reading: ${currentValue}`,
             triggeredAt: now,
           },
-        }),
-      ]);
+        });
+      }
 
       results.push({
         alertId: alert.id,
@@ -591,6 +838,7 @@ export async function evaluateAllWorkspaceAlerts(req: Request, res: Response): P
         currentValue,
         isTriggered,
         status,
+        stateChanged,
       });
     } catch (err: any) {
       results.push({

@@ -1010,6 +1010,8 @@ export interface DashboardReportSnapshot {
   dashboardName: string;
   generatedAt: string;
   chartCount: number;
+  format?: string;
+  csvContent?: string;
   charts: Array<{
     chartId: string;
     title: string;
@@ -1022,12 +1024,25 @@ export interface DashboardReportSnapshot {
     totalCharts: number;
     totalRecords: number;
     executionTimeMs: number;
+    appliedFiltersCount?: number;
   };
 }
 
 export async function generateDashboardReportSnapshot(
   dashboardId: string,
-  organizationId: string
+  organizationId: string,
+  options?: {
+    dashboardFilters?: Array<{
+      column?: string;
+      field?: string;
+      operator?: string;
+      value?: unknown;
+      datasetId?: string;
+      sourceChartId?: string;
+      isCrossFilter?: boolean;
+    }>;
+    format?: string;
+  }
 ): Promise<DashboardReportSnapshot> {
   const startTime = Date.now();
 
@@ -1055,6 +1070,16 @@ export async function generateDashboardReportSnapshot(
     throw AppError.forbidden("Access denied: dashboard belongs to a different organization");
   }
 
+  // Extract dashboard layout-level saved filters
+  const layout = (dashboard.layoutConfig || {}) as Record<string, any>;
+  const rawDashboardFilters: Array<any> = Array.isArray(options?.dashboardFilters)
+    ? options.dashboardFilters
+    : Array.isArray(layout.dashboardFilters)
+    ? layout.dashboardFilters
+    : Array.isArray(layout.filters)
+    ? layout.filters
+    : [];
+
   const reportCharts: Array<{
     chartId: string;
     title: string;
@@ -1080,8 +1105,32 @@ export async function generateDashboardReportSnapshot(
     }
 
     const rawConfig = (chart.config || {}) as Record<string, any>;
+    const baseChartFilters: Array<any> = Array.isArray(rawConfig.filters)
+      ? [...rawConfig.filters]
+      : [];
+
+    // Merge dashboard filters that apply to this chart (respecting dataset, column and cross-filter exemptions)
+    const datasetColNames = (chart.dataset.columns || []).map((c: any) => c.name.toLowerCase());
+    for (const df of rawDashboardFilters) {
+      const colName = df.column || df.field;
+      if (!colName) continue;
+      // If cross filter originating from this chart, exempt source chart
+      if (df.isCrossFilter && df.sourceChartId === chart.id) continue;
+      // If datasetId specified on filter and doesn't match chart dataset, skip
+      if (df.datasetId && chart.datasetId && df.datasetId !== chart.datasetId) continue;
+      // If dataset columns available, verify column belongs to this dataset
+      if (datasetColNames.length > 0 && !datasetColNames.includes(String(colName).toLowerCase())) {
+        continue;
+      }
+      baseChartFilters.push({
+        column: String(colName),
+        operator: df.operator || "=",
+        value: df.value,
+      });
+    }
+
     const queryParams: Record<string, any> = {
-      filters: rawConfig.filters || [],
+      filters: baseChartFilters,
     };
 
     if (rawConfig.sort) queryParams.sort = rawConfig.sort;
@@ -1151,6 +1200,33 @@ export async function generateDashboardReportSnapshot(
   }
 
   const executionTimeMs = Date.now() - startTime;
+  const requestedFormat = String(options?.format || "PDF").toUpperCase();
+
+  // If CSV format requested, serialize chart data to CSV
+  let csvContent: string | undefined;
+  if (requestedFormat === "CSV") {
+    const csvSections: string[] = [];
+    for (const c of reportCharts) {
+      if (c.data.length > 0) {
+        const colNames = c.columns.map((col) => col.name);
+        const header = colNames.join(",");
+        const rows = c.data.map((r) =>
+          colNames
+            .map((col) => {
+              const val = r[col];
+              if (val === null || val === undefined) return "";
+              const str = String(val);
+              return str.includes(",") || str.includes('"') || str.includes("\n")
+                ? `"${str.replace(/"/g, '""')}"`
+                : str;
+            })
+            .join(",")
+        );
+        csvSections.push(`--- Chart: ${c.title} (${c.rowCount} records) ---\r\n${header}\r\n${rows.join("\r\n")}`);
+      }
+    }
+    csvContent = csvSections.join("\r\n\r\n");
+  }
 
   return {
     reportId: crypto.randomUUID(),
@@ -1158,11 +1234,14 @@ export async function generateDashboardReportSnapshot(
     dashboardName: dashboard.name,
     generatedAt: new Date().toISOString(),
     chartCount: reportCharts.length,
+    format: requestedFormat,
+    csvContent,
     charts: reportCharts,
     summary: {
       totalCharts: reportCharts.length,
       totalRecords,
       executionTimeMs,
+      appliedFiltersCount: rawDashboardFilters.length,
     },
   };
 }
@@ -1174,12 +1253,16 @@ export async function generateDashboardReportSnapshot(
 export async function generateDashboardReport(req: Request, res: Response): Promise<void> {
   const { organizationId } = req.user!;
   const { id } = req.params;
+  const { filters, dashboardFilters, format } = req.body || {};
 
   if (!id) {
     throw AppError.badRequest("Dashboard ID is required");
   }
 
-  const snapshot = await generateDashboardReportSnapshot(id, organizationId);
+  const snapshot = await generateDashboardReportSnapshot(id, organizationId, {
+    dashboardFilters: filters || dashboardFilters,
+    format,
+  });
 
   // Update lastRunAt on existing report schedule if any
   const existingReport = await prisma.report.findFirst({

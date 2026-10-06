@@ -10,6 +10,7 @@ import {
   apiCreateAlert,
   apiUpdateAlert,
   apiDeleteAlert,
+  apiClearAlert,
   apiEvaluateAlert,
   apiEvaluateAllWorkspaceAlerts,
   apiListMetrics,
@@ -124,6 +125,18 @@ export default function AlertsPage() {
     }
   };
 
+  const handleClearAlert = async (alertId: string) => {
+    try {
+      const res = await apiClearAlert(alertId);
+      setAlerts((prev) =>
+        prev.map((a) => (a.id === res.id ? { ...a, ...res, status: "OK", lastTriggeredAt: null } : a))
+      );
+      setSuccessMsg("Alert notification cleared and status reset to OK.");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to clear alert");
+    }
+  };
+
   const handleToggleEnable = async (alert: AlertData) => {
     try {
       const isCurrentlyEnabled = alert.enabled ?? alert.isEnabled ?? true;
@@ -234,6 +247,10 @@ export default function AlertsPage() {
     GREATER_THAN_OR_EQUAL: "≥ (Greater Than or Equal)",
     LESS_THAN_OR_EQUAL: "≤ (Less Than or Equal)",
     EQUALS: "= (Equals)",
+    INCREASE_PERCENT: "increase % (> +X%)",
+    DECREASE_PERCENT: "decrease % (> -X%)",
+    INCREASE_PCT: "increase %",
+    DECREASE_PCT: "decrease %",
   };
 
   const conditionSymbols: Record<AlertCondition, string> = {
@@ -242,6 +259,10 @@ export default function AlertsPage() {
     GREATER_THAN_OR_EQUAL: "≥",
     LESS_THAN_OR_EQUAL: "≤",
     EQUALS: "=",
+    INCREASE_PERCENT: "↑ %",
+    DECREASE_PERCENT: "↓ %",
+    INCREASE_PCT: "↑ %",
+    DECREASE_PCT: "↓ %",
   };
 
   const filteredAlerts = alerts.filter((a) => {
@@ -534,6 +555,17 @@ export default function AlertsPage() {
                       >
                         History ({historyCount})
                       </button>
+
+                      {alert.status === "TRIGGERED" && (
+                        <button
+                          type="button"
+                          onClick={() => void handleClearAlert(alert.id)}
+                          className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition"
+                          title="Acknowledge and reset alert"
+                        >
+                          ✓ Clear
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -654,6 +686,8 @@ export default function AlertsPage() {
                     <option value="GREATER_THAN_OR_EQUAL">{conditionLabels.GREATER_THAN_OR_EQUAL}</option>
                     <option value="LESS_THAN_OR_EQUAL">{conditionLabels.LESS_THAN_OR_EQUAL}</option>
                     <option value="EQUALS">{conditionLabels.EQUALS}</option>
+                    <option value="INCREASE_PERCENT">{conditionLabels.INCREASE_PERCENT}</option>
+                    <option value="DECREASE_PERCENT">{conditionLabels.DECREASE_PERCENT}</option>
                   </select>
                 </div>
 

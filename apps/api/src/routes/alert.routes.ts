@@ -15,6 +15,7 @@ import {
   deleteAlert,
   evaluateAlert,
   evaluateAllWorkspaceAlerts,
+  clearAlert,
 } from "../services/alert/alert.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -80,6 +81,16 @@ router.post(
   "/:id/evaluate",
   requireAnyPermission("ALERT_VIEW", "DATASET_VIEW"),
   asyncHandler(evaluateAlert)
+);
+
+/**
+ * POST /api/v1/alerts/:id/clear
+ * Clear / acknowledge triggered alert notification.
+ */
+router.post(
+  "/:id/clear",
+  requireAnyPermission("ALERT_EDIT", "ALERT_VIEW", "DATASET_VIEW"),
+  asyncHandler(clearAlert)
 );
 
 /**

@@ -250,7 +250,7 @@ export class DatasetQueryEngine {
     let rawOrderBy = params.orderBy;
     if (!rawOrderBy) {
       if (params.sort) {
-        rawOrderBy = params.sort;
+        rawOrderBy = Array.isArray(params.sort) ? params.sort[0] : params.sort;
       } else if (params.sorting) {
         if (Array.isArray(params.sorting) && params.sorting.length > 0) {
           rawOrderBy = params.sorting[0];
@@ -258,6 +258,8 @@ export class DatasetQueryEngine {
           rawOrderBy = params.sorting as any;
         }
       }
+    } else if (Array.isArray(rawOrderBy) && rawOrderBy.length > 0) {
+      rawOrderBy = rawOrderBy[0];
     }
 
     // 3. Validate row limits & offset

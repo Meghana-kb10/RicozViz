@@ -17,12 +17,17 @@ import {
   apiPreviewCsvSchema,
   apiPreviewDatasetBlend,
   apiCreateDatasetBlend,
+  apiGetDatasetRefreshSchedule,
+  apiSaveDatasetRefreshSchedule,
+  apiDeleteDatasetRefreshSchedule,
+  apiTriggerDatasetRefresh,
   type DatasetData,
   type DatasetColumn,
   type DataSourceData,
   type SourceTable,
   type DatasetBlendPreviewResult,
   type BlendJoinType,
+  type DatasetRefreshSchedule,
   ApiError,
 } from "../../lib/api";
 
@@ -83,6 +88,16 @@ export default function DatasetsPage() {
   const [previewingBlend, setPreviewingBlend] = useState(false);
   const [savingBlend, setSavingBlend] = useState(false);
   const [blendError, setBlendError] = useState<string | null>(null);
+
+  // Scheduled Refresh Modal state
+  const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
+  const [refreshDataset, setRefreshDataset] = useState<DatasetData | null>(null);
+  const [refreshSchedule, setRefreshSchedule] = useState<DatasetRefreshSchedule | null>(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [triggeringRefresh, setTriggeringRefresh] = useState(false);
+  const [refreshFrequency, setRefreshFrequency] = useState<string>("6H");
+  const [refreshEnabled, setRefreshEnabled] = useState<boolean>(true);
 
   // Permissions
   const canCreate = hasPermission("DATASET_CREATE");
@@ -313,6 +328,81 @@ export default function DatasetsPage() {
       setDatasets((prev) => prev.filter((d) => d.id !== id));
     } catch (err) {
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to delete dataset");
+    }
+  }
+
+  // Scheduled Refresh Handlers
+  async function openRefreshModal(ds: DatasetData) {
+    setRefreshDataset(ds);
+    setIsRefreshModalOpen(true);
+    setLoadingSchedule(true);
+    try {
+      const schedule = await apiGetDatasetRefreshSchedule(ds.id);
+      setRefreshSchedule(schedule);
+      setRefreshFrequency(schedule.frequency || "6H");
+      setRefreshEnabled(schedule.enabled ?? true);
+    } catch {
+      setRefreshSchedule({
+        enabled: true,
+        frequency: "6H",
+        lastStatus: "IDLE",
+      });
+      setRefreshFrequency("6H");
+      setRefreshEnabled(true);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  }
+
+  async function handleSaveSchedule() {
+    if (!refreshDataset) return;
+    setSavingSchedule(true);
+    try {
+      const saved = await apiSaveDatasetRefreshSchedule(refreshDataset.id, {
+        enabled: refreshEnabled,
+        frequency: refreshFrequency,
+      });
+      setRefreshSchedule(saved);
+      setSuccessMsg(`Refresh schedule updated (${refreshFrequency}, ${refreshEnabled ? "Active" : "Paused"}).`);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to save refresh schedule");
+    } finally {
+      setSavingSchedule(false);
+    }
+  }
+
+  async function handleDeleteSchedule() {
+    if (!refreshDataset) return;
+    setSavingSchedule(true);
+    try {
+      await apiDeleteDatasetRefreshSchedule(refreshDataset.id);
+      setRefreshSchedule({
+        enabled: false,
+        frequency: "6H",
+        lastStatus: "IDLE",
+      });
+      setRefreshEnabled(false);
+      setSuccessMsg("Refresh schedule disabled and cleared.");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to clear refresh schedule");
+    } finally {
+      setSavingSchedule(false);
+    }
+  }
+
+  async function handleTriggerRefreshNow() {
+    if (!refreshDataset) return;
+    setTriggeringRefresh(true);
+    try {
+      const res = await apiTriggerDatasetRefresh(refreshDataset.id);
+      setSuccessMsg(`Dataset refreshed successfully! Rows: ${res.rowCount ?? "updated"}, took ${res.durationMs}ms.`);
+      const updated = await apiGetDatasetRefreshSchedule(refreshDataset.id);
+      setRefreshSchedule(updated);
+      refreshDatasets();
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Dataset refresh failed");
+    } finally {
+      setTriggeringRefresh(false);
     }
   }
 
@@ -797,6 +887,13 @@ export default function DatasetsPage() {
                     >
                       Details →
                     </Link>
+                    <button
+                      onClick={() => void openRefreshModal(ds)}
+                      className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 flex items-center gap-1"
+                      title="Schedule automated data refresh"
+                    >
+                      🔄 Refresh
+                    </button>
                   </div>
 
                   {canDelete && (
@@ -1467,6 +1564,191 @@ export default function DatasetsPage() {
                 {savingBlend ? "Saving Blend..." : "Save Blended Dataset"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Scheduled Data Refresh */}
+      {isRefreshModalOpen && refreshDataset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <span>🔄</span>
+                  <span>Scheduled Data Refresh</span>
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Automate re-ingestion and query updates for <span className="font-semibold text-gray-700">{refreshDataset.name}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsRefreshModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100 transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingSchedule ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-gray-500">
+                <span className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+                <span className="text-xs">Loading refresh schedule...</span>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                {/* Status Card */}
+                <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-3.5 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 font-medium">Current Status:</span>
+                    <span
+                      className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
+                        refreshSchedule?.lastStatus === "SUCCESS"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : refreshSchedule?.lastStatus === "FAILED"
+                          ? "bg-rose-100 text-rose-800"
+                          : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
+                      {refreshSchedule?.lastStatus || "IDLE"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 font-medium">Last Refreshed:</span>
+                    <span className="text-gray-700 font-medium">
+                      {refreshSchedule?.lastRunAt
+                        ? new Date(refreshSchedule.lastRunAt).toLocaleString()
+                        : "Never"}
+                    </span>
+                  </div>
+                  {refreshSchedule?.nextRunAt && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500 font-medium">Next Scheduled Run:</span>
+                      <span className="text-emerald-700 font-medium">
+                        {new Date(refreshSchedule.nextRunAt).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {refreshSchedule?.lastError && (
+                    <div className="mt-1 rounded-lg bg-rose-50 border border-rose-200 p-2 text-rose-700 text-[11px]">
+                      {refreshSchedule.lastError}
+                    </div>
+                  )}
+                </div>
+
+                {/* Schedule Configuration */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Refresh Frequency *
+                    </label>
+                    <select
+                      value={refreshFrequency}
+                      onChange={(e) => setRefreshFrequency(e.target.value)}
+                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="1H">Every Hour (1H)</option>
+                      <option value="6H">Every 6 Hours (6H)</option>
+                      <option value="12H">Every 12 Hours (12H)</option>
+                      <option value="DAILY">Daily (24 Hours)</option>
+                      <option value="WEEKLY">Weekly</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="enable-refresh-toggle"
+                      checked={refreshEnabled}
+                      onChange={(e) => setRefreshEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <label htmlFor="enable-refresh-toggle" className="text-xs font-medium text-gray-700 select-none cursor-pointer">
+                      Enable automated scheduled execution
+                    </label>
+                  </div>
+                </div>
+
+                {/* Execution History */}
+                {refreshSchedule?.history && refreshSchedule.history.length > 0 && (
+                  <div className="border-t border-gray-100 pt-3">
+                    <h3 className="text-xs font-bold text-gray-700 mb-2">Recent Refresh Executions</h3>
+                    <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                      {refreshSchedule.history.slice(0, 5).map((entry, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-gray-50 border border-gray-100"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`h-2 w-2 rounded-full ${
+                                entry.status === "SUCCESS" ? "bg-emerald-500" : "bg-rose-500"
+                              }`}
+                            />
+                            <span className="font-medium text-gray-700">
+                              {new Date(entry.executedAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <span>{entry.durationMs}ms</span>
+                            <span
+                              className={`font-semibold ${
+                                entry.status === "SUCCESS" ? "text-emerald-600" : "text-rose-600"
+                              }`}
+                            >
+                              {entry.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="border-t border-gray-100 pt-3 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTriggerRefreshNow}
+                    disabled={triggeringRefresh}
+                    className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    {triggeringRefresh ? (
+                      <>
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                        <span>Refreshing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>⚡</span>
+                        <span>Refresh Now</span>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {refreshSchedule?.enabled && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteSchedule}
+                        disabled={savingSchedule}
+                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition disabled:opacity-50 cursor-pointer"
+                      >
+                        Disable
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSaveSchedule}
+                      disabled={savingSchedule}
+                      className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition disabled:opacity-50 cursor-pointer"
+                    >
+                      {savingSchedule ? "Saving..." : "Save Schedule"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
