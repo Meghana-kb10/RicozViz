@@ -205,18 +205,3 @@ npm run lint
 
 ---
 
-## Development Milestone
-
-**Current status: Day 1, Step 2 — Project Foundation**
-
-- [x] Git repository initialized
-- [x] Monorepo structure (npm workspaces)
-- [x] Next.js frontend scaffolded
-- [x] Express.js backend with health endpoint
-- [x] Prisma configured (models coming next)
-- [x] Docker Compose with PostgreSQL
-- [x] GitHub Actions CI pipeline
-- [ ] Authentication (Day 1, Step 3+)
-- [ ] Database schema (Day 1, Step 3)
-- [ ] RBAC (upcoming)
-- [ ] Dashboard builder (upcoming)
