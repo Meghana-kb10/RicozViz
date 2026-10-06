@@ -292,9 +292,15 @@ export default function DashboardDetailPage({
 
       // Construct effective chart configuration with active drill dimension
       const effectiveConfig = JSON.parse(JSON.stringify(chart.config || {}));
-      if (activeDrill && activeDrill.path && activeDrill.path.length > activeDrill.currentLevel) {
-        const drillDim = activeDrill.path[activeDrill.currentLevel];
-        effectiveConfig.dimensions = [drillDim];
+      if (activeDrill && activeDrill.path) {
+        if (activeDrill.currentLevel < activeDrill.path.length) {
+          const drillDim = activeDrill.path[activeDrill.currentLevel];
+          effectiveConfig.dimensions = [drillDim];
+        } else {
+          // Terminal level: detailed records table view
+          effectiveConfig.dimensions = [];
+          effectiveConfig.limit = 50;
+        }
       }
 
       // Merge chart-level filters with dashboard-level filters
@@ -360,18 +366,35 @@ export default function DashboardDetailPage({
 
   // Handle data point interaction for cross-filtering or drill-down
   const handleChartDataPointClick = (chart: ChartData, field: string, value: unknown) => {
-    // Check if chart has drillPath configured in config.options
-    const drillPath = chart.config?.options?.drillPath as string[] | undefined;
+    // 1. Check if chart has drillPath configured or infer from categorical columns
+    let drillPath = chart.config?.options?.drillPath as string[] | undefined;
+    if (!drillPath || drillPath.length <= 1) {
+      const dataset = datasets.find((d) => d.id === chart.datasetId);
+      if (dataset && dataset.columns && dataset.columns.length > 1) {
+        const currentDim = (chart.config?.dimensions || [])[0] || field;
+        const otherDims = dataset.columns
+          .filter(
+            (c) => {
+              const colType = (c.type || (c as any).dataType || "").toLowerCase();
+              return (colType === "string" || colType === "date") && c.name.toLowerCase() !== currentDim.toLowerCase();
+            }
+          )
+          .map((c) => c.name);
+        if (otherDims.length > 0) {
+          drillPath = [currentDim, ...otherDims.slice(0, 3)];
+        }
+      }
+    }
+
     if (drillPath && drillPath.length > 1) {
       const currentDrill = drillDownStates[chart.id] || null;
       const nextDrill = drillDownNext(currentDrill, chart.id, drillPath, field, value);
       if (nextDrill && nextDrill !== currentDrill) {
         setDrillDownStates((prev) => ({ ...prev, [chart.id]: nextDrill }));
-        return;
       }
     }
 
-    // Standard cross-filter toggle
+    // Toggle dashboard cross-filter so all other compatible widgets on dashboard update
     setDashboardFilters((prev) =>
       toggleCrossFilter(prev, field, value, chart.id, chart.datasetId || undefined)
     );
@@ -1678,13 +1701,19 @@ export default function DashboardDetailPage({
                           );
                         }}
                         drillDown={
-                          chart.config?.options?.drillPath
-                            ? {
-                                path: chart.config.options.drillPath as string[],
-                                currentLevel: drillDownStates[chart.id]?.currentLevel ?? 0,
+                          (() => {
+                            const configuredPath = chart.config?.options?.drillPath as string[] | undefined;
+                            const activeDrill = drillDownStates[chart.id];
+                            const path = activeDrill?.path || configuredPath;
+                            if (path && path.length > 1) {
+                              return {
+                                path,
+                                currentLevel: activeDrill?.currentLevel ?? 0,
                                 onDrillBack: () => handleDrillBack(chart.id),
-                              }
-                            : null
+                              };
+                            }
+                            return null;
+                          })()
                         }
                       />
                     </div>

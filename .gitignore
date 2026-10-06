@@ -70,3 +70,5 @@ $RECYCLE.BIN/
 .cache/
 tmp/
 temp/
+.agents/
+

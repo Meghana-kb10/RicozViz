@@ -227,6 +227,10 @@ export function ChartRenderer({
     }
   };
 
+  const isDetailedDrillLevel = Boolean(
+    drillDown && drillDown.path && drillDown.currentLevel >= drillDown.path.length
+  );
+
   return (
     <div style={{ height }} className="w-full relative flex flex-col">
       {/* Optional Drill-Down Breadcrumb */}
@@ -234,18 +238,18 @@ export function ChartRenderer({
         <div className="flex items-center justify-between pb-2 mb-1 border-b border-gray-100 text-xs shrink-0">
           <div className="flex items-center gap-1.5 text-gray-500 font-medium">
             <span>Drill Level:</span>
-            <span className="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded font-mono">
-              {drillDown.path[drillDown.currentLevel]}
+            <span className="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded font-mono">
+              {drillDown.path[drillDown.currentLevel] || "Detailed records"}
             </span>
           </div>
           {drillDown.onDrillBack && (
             <button
               type="button"
               onClick={drillDown.onDrillBack}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
             >
               <ArrowLeft className="h-3 w-3" />
-              <span>Back to {drillDown.path[drillDown.currentLevel - 1]}</span>
+              <span>Back to {drillDown.path[drillDown.currentLevel - 1] || "Overview"}</span>
             </button>
           )}
         </div>
@@ -253,7 +257,17 @@ export function ChartRenderer({
 
       {/* Main Chart Rendering Area */}
       <div className="flex-1 w-full relative min-h-0">
-        {renderContent()}
+        {isDetailedDrillLevel ? (
+          <TableRenderer
+            data={mapped}
+            config={config}
+            height="100%"
+            onDataPointClick={onDataPointClick}
+            selectedFilterValue={selectedFilterValue}
+          />
+        ) : (
+          renderContent()
+        )}
 
         {/* Subtle Non-Blocking Loading Overlay for Subsequent Queries */}
         {isLoading && (

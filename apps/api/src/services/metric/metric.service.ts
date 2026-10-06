@@ -10,9 +10,13 @@ import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../utils/errors.js";
 import { sendSuccess } from "../../utils/response.js";
 import { logAuditEvent } from "../audit.service.js";
-import { datasetQueryEngine } from "../dataset/query-engine.js";
+import { datasetQueryEngine, type DatasetQueryFilter } from "../dataset/query-engine.js";
 import { validateSqlIdentifier } from "../dataset/schema-discovery.service.js";
 import { resolveWorkspaceAccess } from "../workspace.service.js";
+import {
+  compileCalculatedField,
+  evaluateExpression,
+} from "../dataset/calculated-field.engine.js";
 import type { MetricAggregation, MetricFormat } from "@prisma/client";
 
 const VALID_AGGREGATIONS: MetricAggregation[] = ["SUM", "AVG", "COUNT", "MIN", "MAX"];
@@ -105,14 +109,32 @@ export async function createMetric(req: Request, res: Response): Promise<void> {
   }
 
   const trimmedField = field.trim();
-  // Validate column name against SQL identifier rules
-  if (trimmedField !== "*") {
-    validateSqlIdentifier(trimmedField);
+  const knownCols = dataset.columns.map((c) => ({
+    name: c.name,
+    type: (c.dataType || "STRING").toLowerCase(),
+  }));
+  const meta = (dataset.schemaMeta || {}) as Record<string, unknown>;
+  const calculatedFields = Array.isArray(meta.calculatedFields)
+    ? (meta.calculatedFields as Array<{ name: string; expression: string; dataType?: string }>)
+    : [];
+  for (const cf of calculatedFields) {
+    knownCols.push({ name: cf.name, type: (cf.dataType || "NUMBER").toLowerCase() });
   }
 
-  // Check column exists in dataset
-  if (trimmedField !== "*") {
-    const colExists = dataset.columns.some(
+  const isExpression = /[+\-*/%()]/.test(trimmedField);
+  if (isExpression) {
+    try {
+      compileCalculatedField(trimmedField, knownCols);
+    } catch (err) {
+      throw AppError.badRequest(
+        `Invalid metric formula expression: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  } else if (trimmedField !== "*") {
+    // Validate column name against SQL identifier rules
+    validateSqlIdentifier(trimmedField);
+
+    const colExists = knownCols.some(
       (c) => c.name.toLowerCase() === trimmedField.toLowerCase()
     );
     if (!colExists) {
@@ -123,12 +145,12 @@ export async function createMetric(req: Request, res: Response): Promise<void> {
 
     // Verify non-numeric column is not used for numeric aggregations
     if (normCalc === "SUM" || normCalc === "AVG") {
-      const col = dataset.columns.find(
+      const col = knownCols.find(
         (c) => c.name.toLowerCase() === trimmedField.toLowerCase()
       );
-      if (col && col.dataType !== "NUMBER") {
+      if (col && col.type !== "number" && col.type !== "decimal" && col.type !== "integer") {
         throw AppError.badRequest(
-          `Aggregation "${normCalc}" requires a numeric field, but "${trimmedField}" has type ${col.dataType}`
+          `Aggregation "${normCalc}" requires a numeric field, but "${trimmedField}" has type ${col.type}`
         );
       }
     }
@@ -319,9 +341,30 @@ export async function updateMetric(req: Request, res: Response): Promise<void> {
 
   if (field !== undefined) {
     const trimmedField = String(field).trim();
-    if (trimmedField !== "*") {
+    const knownCols = existing.dataset.columns.map((c) => ({
+      name: c.name,
+      type: (c.dataType || "STRING").toLowerCase(),
+    }));
+    const meta = (existing.dataset.schemaMeta || {}) as Record<string, unknown>;
+    const calculatedFields = Array.isArray(meta.calculatedFields)
+      ? (meta.calculatedFields as Array<{ name: string; expression: string; dataType?: string }>)
+      : [];
+    for (const cf of calculatedFields) {
+      knownCols.push({ name: cf.name, type: (cf.dataType || "NUMBER").toLowerCase() });
+    }
+
+    const isExpression = /[+\-*/%()]/.test(trimmedField);
+    if (isExpression) {
+      try {
+        compileCalculatedField(trimmedField, knownCols);
+      } catch (err) {
+        throw AppError.badRequest(
+          `Invalid metric formula expression: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    } else if (trimmedField !== "*") {
       validateSqlIdentifier(trimmedField);
-      const exists = existing.dataset.columns.some(
+      const exists = knownCols.some(
         (c) => c.name.toLowerCase() === trimmedField.toLowerCase()
       );
       if (!exists) {
@@ -418,6 +461,7 @@ export async function deleteMetric(req: Request, res: Response): Promise<void> {
 export async function calculateMetric(req: Request, res: Response): Promise<void> {
   const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
+  const { filters, filterLogic = "AND", timeRange, dimensions } = req.body || {};
 
   if (!id) {
     throw AppError.badRequest("Metric ID is required");
@@ -444,21 +488,122 @@ export async function calculateMetric(req: Request, res: Response): Promise<void
 
   const startTime = Date.now();
 
-  // Execute aggregation query via safe query engine
-  const queryResult = await datasetQueryEngine.executeQuery(metric.dataset, {
-    limit: 1,
-    measures: [
-      {
-        column: metric.field,
-        aggregation: metric.calculation,
-        alias: "metric_val",
-      },
-    ],
-  });
+  // Prepare runtime filters
+  const queryFilters: DatasetQueryFilter[] = [];
+  if (Array.isArray(filters)) {
+    for (const f of filters) {
+      if (f && typeof f.column === "string") {
+        queryFilters.push({
+          column: f.column,
+          operator: f.operator || "=",
+          value: f.value,
+        });
+      }
+    }
+  }
+  if (timeRange && typeof timeRange.column === "string") {
+    if (timeRange.start) {
+      queryFilters.push({ column: timeRange.column, operator: ">=", value: timeRange.start });
+    }
+    if (timeRange.end) {
+      queryFilters.push({ column: timeRange.column, operator: "<=", value: timeRange.end });
+    }
+  }
+
+  const validatedDimensions: string[] = [];
+  if (Array.isArray(dimensions)) {
+    for (const d of dimensions) {
+      if (typeof d === "string" && d.trim()) {
+        validateSqlIdentifier(d.trim());
+        validatedDimensions.push(d.trim());
+      }
+    }
+  }
+
+  const isExpression = /[+\-*/%()]/.test(metric.field);
+  let rawValue = 0;
+  let breakdownRows: Record<string, unknown>[] | undefined;
+
+  if (isExpression) {
+    // Formula / ratio metric calculation (e.g. revenue / orders or [revenue] / [orders])
+    const knownCols = metric.dataset.columns.map((c) => ({
+      name: c.name,
+      type: (c.dataType || "STRING").toLowerCase(),
+    }));
+    const meta = (metric.dataset.schemaMeta || {}) as Record<string, unknown>;
+    const calculatedFields = Array.isArray(meta.calculatedFields)
+      ? (meta.calculatedFields as Array<{ name: string; expression: string; dataType?: string }>)
+      : [];
+    for (const cf of calculatedFields) {
+      knownCols.push({ name: cf.name, type: (cf.dataType || "NUMBER").toLowerCase() });
+    }
+
+    const compiled = compileCalculatedField(metric.field, knownCols);
+    const measures = compiled.referencedColumns.map((col) => ({
+      column: col,
+      aggregation: metric.calculation,
+      alias: `agg_${col}`,
+    }));
+
+    const queryResult = await datasetQueryEngine.executeQuery(metric.dataset, {
+      limit: validatedDimensions.length > 0 ? 100 : 1,
+      measures,
+      dimensions: validatedDimensions.length > 0 ? validatedDimensions : undefined,
+      filters: queryFilters.length > 0 ? queryFilters : undefined,
+      filterLogic: filterLogic === "OR" ? "OR" : "AND",
+    });
+
+    if (validatedDimensions.length > 0) {
+      breakdownRows = queryResult.rows.map((row) => {
+        const evalContext: Record<string, unknown> = {};
+        for (const col of compiled.referencedColumns) {
+          evalContext[col] = Number(row[`agg_${col}`] ?? row[col]) || 0;
+        }
+        const val = evaluateExpression(compiled.ast, evalContext);
+        return {
+          ...row,
+          metric_val: typeof val === "number" ? val : 0,
+        };
+      });
+      const firstRow = breakdownRows[0];
+      rawValue = firstRow ? Number(firstRow["metric_val"]) || 0 : 0;
+    } else {
+      const rawRow = queryResult.rows[0];
+      if (rawRow) {
+        const evalContext: Record<string, unknown> = {};
+        for (const col of compiled.referencedColumns) {
+          evalContext[col] = Number(rawRow[`agg_${col}`] ?? rawRow[col]) || 0;
+        }
+        const evaluated = evaluateExpression(compiled.ast, evalContext);
+        rawValue = typeof evaluated === "number" ? evaluated : 0;
+      }
+    }
+  } else {
+    // Standard aggregation metric
+    const queryResult = await datasetQueryEngine.executeQuery(metric.dataset, {
+      limit: validatedDimensions.length > 0 ? 100 : 1,
+      measures: [
+        {
+          column: metric.field,
+          aggregation: metric.calculation,
+          alias: "metric_val",
+        },
+      ],
+      dimensions: validatedDimensions.length > 0 ? validatedDimensions : undefined,
+      filters: queryFilters.length > 0 ? queryFilters : undefined,
+      filterLogic: filterLogic === "OR" ? "OR" : "AND",
+    });
+
+    if (validatedDimensions.length > 0) {
+      breakdownRows = queryResult.rows;
+      rawValue = queryResult.rows[0] ? Number(queryResult.rows[0]["metric_val"]) || 0 : 0;
+    } else {
+      const rawRow = queryResult.rows[0];
+      rawValue = rawRow ? Number(rawRow["metric_val"]) || 0 : 0;
+    }
+  }
 
   const durationMs = Date.now() - startTime;
-  const rawRow = queryResult.rows[0];
-  const rawValue = rawRow ? Number(rawRow["metric_val"]) || 0 : 0;
   const formattedValue = formatMetricValue(rawValue, metric.format);
 
   let targetDelta: number | null = null;
@@ -479,10 +624,12 @@ export async function calculateMetric(req: Request, res: Response): Promise<void
     format: metric.format,
     rawValue,
     formattedValue,
+    breakdown: breakdownRows,
     targetValue: metric.targetValue,
     targetDelta,
     targetPercentage: targetPercentage !== null ? Math.round(targetPercentage * 10) / 10 : null,
     targetMet,
+    appliedFiltersCount: queryFilters.length,
     executionTimeMs: durationMs,
     calculatedAt: new Date().toISOString(),
   });

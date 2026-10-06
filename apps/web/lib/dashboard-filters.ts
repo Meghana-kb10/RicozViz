@@ -39,16 +39,13 @@ export function isFilterApplicableToChart(
   chart: ChartData,
   datasetColumns?: DatasetColumn[]
 ): boolean {
-  // If filter is explicitly pinned to a datasetId, verify match
-  if (filter.datasetId && chart.datasetId && filter.datasetId !== chart.datasetId) {
-    return false;
-  }
-
-  // If columns are provided, check if the chart's dataset has this field
+  // If columns are provided, verify if the chart's dataset has this field
   if (datasetColumns && datasetColumns.length > 0) {
-    return datasetColumns.some(
+    const hasColumn = datasetColumns.some(
       (c) => c.name.toLowerCase() === filter.field.toLowerCase()
     );
+    if (hasColumn) return true;
+    return false;
   }
 
   // If chart config defines dimensions or measures, check if field is used
@@ -62,6 +59,11 @@ export function isFilterApplicableToChart(
       (f) => f.toLowerCase() === filter.field.toLowerCase()
     );
     if (matchesChartField) return true;
+  }
+
+  // If filter is explicitly pinned to a datasetId, verify match
+  if (filter.datasetId && chart.datasetId) {
+    return filter.datasetId === chart.datasetId;
   }
 
   // If no columns known, allow by default if dataset matches or is global
@@ -199,7 +201,7 @@ export function parseFiltersFromUrl(
 }
 
 /**
- * Handles drill-down hierarchy transition.
+ * Handles drill-down hierarchy transition including terminal detailed records.
  */
 export function drillDownNext(
   currentState: DrillDownState | null,
@@ -208,11 +210,11 @@ export function drillDownNext(
   selectedField: string,
   selectedValue: unknown
 ): DrillDownState | null {
-  if (!path || path.length <= 1) return null;
+  if (!path || path.length < 1) return null;
 
   const currentLevel = currentState?.currentLevel ?? 0;
-  if (currentLevel >= path.length - 1) {
-    return currentState; // Already at deepest level
+  if (currentLevel >= path.length) {
+    return currentState; // Already at deepest level (detailed records)
   }
 
   const existingFilters = currentState?.filters || [];

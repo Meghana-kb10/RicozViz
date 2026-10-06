@@ -1595,9 +1595,18 @@ export async function apiDeleteMetric(id: string): Promise<{ message: string }> 
   });
 }
 
-export async function apiCalculateMetric(id: string): Promise<CalculatedMetricResult> {
+export async function apiCalculateMetric(
+  id: string,
+  options?: {
+    filters?: DatasetQueryFilter[];
+    filterLogic?: "AND" | "OR";
+    timeRange?: { column: string; start?: string; end?: string };
+    dimensions?: string[];
+  }
+): Promise<CalculatedMetricResult> {
   return apiFetch<CalculatedMetricResult>(`/api/v1/metrics/${id}/calculate`, {
     method: "POST",
+    body: options ? JSON.stringify(options) : undefined,
   });
 }
 
