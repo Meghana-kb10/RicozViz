@@ -18,7 +18,6 @@ const fontMono = JetBrains_Mono({
   display: "swap",
   weight: ["400", "500", "600"],
 });
-
 export const metadata: Metadata = {
   title: {
     default: "RicozViz — Enterprise Intelligence & Governed Analytics",

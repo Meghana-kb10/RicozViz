@@ -7,6 +7,7 @@ import { requireAuth, requirePermission } from "../middleware/auth.middleware.js
 import { sendSuccess } from "../utils/response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { queryAuditLogs, getAuditLogStats } from "../services/audit.service.js";
+import { verifyResourceWorkspaceAccess } from "../services/workspace/workspace-auth.helper.js";
 
 const router = Router();
 
@@ -32,6 +33,16 @@ router.get(
     const search = typeof req.query.search === "string" ? req.query.search : undefined;
     const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 50;
     const offset = typeof req.query.offset === "string" ? parseInt(req.query.offset, 10) : 0;
+
+    if (workspaceId) {
+      await verifyResourceWorkspaceAccess(
+        { workspaceId, organizationId: user.organizationId },
+        user.userId,
+        user.organizationId,
+        user.roleName,
+        "READ"
+      );
+    }
 
     const result = await queryAuditLogs({
       organizationId: user.organizationId,
@@ -62,6 +73,16 @@ router.get(
   asyncHandler(async (req, res) => {
     const user = req.user!;
     const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId : undefined;
+
+    if (workspaceId) {
+      await verifyResourceWorkspaceAccess(
+        { workspaceId, organizationId: user.organizationId },
+        user.userId,
+        user.organizationId,
+        user.roleName,
+        "READ"
+      );
+    }
 
     const stats = await getAuditLogStats(user.organizationId, workspaceId);
     sendSuccess(res, stats, 200);

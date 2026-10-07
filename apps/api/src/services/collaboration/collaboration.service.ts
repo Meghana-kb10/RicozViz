@@ -11,7 +11,7 @@ import type { DashboardAccessLevel } from "@prisma/client";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../utils/errors.js";
 import { logAuditEvent } from "../audit.service.js";
-import { verifyResourceWorkspaceAccess } from "../workspace/workspace-auth.helper.js";
+import { getDashboardWorkspaceId, verifyResourceWorkspaceAccess } from "../workspace/workspace-auth.helper.js";
 import { datasetQueryEngine } from "../dataset/query-engine.js";
 
 export interface CollaboratorInfo {
@@ -66,7 +66,7 @@ export async function listDashboardCollaborators(
     throw AppError.notFound(`Dashboard with ID "${dashboardId}" not found`);
   }
 
-  const workspaceId = (dashboard.layoutConfig as any)?.workspaceId ?? undefined;
+  const workspaceId = getDashboardWorkspaceId(dashboard.layoutConfig);
 
   await verifyResourceWorkspaceAccess(
     { workspaceId, organizationId },
@@ -88,19 +88,18 @@ export async function listDashboardCollaborators(
       grantedAt: g.grantedAt.toISOString(),
     }));
 
-  const orgMembers = await prisma.organizationMember.findMany({
-    where: { organizationId },
-    include: {
-      user: { select: { id: true, name: true, email: true, avatarUrl: true } },
-      role: { select: { name: true } },
-    },
-  });
-
-  const workspaceMembers = orgMembers.map((m) => ({
-    userId: m.user.id,
-    roleName: m.role?.name || "MEMBER",
-    user: m.user,
-  }));
+  const workspaceMembers = workspaceId
+    ? (await prisma.workspaceMember.findMany({
+        where: { workspaceId },
+        include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+      })).map((member) => ({ userId: member.user.id, roleName: member.role, user: member.user }))
+    : (await prisma.organizationMember.findMany({
+        where: { organizationId },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+          role: { select: { name: true } },
+        },
+      })).map((member) => ({ userId: member.user.id, roleName: member.role?.name || "MEMBER", user: member.user }));
 
   return {
     owner: dashboard.owner,
@@ -128,7 +127,7 @@ export async function grantDashboardCollaborator(
     throw AppError.notFound(`Dashboard with ID "${dashboardId}" not found`);
   }
 
-  const workspaceId = (dashboard.layoutConfig as any)?.workspaceId ?? undefined;
+  const workspaceId = getDashboardWorkspaceId(dashboard.layoutConfig);
 
   await verifyResourceWorkspaceAccess(
     { workspaceId, organizationId },
@@ -138,14 +137,19 @@ export async function grantDashboardCollaborator(
     "WRITE"
   );
 
-  // Validate target user exists and belongs to the same organization
-  const targetMember = await prisma.organizationMember.findFirst({
-    where: { userId: targetUserId, organizationId },
-    include: { user: true },
-  });
+  // Validate target user exists in the same workspace (or organization for legacy dashboards).
+  const targetMember = workspaceId
+    ? await prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+        include: { user: true },
+      })
+    : await prisma.organizationMember.findFirst({
+        where: { userId: targetUserId, organizationId },
+        include: { user: true },
+      });
 
   if (!targetMember) {
-    throw AppError.badRequest("Target user is not a member of this organization");
+    throw AppError.badRequest("Target user is not a member of this dashboard workspace");
   }
 
   // Prevent granting to dashboard owner
@@ -218,7 +222,7 @@ export async function revokeDashboardCollaborator(
     throw AppError.notFound(`Dashboard with ID "${dashboardId}" not found`);
   }
 
-  const workspaceId = (dashboard.layoutConfig as any)?.workspaceId ?? undefined;
+  const workspaceId = getDashboardWorkspaceId(dashboard.layoutConfig);
 
   await verifyResourceWorkspaceAccess(
     { workspaceId, organizationId },
@@ -277,7 +281,7 @@ export async function createChartShareLink(
     throw AppError.notFound(`Chart with ID "${chartId}" not found`);
   }
 
-  const workspaceId = (chart.dashboard.layoutConfig as any)?.workspaceId ?? undefined;
+  const workspaceId = getDashboardWorkspaceId(chart.dashboard.layoutConfig);
 
   await verifyResourceWorkspaceAccess(
     { workspaceId, organizationId },
@@ -334,7 +338,7 @@ export async function revokeChartShareLink(
     throw AppError.notFound(`Chart with ID "${chartId}" not found`);
   }
 
-  const workspaceId = (chart.dashboard.layoutConfig as any)?.workspaceId ?? undefined;
+  const workspaceId = getDashboardWorkspaceId(chart.dashboard.layoutConfig);
 
   await verifyResourceWorkspaceAccess(
     { workspaceId, organizationId },

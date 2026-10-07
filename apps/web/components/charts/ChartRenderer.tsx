@@ -26,6 +26,7 @@ import { mapQueryResultToChartData } from "../../lib/chart-query-mapper";
 import { RadarChartRenderer } from "../visualization/RadarChartRenderer";
 import { FunnelChartRenderer } from "../visualization/FunnelChartRenderer";
 import { HeatmapRenderer } from "../visualization/HeatmapRenderer";
+import { MapRenderer } from "../visualization/MapRenderer";
 
 export const COLOR_PALETTES: Record<string, string[]> = {
   default: [
@@ -97,6 +98,9 @@ export interface ChartRendererProps {
   isLoading?: boolean;
   error?: string | null;
   height?: number | string;
+  onDataPointClick?: (field: string, value: unknown) => void;
+  selectedFilterValue?: unknown;
+  onClearFilter?: () => void;
 }
 
 function subscribe() {
@@ -139,6 +143,9 @@ export function ChartRenderer({
   isLoading = false,
   error = null,
   height = 260,
+  onDataPointClick,
+  selectedFilterValue,
+  onClearFilter,
 }: ChartRendererProps) {
   const mounted = useSyncExternalStore(
     subscribe,
@@ -661,6 +668,18 @@ export function ChartRenderer({
             <Tooltip formatter={tooltipFormatter} />
           </Treemap>
         </ResponsiveContainer>
+      )}
+
+      {/* 14. GEOSPATIAL MAP */}
+      {chartType === "MAP" && (
+        <MapRenderer
+          data={mapped}
+          config={config}
+          height="100%"
+          onDataPointClick={onDataPointClick}
+          selectedFilterValue={selectedFilterValue}
+          onClearFilter={onClearFilter}
+        />
       )}
     </div>
   );

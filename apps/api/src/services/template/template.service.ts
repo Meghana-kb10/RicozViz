@@ -9,7 +9,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../utils/errors.js";
 import { logAuditEvent } from "../audit.service.js";
-import { verifyResourceWorkspaceAccess } from "../workspace/workspace-auth.helper.js";
+import { getDashboardWorkspaceId, verifyResourceWorkspaceAccess } from "../workspace/workspace-auth.helper.js";
 
 export interface TemplateChartDef {
   title: string;
@@ -204,13 +204,24 @@ export const SYSTEM_TEMPLATES: SystemTemplateSeed[] = [
 export async function listTemplates(
   organizationId: string,
   workspaceId?: string,
-  category?: string
+  category?: string,
+  userId?: string,
+  userRoleName?: string
 ) {
+  if (workspaceId && userId) {
+    await verifyResourceWorkspaceAccess(
+      { workspaceId, organizationId },
+      userId,
+      organizationId,
+      userRoleName,
+      "READ"
+    );
+  }
   // Query custom templates from DB
   let customTemplates: any[] = [];
   try {
     const where: any = {
-      OR: [{ isSystem: true }, { organizationId }],
+      OR: [{ isSystem: true }, { organizationId, ...(workspaceId ? { workspaceId } : {}) }],
     };
     if (category && category !== "All") {
       where.category = category;
@@ -245,7 +256,12 @@ export async function listTemplates(
   return Array.from(map.values());
 }
 
-export async function getTemplateById(templateId: string, organizationId: string) {
+export async function getTemplateById(
+  templateId: string,
+  organizationId: string,
+  userId?: string,
+  userRoleName?: string
+) {
   // Check system templates first
   const sys = SYSTEM_TEMPLATES.find((t) => t.id === templateId);
   if (sys) {
@@ -258,14 +274,24 @@ export async function getTemplateById(templateId: string, organizationId: string
   }
 
   const template = await prisma.dashboardTemplate.findFirst({
-    where: {
-      id: templateId,
-      OR: [{ isSystem: true }, { organizationId }],
-    },
+      where: {
+        id: templateId,
+        OR: [{ isSystem: true }, { organizationId }],
+      },
   });
 
   if (!template) {
     throw AppError.notFound(`Dashboard template with ID "${templateId}" not found`);
+  }
+
+  if (template.workspaceId && userId) {
+    await verifyResourceWorkspaceAccess(
+      { workspaceId: template.workspaceId, organizationId },
+      userId,
+      organizationId,
+      userRoleName,
+      "READ"
+    );
   }
 
   return template;
@@ -281,7 +307,7 @@ export async function createTemplateFromDashboard(params: {
   workspaceId?: string;
   userRoleName?: string;
 }) {
-  const { dashboardId, name, description, category, userId, organizationId, workspaceId, userRoleName } =
+  const { dashboardId, name, description, category, userId, organizationId, userRoleName } =
     params;
 
   const dashboard = await prisma.dashboard.findFirst({
@@ -293,9 +319,11 @@ export async function createTemplateFromDashboard(params: {
     throw AppError.notFound(`Dashboard with ID "${dashboardId}" not found`);
   }
 
-  // Check workspace access
+  const dashboardWorkspaceId = getDashboardWorkspaceId(dashboard.layoutConfig);
+
+  // Check the source dashboard's actual workspace, never a caller-supplied label.
   await verifyResourceWorkspaceAccess(
-    { workspaceId: dashboard.organizationId ? workspaceId : null, organizationId },
+    { workspaceId: dashboardWorkspaceId, organizationId: dashboard.organizationId },
     userId,
     organizationId,
     userRoleName,
@@ -319,14 +347,14 @@ export async function createTemplateFromDashboard(params: {
       chartsConfig: chartsConfig as any,
       isSystem: false,
       organizationId,
-      workspaceId: workspaceId ?? null,
+      workspaceId: dashboardWorkspaceId ?? null,
       createdById: userId,
     },
   });
 
   await logAuditEvent({
     organizationId,
-    workspaceId: workspaceId ?? undefined,
+    workspaceId: dashboardWorkspaceId,
     userId,
     action: "TEMPLATE_CREATED",
     resourceType: "DashboardTemplate",
@@ -350,12 +378,43 @@ export async function instantiateDashboardFromTemplate(params: {
   const { templateId, name, description, workspaceId, targetDatasetId, userId, organizationId, userRoleName } =
     params;
 
-  const template = await getTemplateById(templateId, organizationId);
+  const template = await getTemplateById(templateId, organizationId, userId, userRoleName);
+
+  let resolvedWorkspaceId = workspaceId ?? (template as { workspaceId?: string | null }).workspaceId ?? undefined;
 
   // Validate workspace access if workspaceId provided
-  if (workspaceId) {
+  if (resolvedWorkspaceId) {
     await verifyResourceWorkspaceAccess(
-      { workspaceId, organizationId },
+      { workspaceId: resolvedWorkspaceId, organizationId },
+      userId,
+      organizationId,
+      userRoleName,
+      "WRITE"
+    );
+  }
+
+  if (targetDatasetId) {
+    const dataset = await prisma.dataset.findFirst({
+      where: { id: targetDatasetId, organizationId },
+      select: { workspaceId: true, organizationId: true },
+    });
+    if (!dataset) throw AppError.notFound("Target dataset");
+    await verifyResourceWorkspaceAccess(
+      { workspaceId: dataset.workspaceId, organizationId: dataset.organizationId },
+      userId,
+      organizationId,
+      userRoleName,
+      "READ"
+    );
+    if (!resolvedWorkspaceId) resolvedWorkspaceId = dataset.workspaceId ?? undefined;
+    if (resolvedWorkspaceId && dataset.workspaceId !== resolvedWorkspaceId) {
+      throw AppError.badRequest("Target dataset must belong to the selected workspace");
+    }
+  }
+
+  if (resolvedWorkspaceId && !workspaceId && !(template as { workspaceId?: string | null }).workspaceId) {
+    await verifyResourceWorkspaceAccess(
+      { workspaceId: resolvedWorkspaceId, organizationId },
       userId,
       organizationId,
       userRoleName,
@@ -372,7 +431,10 @@ export async function instantiateDashboardFromTemplate(params: {
       ownerId: userId,
       status: "DRAFT",
       visibility: "PRIVATE",
-      layoutConfig: template.layoutConfig as any,
+      layoutConfig: {
+        ...((template.layoutConfig as Record<string, unknown>) || {}),
+        ...(resolvedWorkspaceId ? { workspaceId: resolvedWorkspaceId } : {}),
+      } as any,
     },
   });
 
@@ -397,7 +459,7 @@ export async function instantiateDashboardFromTemplate(params: {
 
   await logAuditEvent({
     organizationId,
-    workspaceId: workspaceId ?? undefined,
+    workspaceId: resolvedWorkspaceId,
     userId,
     action: "TEMPLATE_APPLIED",
     resourceType: "Dashboard",

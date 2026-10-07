@@ -14,6 +14,7 @@ import { KpiRenderer } from "./KpiRenderer";
 import { RadarChartRenderer } from "./RadarChartRenderer";
 import { FunnelChartRenderer } from "./FunnelChartRenderer";
 import { HeatmapRenderer } from "./HeatmapRenderer";
+import { MapRenderer } from "./MapRenderer";
 
 export interface ChartRendererProps {
   chartType: ChartType;
@@ -121,7 +122,7 @@ export function ChartRenderer({
   const hasDimension = (config.dimensions && config.dimensions.length > 0) || Boolean(config.xAxis || (config as Record<string, unknown>).category);
   const hasMeasure = (config.measures && config.measures.length > 0) || Boolean(config.yAxis || (config as Record<string, unknown>).value);
 
-  if (chartType !== "TABLE" && chartType !== "KPI" && (!hasDimension || !hasMeasure)) {
+  if (chartType !== "TABLE" && chartType !== "KPI" && chartType !== "MAP" && (!hasDimension || !hasMeasure)) {
     return (
       <div
         style={{ height }}
@@ -214,6 +215,17 @@ export function ChartRenderer({
         return <FunnelChartRenderer data={mapped} config={config} height="100%" />;
       case "HEATMAP":
         return <HeatmapRenderer data={mapped} config={config} height="100%" />;
+      case "MAP":
+        return (
+          <MapRenderer
+            data={mapped}
+            config={config}
+            height="100%"
+            onDataPointClick={onDataPointClick}
+            selectedFilterValue={selectedFilterValue}
+            onClearFilter={onClearFilter}
+          />
+        );
       default:
         return (
           <BarChartRenderer

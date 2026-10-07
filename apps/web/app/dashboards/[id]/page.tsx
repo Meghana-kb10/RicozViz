@@ -79,6 +79,15 @@ import {
   parseFiltersFromUrl,
 } from "../../../lib/dashboard-filters";
 import { exportChartDataToCsv } from "../../../lib/export-csv";
+import { DashboardAppearanceModal } from "../../../components/dashboard/DashboardAppearanceModal";
+import {
+  getDashboardTheme,
+  getDashboardBranding,
+  getRadiusStyle,
+  getShadowStyle,
+  getFontFamilyClass,
+} from "../../../lib/theme-utils";
+import type { DashboardThemeConfig, DashboardBrandingConfig } from "../../../lib/api";
 import {
   BarChart3,
   LineChart as LineChartIcon,
@@ -123,6 +132,7 @@ import {
   RotateCcw,
   Code,
   Radio,
+  Palette,
 } from "lucide-react";
 
 
@@ -135,6 +145,7 @@ const QUICK_CHART_TYPES: { value: ChartType; label: string; icon: React.Componen
   { value: "SCATTER", label: "Scatter Plot", icon: ScatterIcon },
   { value: "TABLE", label: "Data Table", icon: TableIcon },
   { value: "KPI", label: "KPI Metric", icon: Hash },
+  { value: "MAP", label: "Geospatial Map", icon: Globe },
 ];
 
 export default function DashboardDetailPage({
@@ -207,6 +218,7 @@ export default function DashboardDetailPage({
   const [shareStatus, setShareStatus] = useState<ShareLinkStatusResponse | null>(null);
   const [loadingShareStatus, setLoadingShareStatus] = useState(false);
   const [updatingShare, setUpdatingShare] = useState(false);
+  const [shareExpiresAtInput, setShareExpiresAtInput] = useState("");
   const [copiedShareLink, setCopiedShareLink] = useState(false);
   const [collaborators, setCollaborators] = useState<DashboardCollaboratorData[]>([]);
   const [workspaceMembers, setWorkspaceMembers] = useState<
@@ -245,7 +257,6 @@ export default function DashboardDetailPage({
   const [generatingReport, setGeneratingReport] = useState(false);
   const [lastGeneratedReport, setLastGeneratedReport] = useState<DashboardReportSnapshot | null>(null);
   const [reportExecutions, setReportExecutions] = useState<ReportExecutionData[]>([]);
-  const [reportFormat, setReportFormat] = useState<string>("PDF");
   const [scheduleModalTab, setScheduleModalTab] = useState<"CONFIG" | "HISTORY">("CONFIG");
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
@@ -330,7 +341,6 @@ export default function DashboardDetailPage({
     }
   };
 
-
   const handleAddAiGeneratedChart = async (chartSpec: NlToChartResponse) => {
     if (!dashboard) return;
     try {
@@ -353,6 +363,22 @@ export default function DashboardDetailPage({
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to add chart to dashboard");
     }
   };
+
+  const [reportFormat, setReportFormat] = useState<"PDF" | "CSV" | "PNG" | "EXCEL">("PDF");
+
+  // Dashboard Theme & Branding State
+  const [isAppearanceModalOpen, setIsAppearanceModalOpen] = useState(false);
+  const [savingAppearance, setSavingAppearance] = useState(false);
+
+  // Derived Theme & Branding Configurations
+  const dashboardTheme = useMemo(
+    () => getDashboardTheme(dashboard?.layoutConfig),
+    [dashboard?.layoutConfig]
+  );
+  const dashboardBranding = useMemo(
+    () => getDashboardBranding(dashboard?.layoutConfig),
+    [dashboard?.layoutConfig]
+  );
 
   useEffect(() => {
     if (!isLoading && !auth) {
@@ -981,6 +1007,46 @@ export default function DashboardDetailPage({
     }
   };
 
+  // Save Dashboard Theme & Enterprise Branding
+  const handleSaveAppearance = async (
+    newTheme: DashboardThemeConfig,
+    newBranding: DashboardBrandingConfig
+  ) => {
+    if (!dashboard) return;
+    setSavingAppearance(true);
+    setErrorMsg(null);
+    try {
+      const nextLayoutConfig = {
+        ...(dashboard.layoutConfig || {}),
+        theme: newTheme,
+        branding: newBranding,
+      };
+      const updatePayload: {
+        layoutConfig: Record<string, unknown>;
+        name?: string;
+        description?: string | null;
+      } = {
+        layoutConfig: nextLayoutConfig,
+      };
+      if (newBranding.title && newBranding.title.trim() !== dashboard.name) {
+        updatePayload.name = newBranding.title.trim();
+      }
+      if (newBranding.description !== undefined && newBranding.description !== dashboard.description) {
+        updatePayload.description = newBranding.description;
+      }
+      const updated = await apiUpdateDashboard(dashboard.id, updatePayload);
+      setDashboard(updated);
+      if (updatePayload.name) setEditName(updatePayload.name);
+      if (updatePayload.description !== undefined) setEditDescription(updatePayload.description || "");
+      setSuccessMsg("Dashboard appearance and branding updated successfully.");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to update appearance");
+      throw err;
+    } finally {
+      setSavingAppearance(false);
+    }
+  };
+
   const handleRevokeCollaborator = async (collaboratorUserId: string) => {
     setUpdatingCollaborator(true);
     try {
@@ -997,7 +1063,10 @@ export default function DashboardDetailPage({
   const handleCreateShareLink = async () => {
     setUpdatingShare(true);
     try {
-      const res = await apiCreateShareLink(id);
+      const res = await apiCreateShareLink(
+        id,
+        shareExpiresAtInput ? new Date(shareExpiresAtInput).toISOString() : undefined
+      );
       setShareStatus(res);
       setSuccessMsg("Public share link created successfully!");
     } catch (err) {
@@ -1491,6 +1560,16 @@ export default function DashboardDetailPage({
                   <Save className="h-3.5 w-3.5" />
                   <span>{savingDashboard ? "Saving..." : "Save"}</span>
                 </button>
+                {/* Theme & Branding Customization Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsAppearanceModalOpen(true)}
+                  title="Customize Theme & Branding"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition shadow-2xs"
+                >
+                  <Palette className="h-3.5 w-3.5 text-indigo-600" />
+                  <span className="hidden md:inline">Appearance</span>
+                </button>
               </div>
             )}
 
@@ -1574,7 +1653,10 @@ export default function DashboardDetailPage({
       {/* ============================================================ */}
       {/* 2. DASHBOARD BODY */}
       {/* ============================================================ */}
-      <div className="flex-1 flex overflow-hidden">
+      <div
+        className={`flex-1 flex overflow-hidden transition-colors duration-200 ${getFontFamilyClass(dashboardBranding.typography || dashboardTheme.fontFamily)}`}
+        style={{ backgroundColor: dashboardTheme.backgroundColor }}
+      >
         {/* Left Quick Palette (Hidden in Preview Mode) */}
         {!previewMode && (
           <aside className="w-64 border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto hidden md:flex no-print">
@@ -1781,11 +1863,31 @@ export default function DashboardDetailPage({
                   </button>
                 </form>
               ) : (
-                <div>
-                  <h2 className="text-base font-bold text-gray-900">{dashboard.name}</h2>
-                  {dashboard.description && (
-                    <p className="text-xs text-gray-500 mt-0.5">{dashboard.description}</p>
+                <div className="flex items-center gap-3">
+                  {dashboardBranding.logoUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={dashboardBranding.logoUrl}
+                      alt="Brand Logo"
+                      className="h-8 max-w-[120px] object-contain rounded"
+                    />
                   )}
+                  <div>
+                    <h2
+                      className="text-base font-bold"
+                      style={{ color: dashboardTheme.textColor }}
+                    >
+                      {dashboardBranding.title || dashboard.name}
+                    </h2>
+                    {(dashboardBranding.description || dashboard.description) && (
+                      <p
+                        className="text-xs mt-0.5"
+                        style={{ color: dashboardTheme.textMutedColor }}
+                      >
+                        {dashboardBranding.description || dashboard.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1864,8 +1966,8 @@ export default function DashboardDetailPage({
               )}
             </div>
           ) : (
-            /* Dashboard Grid Canvas — 12-Column Responsive Layout */
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            /* Dashboard Grid Canvas — Mobile-Responsive 12-Column Layout */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6">
               {charts.map((chart) => {
                 const queryState = chartQueryResults[chart.id];
                 const dims = chart.config?.dimensions || [];
@@ -1878,10 +1980,10 @@ export default function DashboardDetailPage({
                 const chartHeight = heightUnit === 6 ? 380 : 250;
                 const colSpanClass =
                   width >= 12
-                    ? "col-span-12"
+                    ? "col-span-1 md:col-span-2 lg:col-span-12"
                     : width <= 4
-                      ? "col-span-12 md:col-span-6 xl:col-span-4"
-                      : "col-span-12 md:col-span-6 xl:col-span-6";
+                      ? "col-span-1 md:col-span-1 lg:col-span-4"
+                      : "col-span-1 md:col-span-2 lg:col-span-6";
 
                 const applicableFilters = dashboardFilters.filter((df) => {
                   if (df.isCrossFilter && df.sourceChartId === chart.id) return false;
@@ -1899,21 +2001,42 @@ export default function DashboardDetailPage({
                 return (
                   <div
                     key={chart.id}
-                    className={`rounded-xl border border-gray-200 bg-white shadow-xs flex flex-col justify-between overflow-hidden group hover:shadow-md transition ${colSpanClass} break-inside-avoid print:shadow-none print:border-gray-300 print:mb-6`}
+                    className={`border flex flex-col justify-between overflow-hidden group hover:shadow-md transition ${colSpanClass} break-inside-avoid print:shadow-none print:border-gray-300 print:mb-6`}
+                    style={{
+                      backgroundColor: dashboardTheme.cardBackground,
+                      borderColor: dashboardTheme.borderColor,
+                      borderRadius: getRadiusStyle(dashboardTheme.cardRadius),
+                      boxShadow: getShadowStyle(dashboardTheme.cardShadow, dashboardTheme.mode === "dark"),
+                    }}
                   >
                     {/* Card Header */}
-                    <div className="p-4 border-b border-gray-100 flex items-start justify-between gap-2">
+                    <div
+                      className="p-4 border-b flex items-start justify-between gap-2"
+                      style={{ borderColor: dashboardTheme.borderColor }}
+                    >
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-sm text-gray-900 line-clamp-1">
+                          <h4
+                            className="font-bold text-sm line-clamp-1"
+                            style={{ color: dashboardTheme.textColor }}
+                          >
                             {chart.title}
                           </h4>
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-[10px] font-bold text-indigo-700 shrink-0">
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0"
+                            style={{
+                              backgroundColor: `${dashboardBranding.brandColor || "#4f46e5"}18`,
+                              color: dashboardBranding.brandColor || "#4f46e5",
+                            }}
+                          >
                             {chart.chartType}
                           </span>
                         </div>
                         {chart.description && (
-                          <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                          <p
+                            className="text-xs mt-0.5 line-clamp-1"
+                            style={{ color: dashboardTheme.textMutedColor }}
+                          >
                             {chart.description}
                           </p>
                         )}
@@ -2083,12 +2206,19 @@ export default function DashboardDetailPage({
                     </div>
 
                     {/* Card Metadata Footer */}
-                    <div className="px-4 py-2 bg-gray-50/70 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 font-mono">
+                    <div
+                      className="px-4 py-2 border-t flex items-center justify-between text-[11px] font-mono"
+                      style={{
+                        backgroundColor: dashboardTheme.mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+                        borderColor: dashboardTheme.borderColor,
+                        color: dashboardTheme.textMutedColor,
+                      }}
+                    >
                       <span className="truncate max-w-[140px] flex items-center gap-1">
                         <Database className="h-3 w-3 text-gray-400 shrink-0" />
                         <span>{chart.datasetName || "Dataset"}</span>
                       </span>
-                      <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                      <div className="flex items-center gap-2 text-[10px] opacity-75">
                         {dims.length > 0 && <span>Dim: {dims[0]}</span>}
                         {measures.length > 0 && (
                           <span>
@@ -2514,7 +2644,7 @@ export default function DashboardDetailPage({
                                 type="button"
                                 disabled={updatingCollaborator}
                                 onClick={() => handleRevokeCollaborator(c.userId)}
-                                className="rounded-md p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                                className="rounded-md p-1.5 text-gray-500 hover:text-red-700 hover:bg-red-50 transition"
                                 title="Revoke collaborator access"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -2611,7 +2741,7 @@ export default function DashboardDetailPage({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-6 space-y-4">
+                      <div className="text-center py-6 space-y-4">
                       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
                         <Globe className="h-6 w-6" />
                       </div>
@@ -2620,6 +2750,18 @@ export default function DashboardDetailPage({
                         <p className="text-xs text-gray-500 max-w-sm mx-auto">
                           Generate a unique, cryptographically secure share link to allow stakeholders to view this dashboard in read-only mode.
                         </p>
+                      </div>
+                      <div className="mx-auto max-w-xs text-left">
+                        <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                          Expiration (optional)
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={shareExpiresAtInput}
+                          onChange={(event) => setShareExpiresAtInput(event.target.value)}
+                          min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
                       </div>
                       <button
                         type="button"
@@ -3456,6 +3598,19 @@ export default function DashboardDetailPage({
         onAddGeneratedChart={handleAddAiGeneratedChart}
       />
 
+      {/* Dashboard Appearance & Branding Modal */}
+      {isAppearanceModalOpen && (
+        <DashboardAppearanceModal
+          isOpen={isAppearanceModalOpen}
+          onClose={() => setIsAppearanceModalOpen(false)}
+          initialTheme={dashboardTheme}
+          initialBranding={dashboardBranding}
+          dashboardTitle={dashboard.name}
+          dashboardDescription={dashboard.description}
+          onSave={handleSaveAppearance}
+          isSaving={savingAppearance}
+        />
+      )}
       {/* Print Media Query Rules */}
       <style jsx global>{`
         @media print {

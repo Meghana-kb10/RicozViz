@@ -17,8 +17,8 @@ import { logAuditEvent } from "../audit.service.js";
 import { datasetQueryEngine, type DatasetQueryParams } from "../dataset/query-engine.js";
 import { validateWebhookUrl, isValidEmail } from "../report/report-delivery.dispatcher.js";
 import { createDashboardVersionSnapshot } from "./dashboard-version.service.js";
-import { verifyResourceWorkspaceAccess } from "../workspace/workspace-auth.helper.js";
 import { resolveWorkspaceAccess } from "../workspace.service.js";
+import { resolveTargetWorkspaceId, verifyResourceWorkspaceAccess, getDashboardWorkspaceId } from "../workspace/workspace-auth.helper.js";
 
 // ============================================================
 // ZOD VALIDATION SCHEMAS
@@ -97,6 +97,7 @@ export function buildSafeDashboard(
     shareToken: (dash as any).shareToken || null,
     shareTokenActive: Boolean((dash as any).shareTokenActive),
     sharedAt: (dash as any).sharedAt ? (dash as any).sharedAt.toISOString() : null,
+    shareExpiresAt: (dash as any).shareExpiresAt ? (dash as any).shareExpiresAt.toISOString() : null,
     createdAt: dash.createdAt.toISOString(),
     updatedAt: dash.updatedAt.toISOString(),
   };
@@ -111,12 +112,15 @@ export function buildSafeDashboard(
  * Create a new dashboard.
  */
 export async function createDashboard(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const input = createDashboardSchema.parse(req.body);
+
+  const workspaceId = await resolveTargetWorkspaceId(input.workspaceId, userId, organizationId, roleName);
 
   const initialLayoutConfig: Record<string, unknown> = {
     ...(input.layoutConfig || {}),
   };
+  if (workspaceId) initialLayoutConfig.workspaceId = workspaceId;
   if (Array.isArray(input.layout)) {
     initialLayoutConfig["layout"] = input.layout;
   }
@@ -200,7 +204,7 @@ export async function createDashboard(req: Request, res: Response): Promise<void
  * List dashboards belonging to user's organization.
  */
 export async function listDashboards(req: Request, res: Response): Promise<void> {
-  const { organizationId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const query = listDashboardsQuerySchema.parse(req.query);
 
   const where: Prisma.DashboardWhereInput = {
@@ -218,22 +222,34 @@ export async function listDashboards(req: Request, res: Response): Promise<void>
     ];
   }
 
-  const skip = (query.page - 1) * query.limit;
-  const take = query.limit;
+  const accessibleWorkspaceIds =
+    roleName === "ADMIN"
+      ? null
+      : new Set(
+          (await prisma.workspaceMember.findMany({
+            where: { userId, workspace: { organizationId } },
+            select: { workspaceId: true },
+          })).map((membership) => membership.workspaceId)
+        );
 
-  const [total, dashboards] = await Promise.all([
-    prisma.dashboard.count({ where }),
-    prisma.dashboard.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { [query.sortBy]: query.sortOrder },
-      include: {
-        owner: { select: { id: true, name: true, email: true } },
-        _count: { select: { charts: true } },
-      },
-    }),
-  ]);
+  // Dashboard workspace bindings live in layoutConfig for compatibility with
+  // the original schema. Filter before pagination so users cannot infer or
+  // access another workspace's dashboards through collection endpoints.
+  const allDashboards = await prisma.dashboard.findMany({
+    where,
+    orderBy: { [query.sortBy]: query.sortOrder },
+    include: {
+      owner: { select: { id: true, name: true, email: true } },
+      _count: { select: { charts: true } },
+    },
+  });
+  const visibleDashboards = allDashboards.filter((dashboard) => {
+    const dashboardWorkspaceId = getDashboardWorkspaceId(dashboard.layoutConfig);
+    return !dashboardWorkspaceId || accessibleWorkspaceIds === null || accessibleWorkspaceIds.has(dashboardWorkspaceId);
+  });
+  const skip = (query.page - 1) * query.limit;
+  const dashboards = visibleDashboards.slice(skip, skip + query.limit);
+  const total = visibleDashboards.length;
 
   sendSuccess(res, {
     dashboards: dashboards.map(buildSafeDashboard),
@@ -251,7 +267,7 @@ export async function listDashboards(req: Request, res: Response): Promise<void>
  * Retrieve a single dashboard with layout and chart references.
  */
 export async function getDashboard(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   if (!id) {
@@ -287,6 +303,14 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
     throw AppError.forbidden("Access denied: resource belongs to a different organization");
   }
 
+  await verifyResourceWorkspaceAccess(
+    { workspaceId: getDashboardWorkspaceId(dashboard.layoutConfig), organizationId: dashboard.organizationId },
+    userId,
+    organizationId,
+    roleName,
+    "READ"
+  );
+
   await logAuditEvent({
     organizationId,
     userId,
@@ -309,7 +333,7 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
  * Update dashboard metadata, layout configuration, or status.
  */
 export async function updateDashboard(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   if (!id) {
@@ -330,12 +354,12 @@ export async function updateDashboard(req: Request, res: Response): Promise<void
     throw AppError.forbidden("Access denied: resource belongs to a different organization");
   }
 
-  const workspaceId = (existing.layoutConfig as any)?.workspaceId ?? undefined;
+  const workspaceId = getDashboardWorkspaceId(existing.layoutConfig);
   await verifyResourceWorkspaceAccess(
     { workspaceId, organizationId },
     userId,
     organizationId,
-    req.user?.roleName,
+    roleName,
     "WRITE"
   );
 
@@ -345,7 +369,20 @@ export async function updateDashboard(req: Request, res: Response): Promise<void
   if (input.status !== undefined) data.status = input.status as DashboardStatus;
   if (input.visibility !== undefined) data.visibility = input.visibility as DashboardVisibility;
   if (input.layoutConfig !== undefined) {
-    data.layoutConfig = input.layoutConfig as Prisma.InputJsonValue;
+    const nextLayoutConfig = { ...input.layoutConfig };
+    const existingWorkspaceId = getDashboardWorkspaceId(existing.layoutConfig);
+    const requestedWorkspaceId = getDashboardWorkspaceId(nextLayoutConfig);
+    if (requestedWorkspaceId && requestedWorkspaceId !== existingWorkspaceId) {
+      await verifyResourceWorkspaceAccess(
+        { workspaceId: requestedWorkspaceId, organizationId },
+        userId,
+        organizationId,
+        roleName,
+        "WRITE"
+      );
+    }
+    if (existingWorkspaceId) nextLayoutConfig.workspaceId = existingWorkspaceId;
+    data.layoutConfig = nextLayoutConfig as Prisma.InputJsonValue;
   }
 
   const updated = await prisma.dashboard.update({
@@ -387,7 +424,7 @@ export async function updateDashboard(req: Request, res: Response): Promise<void
  * Delete a dashboard and cascade related items safely.
  */
 export async function deleteDashboard(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   if (!id) {
@@ -406,24 +443,23 @@ export async function deleteDashboard(req: Request, res: Response): Promise<void
     throw AppError.forbidden("Access denied: resource belongs to a different organization");
   }
 
-  const deleteWsId = (existing.layoutConfig as any)?.workspaceId ?? undefined;
+  const deleteWsId = getDashboardWorkspaceId(existing.layoutConfig);
   await verifyResourceWorkspaceAccess(
     { workspaceId: deleteWsId, organizationId },
     userId,
     organizationId,
-    req.user?.roleName,
+    roleName,
     "WRITE"
   );
 
-  if (existing.ownerId !== userId && req.user?.roleName !== "ADMIN") {
+  if (existing.ownerId !== userId && roleName !== "ADMIN") {
     if (deleteWsId) {
-      const access = await resolveWorkspaceAccess(deleteWsId, userId, organizationId, req.user?.roleName);
+      const access = await resolveWorkspaceAccess(deleteWsId, userId, organizationId, roleName);
       if (access.userRole !== "OWNER" && access.userRole !== "ADMIN" && !access.isOrgAdmin) {
         throw AppError.forbidden("Only workspace owners or admins can delete this dashboard");
       }
     }
   }
-
   // Delete associated reports first to satisfy foreign key constraint
   await prisma.report.deleteMany({ where: { dashboardId: id } });
 
@@ -456,7 +492,7 @@ export async function deleteDashboard(req: Request, res: Response): Promise<void
  * Generates or activates a secure random token share link for the dashboard.
  */
 export async function createShareLink(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   if (!id) {
@@ -475,6 +511,23 @@ export async function createShareLink(req: Request, res: Response): Promise<void
     throw AppError.forbidden("Access denied: dashboard belongs to a different organization");
   }
 
+  await verifyResourceWorkspaceAccess(
+    { workspaceId: getDashboardWorkspaceId(dashboard.layoutConfig), organizationId: dashboard.organizationId },
+    userId,
+    organizationId,
+    roleName,
+    "WRITE"
+  );
+
+  const expiresAtInput = req.body?.expiresAt;
+  let shareExpiresAt: Date | null = null;
+  if (expiresAtInput !== undefined && expiresAtInput !== null && String(expiresAtInput).trim()) {
+    shareExpiresAt = new Date(String(expiresAtInput));
+    if (Number.isNaN(shareExpiresAt.getTime()) || shareExpiresAt.getTime() <= Date.now()) {
+      throw AppError.badRequest("Share expiration must be a valid future date");
+    }
+  }
+
   // Generate 48-char cryptographically secure token
   const shareToken = crypto.randomBytes(24).toString("hex");
 
@@ -484,6 +537,7 @@ export async function createShareLink(req: Request, res: Response): Promise<void
       shareToken,
       shareTokenActive: true,
       sharedAt: new Date(),
+      shareExpiresAt,
     },
   });
 
@@ -508,6 +562,7 @@ export async function createShareLink(req: Request, res: Response): Promise<void
     active: updated.shareTokenActive,
     token: updated.shareToken,
     shareUrl: `/dashboards/shared/${updated.shareToken}`,
+    shareExpiresAt: updated.shareExpiresAt?.toISOString() || null,
   });
 }
 
@@ -516,7 +571,7 @@ export async function createShareLink(req: Request, res: Response): Promise<void
  * Retrieves current share status for a dashboard.
  */
 export async function getShareLinkStatus(req: Request, res: Response): Promise<void> {
-  const { organizationId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   if (!id) {
@@ -531,6 +586,8 @@ export async function getShareLinkStatus(req: Request, res: Response): Promise<v
       shareToken: true,
       shareTokenActive: true,
       sharedAt: true,
+      layoutConfig: true,
+      shareExpiresAt: true,
     },
   });
 
@@ -542,6 +599,14 @@ export async function getShareLinkStatus(req: Request, res: Response): Promise<v
     throw AppError.forbidden("Access denied: dashboard belongs to a different organization");
   }
 
+  await verifyResourceWorkspaceAccess(
+    { workspaceId: getDashboardWorkspaceId(dashboard.layoutConfig), organizationId: dashboard.organizationId },
+    userId,
+    organizationId,
+    roleName,
+    "READ"
+  );
+
   sendSuccess(res, {
     shareToken: dashboard.shareToken,
     shareTokenActive: dashboard.shareTokenActive,
@@ -549,6 +614,7 @@ export async function getShareLinkStatus(req: Request, res: Response): Promise<v
     active: dashboard.shareTokenActive,
     token: dashboard.shareToken,
     shareUrl: dashboard.shareTokenActive && dashboard.shareToken ? `/dashboards/shared/${dashboard.shareToken}` : null,
+    shareExpiresAt: dashboard.shareExpiresAt?.toISOString() || null,
   });
 }
 
@@ -557,7 +623,7 @@ export async function getShareLinkStatus(req: Request, res: Response): Promise<v
  * Disables active share link for a dashboard.
  */
 export async function disableShareLink(req: Request, res: Response): Promise<void> {
-  const { organizationId, userId } = req.user!;
+  const { organizationId, userId, roleName } = req.user!;
   const { id } = req.params;
 
   if (!id) {
@@ -575,6 +641,14 @@ export async function disableShareLink(req: Request, res: Response): Promise<voi
   if (dashboard.organizationId !== organizationId) {
     throw AppError.forbidden("Access denied: dashboard belongs to a different organization");
   }
+
+  await verifyResourceWorkspaceAccess(
+    { workspaceId: getDashboardWorkspaceId(dashboard.layoutConfig), organizationId: dashboard.organizationId },
+    userId,
+    organizationId,
+    roleName,
+    "WRITE"
+  );
 
   await prisma.dashboard.update({
     where: { id },
@@ -644,6 +718,10 @@ export async function getSharedDashboard(req: Request, res: Response): Promise<v
 
   if (!dashboard || !dashboard.shareTokenActive) {
     throw AppError.notFound("Shared dashboard not found or link has been disabled");
+  }
+
+  if (dashboard.shareExpiresAt && dashboard.shareExpiresAt <= new Date()) {
+    throw AppError.notFound("Shared dashboard link has expired");
   }
 
   // Safe read-only DTO for public consumption
@@ -717,6 +795,10 @@ export async function getSharedChartData(req: Request, res: Response): Promise<v
 
   if (!dashboard || !dashboard.shareTokenActive) {
     throw AppError.notFound("Shared dashboard not found or link has been disabled");
+  }
+
+  if (dashboard.shareExpiresAt && dashboard.shareExpiresAt <= new Date()) {
+    throw AppError.notFound("Shared dashboard link has expired");
   }
 
   const chart = dashboard.charts[0];
@@ -1548,6 +1630,3 @@ export async function getDashboardReportHistory(req: Request, res: Response): Pr
 
   sendSuccess(res, executions);
 }
-
-
-

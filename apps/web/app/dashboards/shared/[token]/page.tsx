@@ -19,6 +19,13 @@ import {
   toggleCrossFilter,
 } from "../../../../lib/dashboard-filters";
 import {
+  getDashboardTheme,
+  getDashboardBranding,
+  getRadiusStyle,
+  getShadowStyle,
+  getFontFamilyClass,
+} from "../../../../lib/theme-utils";
+import {
   BarChart3,
   Printer,
   RefreshCw,
@@ -54,6 +61,16 @@ export default function SharedDashboardPage({
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date>(new Date());
   const [isRefreshingCharts, setIsRefreshingCharts] = useState(false);
   const isRefreshingRef = useRef(false);
+
+  // Derived Theme & Enterprise Branding
+  const dashboardTheme = useMemo(
+    () => getDashboardTheme(dashboard?.layoutConfig),
+    [dashboard?.layoutConfig]
+  );
+  const dashboardBranding = useMemo(
+    () => getDashboardBranding(dashboard?.layoutConfig),
+    [dashboard?.layoutConfig]
+  );
 
   // 1. Load Shared Dashboard metadata & chart list
   useEffect(() => {
@@ -270,7 +287,13 @@ export default function SharedDashboardPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col antialiased">
+    <div
+      className={`min-h-screen flex flex-col antialiased ${getFontFamilyClass(dashboardTheme.fontFamily)}`}
+      style={{
+        backgroundColor: dashboardTheme.backgroundColor || "#f8fafc",
+        color: dashboardTheme.textColor || "#0f172a",
+      }}
+    >
       {/* Print Stylesheet */}
       <style jsx global>{`
         @media print {
@@ -310,14 +333,28 @@ export default function SharedDashboardPage({
         <div className="mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 font-bold text-gray-900">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">
-                R
+              {dashboardBranding.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={dashboardBranding.logoUrl}
+                  alt="Brand Logo"
+                  className="h-7 max-w-[100px] object-contain rounded"
+                />
+              ) : (
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-white font-bold text-xs shadow-xs"
+                  style={{ backgroundColor: dashboardBranding.brandColor || "#4f46e5" }}
+                >
+                  R
+                </span>
+              )}
+              <span className="text-sm tracking-tight">
+                {dashboardBranding.title ? "RicozViz" : "RicozViz"}
               </span>
-              <span className="text-sm tracking-tight">RicozViz</span>
             </Link>
             <span className="text-gray-300">/</span>
             <span className="text-xs font-semibold text-gray-900 truncate max-w-xs sm:max-w-md">
-              {dashboard.name}
+              {dashboardBranding.title || dashboard.name}
             </span>
             <span className="inline-flex items-center gap-1 rounded bg-indigo-50 text-[10px] font-bold text-indigo-700 px-2 py-0.5 border border-indigo-200">
               <Lock className="h-2.5 w-2.5" />
@@ -413,14 +450,36 @@ export default function SharedDashboardPage({
         </div>
 
         {/* Dashboard Title & Meta in Screen Mode */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs mb-6 no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-base font-bold text-gray-900">{dashboard.name}</h1>
-            {dashboard.description && (
-              <p className="text-xs text-gray-500 mt-0.5">{dashboard.description}</p>
+        <div
+          className="border p-4 mb-6 no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition"
+          style={{
+            backgroundColor: dashboardTheme.cardBackground,
+            borderColor: dashboardTheme.borderColor,
+            borderRadius: getRadiusStyle(dashboardTheme.cardRadius),
+            boxShadow: getShadowStyle(dashboardTheme.cardShadow, dashboardTheme.mode === "dark"),
+          }}
+        >
+          <div className="flex items-center gap-3">
+            {dashboardBranding.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={dashboardBranding.logoUrl}
+                alt="Brand Logo"
+                className="h-9 max-w-[120px] object-contain rounded"
+              />
             )}
+            <div>
+              <h1 className="text-base font-bold" style={{ color: dashboardTheme.textColor }}>
+                {dashboardBranding.title || dashboard.name}
+              </h1>
+              {(dashboardBranding.description || dashboard.description) && (
+                <p className="text-xs mt-0.5" style={{ color: dashboardTheme.textMutedColor }}>
+                  {dashboardBranding.description || dashboard.description}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="flex items-center gap-2 text-xs" style={{ color: dashboardTheme.textMutedColor }}>
             <span>{dashboard.charts.length} visualization{dashboard.charts.length === 1 ? "" : "s"}</span>
             <span>•</span>
             <span>Updated {new Date(dashboard.updatedAt).toLocaleDateString()}</span>
@@ -437,7 +496,7 @@ export default function SharedDashboardPage({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6">
             {dashboard.charts.map((chart) => {
               const queryState = chartDataResults[chart.id];
               const width = chart.position?.w || 6;
@@ -445,10 +504,10 @@ export default function SharedDashboardPage({
               const chartHeight = heightUnit === 6 ? 380 : 250;
               const colSpanClass =
                 width >= 12
-                  ? "col-span-12"
+                  ? "col-span-1 md:col-span-2 lg:col-span-12"
                   : width <= 4
-                    ? "col-span-12 md:col-span-6 xl:col-span-4"
-                    : "col-span-12 md:col-span-6 xl:col-span-6";
+                    ? "col-span-1 md:col-span-1 lg:col-span-4"
+                    : "col-span-1 md:col-span-2 lg:col-span-6";
 
               const applicableFilters = dashboardFilters.filter((df) =>
                 isFilterApplicableToChart(df, chart as any, chart.datasetColumns)
@@ -457,21 +516,42 @@ export default function SharedDashboardPage({
               return (
                 <div
                   key={chart.id}
-                  className={`chart-card rounded-xl border border-gray-200 bg-white shadow-xs flex flex-col justify-between overflow-hidden ${colSpanClass}`}
+                  className={`chart-card border flex flex-col justify-between overflow-hidden transition ${colSpanClass}`}
+                  style={{
+                    backgroundColor: dashboardTheme.cardBackground,
+                    borderColor: dashboardTheme.borderColor,
+                    borderRadius: getRadiusStyle(dashboardTheme.cardRadius),
+                    boxShadow: getShadowStyle(dashboardTheme.cardShadow, dashboardTheme.mode === "dark"),
+                  }}
                 >
                   {/* Card Header */}
-                  <div className="p-4 border-b border-gray-100 flex items-start justify-between gap-2">
+                  <div
+                    className="p-4 border-b flex items-start justify-between gap-2"
+                    style={{ borderColor: dashboardTheme.borderColor }}
+                  >
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-gray-900 line-clamp-1">
+                        <h4
+                          className="font-bold text-sm line-clamp-1"
+                          style={{ color: dashboardTheme.textColor }}
+                        >
                           {chart.title}
                         </h4>
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-[10px] font-bold text-indigo-700 uppercase shrink-0">
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
+                          style={{
+                            backgroundColor: `${dashboardBranding.brandColor || "#4f46e5"}18`,
+                            color: dashboardBranding.brandColor || "#4f46e5",
+                          }}
+                        >
                           {chart.chartType}
                         </span>
                       </div>
                       {chart.description && (
-                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                        <p
+                          className="text-xs mt-0.5 line-clamp-1"
+                          style={{ color: dashboardTheme.textMutedColor }}
+                        >
                           {chart.description}
                         </p>
                       )}

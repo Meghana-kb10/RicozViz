@@ -21,6 +21,7 @@ import {
 import {
   apiListDatasets,
   apiListDashboards,
+  apiListVisualizations,
   apiExportResource,
   apiListExportHistory,
   type DatasetData,
@@ -28,13 +29,16 @@ import {
   type ExportFormat,
   type ExportResourceType,
   type ExportJobData,
+  type VisualizationData,
 } from "../../lib/api";
 import { downloadCsv } from "../../lib/export-csv";
+import { useWorkspace } from "../../contexts/workspace-context";
 
 export default function ExportCenterPage() {
   const [resourceType, setResourceType] = useState<ExportResourceType>("DATASET");
   const [datasets, setDatasets] = useState<DatasetData[]>([]);
   const [dashboards, setDashboards] = useState<DashboardData[]>([]);
+  const [visualizations, setVisualizations] = useState<VisualizationData[]>([]);
   const [selectedResourceId, setSelectedResourceId] = useState<string>("");
   const [format, setFormat] = useState<ExportFormat>("CSV");
   const [rowLimit, setRowLimit] = useState<number>(5000);
@@ -43,22 +47,28 @@ export default function ExportCenterPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<ExportJobData[]>([]);
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [dsData, dashRes] = await Promise.all([
-          apiListDatasets().catch(() => []),
-          apiListDashboards().catch(() => ({ dashboards: [] })),
+        const [dsData, dashRes, vizData] = await Promise.all([
+          apiListDatasets({ workspaceId }).catch(() => []),
+          apiListDashboards({ workspaceId }).catch(() => ({ dashboards: [] })),
+          apiListVisualizations({ workspaceId }).catch(() => []),
         ]);
         const dashList = Array.isArray(dashRes) ? dashRes : (dashRes?.dashboards || []);
         setDatasets(dsData);
         setDashboards(dashList);
+        setVisualizations(vizData);
 
         if (resourceType === "DATASET" && dsData.length > 0) {
           setSelectedResourceId(dsData[0].id);
         } else if (resourceType === "DASHBOARD" && dashList.length > 0) {
           setSelectedResourceId(dashList[0].id);
+        } else if (resourceType === "VISUALIZATION" && vizData.length > 0) {
+          setSelectedResourceId(vizData[0].id);
         }
       } catch (err) {
         setErrorMessage("Failed to load export resources");
@@ -66,20 +76,22 @@ export default function ExportCenterPage() {
     }
     loadData();
     loadExportHistory();
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => {
     if (resourceType === "DATASET" && datasets.length > 0) {
       setSelectedResourceId(datasets[0].id);
     } else if (resourceType === "DASHBOARD" && dashboards.length > 0) {
       setSelectedResourceId(dashboards[0].id);
+    } else if (resourceType === "VISUALIZATION" && visualizations.length > 0) {
+      setSelectedResourceId(visualizations[0].id);
     }
-  }, [resourceType, datasets, dashboards]);
+  }, [resourceType, datasets, dashboards, visualizations]);
 
   async function loadExportHistory() {
     try {
       setLoadingHistory(true);
-      const res = await apiListExportHistory();
+      const res = await apiListExportHistory(workspaceId);
       setHistory(res);
     } catch {
       // non-fatal
@@ -103,6 +115,7 @@ export default function ExportCenterPage() {
         resourceType,
         resourceId: selectedResourceId,
         format,
+        workspaceId,
         options: {
           rowLimit,
           includeHeaders: true,
@@ -208,7 +221,7 @@ export default function ExportCenterPage() {
               <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                 1. Resource Scope
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setResourceType("DATASET")}
@@ -233,6 +246,18 @@ export default function ExportCenterPage() {
                   <LayoutDashboard className="w-4 h-4" />
                   Dashboard
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setResourceType("VISUALIZATION")}
+                  className={`p-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                    resourceType === "VISUALIZATION"
+                      ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-950/50"
+                      : "bg-slate-900 border-slate-700 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Layers className="w-4 h-4" />
+                  Visualization
+                </button>
               </div>
             </div>
 
@@ -253,6 +278,16 @@ export default function ExportCenterPage() {
                     datasets.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name} ({d.rowCount ?? 0} rows)
+                      </option>
+                    ))
+                  )
+                ) : resourceType === "VISUALIZATION" ? (
+                  visualizations.length === 0 ? (
+                    <option value="">No visualizations available</option>
+                  ) : (
+                    visualizations.map((viz) => (
+                      <option key={viz.id} value={viz.id}>
+                        {viz.title} ({viz.chartType})
                       </option>
                     ))
                   )
@@ -311,7 +346,7 @@ export default function ExportCenterPage() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${isSelected ? "bg-cyan-500 text-slate-950 font-bold" : "bg-slate-800"}`}>
+                      <div className={`p-2 rounded-lg ${isSelected ? "bg-cyan-500 text-slate-900 font-bold" : "bg-slate-800"}`}>
                         <Icon className="w-5 h-5" />
                       </div>
                       <div>
@@ -332,7 +367,7 @@ export default function ExportCenterPage() {
               disabled={exporting || !selectedResourceId}
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-cyan-950/50"
             >
-              <Download className={`w-4 h-4 ${exporting ? "animate-bounce" : ""}`} />
+              <Download className={`w-4 h-4 ${exporting ? "animate-pulse" : ""}`} />
               {exporting ? "Generating Export..." : `Export ${format} Now`}
             </button>
           </div>

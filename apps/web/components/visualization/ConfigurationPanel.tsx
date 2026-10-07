@@ -15,6 +15,7 @@ import {
   Palette,
   X,
   Plus,
+  Globe,
 } from "lucide-react";
 import type {
   ChartType,
@@ -41,6 +42,7 @@ export const CHART_TYPES: {
   { value: "SCATTER", label: "Scatter", icon: ScatterIcon, desc: "Two metrics" },
   { value: "TABLE", label: "Table", icon: TableIcon, desc: "Raw or tabular rows" },
   { value: "KPI", label: "KPI", icon: Hash, desc: "Single aggregated metric" },
+  { value: "MAP", label: "Geospatial Map", icon: Globe, desc: "Region & coordinate maps" },
 ];
 
 export interface ConfigurationPanelProps {
@@ -600,6 +602,103 @@ export function ConfigurationPanel({
               <Palette className="h-3.5 w-3.5 text-indigo-600" />
               Chart Presentation
             </span>
+
+            {/* Geospatial Map Specific Controls */}
+            {chartType === "MAP" && (
+              <div className="space-y-3 p-3 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                <span className="text-[11px] font-bold text-indigo-900 block">
+                  Geospatial Map Configuration
+                </span>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-600 block mb-1">
+                    Map Visualization Type
+                  </label>
+                  <select
+                    value={(options.mapType as string) || "CHOROPLETH"}
+                    onChange={(e) => onChangeOption("mapType", e.target.value)}
+                    className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-800 focus:outline-none"
+                  >
+                    <option value="CHOROPLETH">Choropleth (Shaded Regions)</option>
+                    <option value="BUBBLE">Bubble Map (Magnitude Circles)</option>
+                    <option value="MARKER">Point / Marker Map (Coordinates)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-600 block mb-1">
+                    Geographic Column (Country/State/City)
+                  </label>
+                  <select
+                    value={(options.geoColumn as string) || dimensions[0] || ""}
+                    onChange={(e) => onChangeOption("geoColumn", e.target.value)}
+                    className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-800 focus:outline-none"
+                  >
+                    <option value="">-- Auto-detect or select column --</option>
+                    {columns.map((col) => (
+                      <option key={col.name} value={col.name}>
+                        {col.name} ({col.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-600 block mb-1">
+                      Latitude Column (optional)
+                    </label>
+                    <select
+                      value={(options.latColumn as string) || ""}
+                      onChange={(e) => onChangeOption("latColumn", e.target.value)}
+                      className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-800 focus:outline-none"
+                    >
+                      <option value="">-- None --</option>
+                      {columns.map((col) => (
+                        <option key={col.name} value={col.name}>
+                          {col.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-600 block mb-1">
+                      Longitude Column (optional)
+                    </label>
+                    <select
+                      value={(options.lngColumn as string) || ""}
+                      onChange={(e) => onChangeOption("lngColumn", e.target.value)}
+                      className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-800 focus:outline-none"
+                    >
+                      <option value="">-- None --</option>
+                      {columns.map((col) => (
+                        <option key={col.name} value={col.name}>
+                          {col.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-600 block mb-1">
+                    Map Color Palette
+                  </label>
+                  <select
+                    value={(options.colorScale as string) || "indigo"}
+                    onChange={(e) => onChangeOption("colorScale", e.target.value)}
+                    className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-800 focus:outline-none"
+                  >
+                    <option value="indigo">Indigo Horizon</option>
+                    <option value="emerald">Emerald Growth</option>
+                    <option value="amber">Amber Sun</option>
+                    <option value="rose">Rose Crimson</option>
+                    <option value="blue">Ocean Blue</option>
+                    <option value="slate">Monochrome Slate</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
             {/* Number Formatting */}
             <div>

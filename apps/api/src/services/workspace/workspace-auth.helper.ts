@@ -10,6 +10,20 @@ import { AppError } from "../../utils/errors.js";
 import { resolveWorkspaceAccess } from "../workspace.service.js";
 
 /**
+ * Dashboards predate the first-class workspace relation and keep their
+ * workspace binding in layoutConfig. Keep the extraction in one place so all
+ * dashboard-adjacent features apply the same tenant boundary.
+ */
+export function getDashboardWorkspaceId(layoutConfig: unknown): string | undefined {
+  if (!layoutConfig || typeof layoutConfig !== "object" || Array.isArray(layoutConfig)) {
+    return undefined;
+  }
+
+  const workspaceId = (layoutConfig as Record<string, unknown>).workspaceId;
+  return typeof workspaceId === "string" && workspaceId.trim() ? workspaceId : undefined;
+}
+
+/**
  * Resolves target workspaceId for resource creation or query filtering.
  * - If targetWorkspaceId is supplied by the client, verifies membership.
  * - If not supplied, falls back to the user's first accessible workspace in the organization.

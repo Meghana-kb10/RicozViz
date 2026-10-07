@@ -33,6 +33,7 @@ export const ALLOWED_CHART_TYPES = [
   "RADAR",
   "FUNNEL",
   "HEATMAP",
+  "MAP",
 ] as const;
 
 export type ChartType = (typeof ALLOWED_CHART_TYPES)[number];

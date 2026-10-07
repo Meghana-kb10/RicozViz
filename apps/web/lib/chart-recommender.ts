@@ -19,7 +19,7 @@ export interface ChartRecommendation {
   groupCol?: string;
   aggregation: AggregationFunction;
   suitabilityScore: number; // 0 - 100
-  badge: "Primary" | "Trend" | "Distribution" | "Correlation" | "KPI" | "Matrix";
+  badge: "Primary" | "Trend" | "Distribution" | "Correlation" | "KPI" | "Matrix" | "Geospatial";
 }
 
 export type ColumnClassification = "numeric" | "date" | "categorical" | "boolean";
@@ -237,7 +237,43 @@ export function getRecommendedVisualizations(columns: DatasetColumn[]): ChartRec
     });
   }
 
-  // 6. NUMERIC STATISTIC -> METRIC/KPI CARD
+  // 6. GEOSPATIAL MAP RECOMMENDATION
+  const geoCandidate = columns.find((c) =>
+    /^(country|nation|state|province|city|region|location|territory)$/i.test(c.name)
+  );
+  const latCandidate = columns.find((c) => /^(lat|latitude)$/i.test(c.name));
+  const lngCandidate = columns.find((c) => /^(lng|lon|longitude)$/i.test(c.name));
+
+  if (geoCandidate && numerics.length > 0) {
+    const geoCol = geoCandidate.name;
+    const numCol = numerics[0].name;
+    recommendations.push({
+      id: `map-${geoCol}-${numCol}`,
+      chartType: "MAP",
+      title: `Map: ${numCol} by ${geoCol}`,
+      description: `Geospatial distribution across ${geoCol} regions`,
+      categoryCol: geoCol,
+      valueCol: numCol,
+      aggregation: pickDefaultAgg(numCol),
+      suitabilityScore: 92,
+      badge: "Geospatial",
+    });
+  } else if (latCandidate && lngCandidate) {
+    const numCol = numerics[0]?.name || latCandidate.name;
+    recommendations.push({
+      id: `map-coords-${latCandidate.name}`,
+      chartType: "MAP",
+      title: `Map: Coordinate Point Distribution`,
+      description: `Geospatial coordinate mapping with latitude and longitude`,
+      categoryCol: geoCandidate?.name || latCandidate.name,
+      valueCol: numCol,
+      aggregation: "COUNT",
+      suitabilityScore: 94,
+      badge: "Geospatial",
+    });
+  }
+
+  // 7. NUMERIC STATISTIC -> METRIC/KPI CARD
   if (numerics.length > 0) {
     const numCol = numerics[0].name;
     recommendations.push({
@@ -325,6 +361,18 @@ export function validateChartCompatibility(
   // TABLE
   if (chartType === "TABLE") {
     return { isCompatible: true, severity: "none", message: "Data table compatible with all columns." };
+  }
+
+  // MAP
+  if (chartType === "MAP") {
+    if (!categoryCol && !valueCol) {
+      return {
+        isCompatible: false,
+        severity: "error",
+        message: "Map requires a geographic column (country/state/region) or coordinate columns.",
+      };
+    }
+    return { isCompatible: true, severity: "none", message: "Suitable Geospatial Map configuration." };
   }
 
   // Requires Category/X-Axis

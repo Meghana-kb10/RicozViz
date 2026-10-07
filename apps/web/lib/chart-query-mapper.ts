@@ -132,6 +132,22 @@ export function buildChartQueryParams(
     params.columns = effectiveDimensions;
   }
 
+  // Geospatial Map Specific Dimensions/Columns mapping
+  const opts = (config.options || {}) as Record<string, unknown>;
+  const latCol = opts.latColumn as string | undefined;
+  const lngCol = opts.lngColumn as string | undefined;
+  if (latCol && lngCol) {
+    if (params.measures && params.measures.length > 0) {
+      const mergedDims = new Set([...(params.dimensions || []), latCol, lngCol]);
+      params.dimensions = Array.from(mergedDims);
+    } else if (params.columns) {
+      const mergedCols = new Set([...params.columns, latCol, lngCol]);
+      params.columns = Array.from(mergedCols);
+    } else {
+      params.columns = [latCol, lngCol];
+    }
+  }
+
   // Filters
   if (config.filters && config.filters.length > 0) {
     const validFilters: DatasetQueryFilter[] = config.filters.map((f) => ({

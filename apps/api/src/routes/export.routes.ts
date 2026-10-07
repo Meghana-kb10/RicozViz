@@ -8,6 +8,7 @@ import { requireAuth, requirePermission } from "../middleware/auth.middleware.js
 import { sendSuccess } from "../utils/response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { exportResource, listExportHistory } from "../services/export/export.service.js";
+import { verifyResourceWorkspaceAccess } from "../services/workspace/workspace-auth.helper.js";
 
 const router = Router();
 
@@ -72,6 +73,16 @@ router.get(
     const user = req.user!;
     const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId : undefined;
     const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 50;
+
+    if (workspaceId) {
+      await verifyResourceWorkspaceAccess(
+        { workspaceId, organizationId: user.organizationId },
+        user.userId,
+        user.organizationId,
+        user.roleName,
+        "READ"
+      );
+    }
 
     const history = await listExportHistory(user.organizationId, workspaceId, limit);
     sendSuccess(res, history, 200);

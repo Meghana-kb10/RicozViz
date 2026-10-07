@@ -497,6 +497,7 @@ model Dashboard {
   shareToken       String?   @unique
   shareTokenActive Boolean   @default(false)
   sharedAt         DateTime?
+  shareExpiresAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -921,5 +922,3 @@ model RowLevelSecurityRule {
   @@index([organizationId])
   @@map("row_level_security_rules")
 }
-
-

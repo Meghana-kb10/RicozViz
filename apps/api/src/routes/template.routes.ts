@@ -46,7 +46,13 @@ router.get(
     const category = typeof req.query.category === "string" ? req.query.category : undefined;
     const workspaceId = typeof req.query.workspaceId === "string" ? req.query.workspaceId : undefined;
 
-    const templates = await listTemplates(user.organizationId, workspaceId, category);
+    const templates = await listTemplates(
+      user.organizationId,
+      workspaceId,
+      category,
+      user.userId,
+      user.roleName
+    );
     sendSuccess(res, templates, 200);
   })
 );
@@ -61,7 +67,12 @@ router.get(
   requireAnyPermission("TEMPLATE_VIEW", "DASHBOARD_VIEW"),
   asyncHandler(async (req, res) => {
     const user = req.user!;
-    const template = await getTemplateById(req.params.id as string, user.organizationId);
+    const template = await getTemplateById(
+      req.params.id as string,
+      user.organizationId,
+      user.userId,
+      user.roleName
+    );
     sendSuccess(res, template, 200);
   })
 );

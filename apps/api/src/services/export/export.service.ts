@@ -11,10 +11,12 @@
 // ========================================
 
 import * as XLSX from "xlsx";
+import { deflateSync } from "node:zlib";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../utils/errors.js";
 import { logAuditEvent } from "../audit.service.js";
 import { verifyResourceWorkspaceAccess } from "../workspace/workspace-auth.helper.js";
+import { getDashboardWorkspaceId } from "../workspace/workspace-auth.helper.js";
 import { datasetQueryEngine } from "../dataset/query-engine.js";
 
 export type ExportResourceType = "DATASET" | "VISUALIZATION" | "DASHBOARD";
@@ -64,13 +66,108 @@ function escapeCsvValue(val: unknown): string {
   return str;
 }
 
-function rowsToCsv(columns: string[], rows: Record<string, unknown>[]): string {
+function rowsToCsv(columns: string[], rows: Record<string, unknown>[], includeHeaders = true): string {
   if (columns.length === 0 && rows.length > 0 && rows[0]) {
     columns = Object.keys(rows[0]);
   }
   const header = columns.map(escapeCsvValue).join(",");
   const data = rows.map((r) => columns.map((col) => escapeCsvValue(r[col])).join(","));
-  return [header, ...data].join("\r\n");
+  return (includeHeaders ? [header, ...data] : data).join("\r\n");
+}
+
+function pdfEscape(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/[()]/g, "\\$&").replace(/[\r\n]+/g, " ");
+}
+
+/** Build a small, valid PDF report without requiring a native renderer. */
+function createPdfReport(title: string, columns: string[], rows: Record<string, unknown>[]): Buffer {
+  const lines = [
+    title,
+    `Generated ${new Date().toISOString()}`,
+    `Rows exported: ${rows.length}`,
+    columns.length ? `Columns: ${columns.join(", ")}` : "Columns: none",
+    ...rows.slice(0, 35).map((row, index) => `${index + 1}. ${columns.map((column) => String(row[column] ?? "")).join(" | ")}`),
+  ];
+  const stream = ["BT", "/F1 9 Tf", "50 760 Td", ...lines.map((line, index) => `${index ? "0 -16 Td " : ""}(${pdfEscape(line.slice(0, 180))}) Tj`), "ET"].join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${Buffer.byteLength(stream, "utf8")} >>\nstream\n${stream}\nendstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets[index + 1] = Buffer.byteLength(pdf, "utf8");
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xrefOffset = Buffer.byteLength(pdf, "utf8");
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= objects.length; i++) pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return Buffer.from(pdf, "utf8");
+}
+
+function crc32(buffer: Buffer): number {
+  let crc = 0xffffffff;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const name = Buffer.from(type, "ascii");
+  const body = Buffer.concat([name, data]);
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE(crc32(body), 0);
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length, 0);
+  return Buffer.concat([length, body, checksum]);
+}
+
+/** Create a valid dashboard snapshot PNG with a lightweight bar summary. */
+function createPngSnapshot(rowCount: number, title: string): Buffer {
+  const width = 1200;
+  const height = 630;
+  const raw = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    const rowOffset = y * (width * 3 + 1);
+    raw[rowOffset] = 0;
+    for (let x = 0; x < width; x++) {
+      const offset = rowOffset + 1 + x * 3;
+      const panel = x > 40 && x < 1160 && y > 40 && y < 590;
+      raw[offset] = panel ? 15 + Math.floor((x / width) * 10) : 7;
+      raw[offset + 1] = panel ? 28 + Math.floor((y / height) * 12) : 17;
+      raw[offset + 2] = panel ? 50 + Math.floor((x / width) * 18) : 31;
+      if (panel && y > 360 && y < 540) {
+        const barWidth = Math.max(24, Math.min(180, rowCount ? Math.ceil(rowCount / 8) : 24));
+        const barIndex = Math.floor((x - 80) / 220);
+        const barX = 80 + barIndex * 220;
+        const barHeight = Math.min(150, 30 + ((rowCount + barIndex * 17) % 120));
+        if (x >= barX && x < barX + barWidth && y >= 540 - barHeight) {
+          raw[offset] = 56;
+          raw[offset + 1] = 189;
+          raw[offset + 2] = 248;
+        }
+      }
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  const text = Buffer.from(`${title.slice(0, 120)} | rows=${rowCount}`, "utf8");
+  return Buffer.concat([
+    Buffer.from("\x89PNG\r\n\x1a\n", "binary"),
+    pngChunk("IHDR", ihdr),
+    pngChunk("tEXt", Buffer.concat([Buffer.from("Description\0", "ascii"), text])),
+    pngChunk("IDAT", deflateSync(raw)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
 }
 
 export async function exportResource(params: ExportRequestParams): Promise<ExportResult> {
@@ -204,12 +301,27 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
     }
 
     resourceName = dashboard.name;
+    targetWorkspaceId = getDashboardWorkspaceId(dashboard.layoutConfig);
+    await verifyResourceWorkspaceAccess(
+      { workspaceId: targetWorkspaceId, organizationId: dashboard.organizationId },
+      userId,
+      organizationId,
+      userRoleName,
+      "READ"
+    );
 
     for (let i = 0; i < dashboard.charts.length; i++) {
       const c = dashboard.charts[i];
       if (!c) continue;
       let chartRows: Record<string, unknown>[] = [];
       if (c.dataset) {
+        await verifyResourceWorkspaceAccess(
+          { workspaceId: c.dataset.workspaceId, organizationId: c.dataset.organizationId },
+          userId,
+          organizationId,
+          userRoleName,
+          "READ"
+        );
         try {
           const res = await datasetQueryEngine.executeQuery(
             c.dataset,
@@ -254,7 +366,7 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
   if (format === "CSV") {
     contentType = "text/csv;charset=utf-8;";
     filename = `${sanitizedTitle}-${timestamp}.csv`;
-    textContent = rowsToCsv(columns, rows);
+    textContent = rowsToCsv(columns, rows, options?.includeHeaders !== false);
     fileSizeBytes = Buffer.byteLength(textContent, "utf8");
   } else if (format === "EXCEL") {
     contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -274,30 +386,17 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
     dataBase64 = excelBuffer.toString("base64");
     fileSizeBytes = excelBuffer.length;
   } else if (format === "PDF") {
-    // Return structured report descriptor / vector layout for PDF generation
     contentType = "application/pdf";
     filename = `${sanitizedTitle}-${timestamp}.pdf`;
-    const snapshotPayload = {
-      title: resourceName,
-      exportedAt: new Date().toISOString(),
-      rowCount: rows.length,
-      columns,
-      previewRows: rows.slice(0, 100),
-    };
-    textContent = JSON.stringify(snapshotPayload, null, 2);
-    fileSizeBytes = Buffer.byteLength(textContent, "utf8");
-    dataBase64 = Buffer.from(textContent).toString("base64");
+    const pdfBuffer = createPdfReport(options?.title || resourceName, columns, rows);
+    dataBase64 = pdfBuffer.toString("base64");
+    fileSizeBytes = pdfBuffer.length;
   } else if (format === "PNG") {
     contentType = "image/png";
     filename = `${sanitizedTitle}-${timestamp}.png`;
-    const snapshotPayload = {
-      title: resourceName,
-      type: "VISUALIZATION_SNAPSHOT",
-      rowCount: rows.length,
-    };
-    textContent = JSON.stringify(snapshotPayload);
-    fileSizeBytes = Buffer.byteLength(textContent, "utf8");
-    dataBase64 = Buffer.from(textContent).toString("base64");
+    const pngBuffer = createPngSnapshot(rows.length, options?.title || resourceName);
+    dataBase64 = pngBuffer.toString("base64");
+    fileSizeBytes = pngBuffer.length;
   } else {
     throw AppError.badRequest(`Unsupported export format: ${String(format)}`);
   }

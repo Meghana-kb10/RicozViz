@@ -990,6 +990,7 @@ export interface DashboardData {
   shareToken?: string | null;
   shareTokenActive?: boolean;
   sharedAt?: string | null;
+  shareExpiresAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1007,6 +1008,7 @@ export interface DashboardListResponse {
 export async function apiListDashboards(params?: {
   search?: string;
   status?: string;
+  workspaceId?: string;
   page?: number;
   limit?: number;
   sortBy?: "name" | "createdAt" | "updatedAt";
@@ -1015,6 +1017,7 @@ export async function apiListDashboards(params?: {
   const query = new URLSearchParams();
   if (params?.search) query.set("search", params.search);
   if (params?.status) query.set("status", params.status);
+  if (params?.workspaceId) query.set("workspaceId", params.workspaceId);
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
   if (params?.sortBy) query.set("sortBy", params.sortBy);
@@ -1037,6 +1040,7 @@ export async function apiCreateDashboard(input: {
   status?: DashboardStatus;
   visibility?: DashboardVisibility;
   layoutConfig?: Record<string, unknown>;
+  workspaceId?: string | null;
 }): Promise<DashboardData> {
   return apiFetch<DashboardData>("/api/v1/dashboards", {
     method: "POST",
@@ -1100,11 +1104,13 @@ export interface ShareLinkStatusResponse {
   active?: boolean;
   token?: string | null;
   shareUrl?: string | null;
+  shareExpiresAt?: string | null;
 }
 
-export async function apiCreateShareLink(dashboardId: string): Promise<ShareLinkStatusResponse> {
+export async function apiCreateShareLink(dashboardId: string, expiresAt?: string): Promise<ShareLinkStatusResponse> {
   return apiFetch<ShareLinkStatusResponse>(`/api/v1/dashboards/${dashboardId}/share`, {
     method: "POST",
+    body: expiresAt ? JSON.stringify({ expiresAt }) : undefined,
   });
 }
 
@@ -1151,7 +1157,33 @@ export type ChartType =
   | "HEATMAP"
   | "GAUGE"
   | "BUBBLE"
-  | "TREEMAP";
+  | "TREEMAP"
+  | "MAP";
+
+export type ThemePreset = "default" | "dark" | "light" | "professional" | "minimal" | "custom";
+
+export interface DashboardThemeConfig {
+  preset: ThemePreset;
+  mode: "light" | "dark";
+  backgroundColor: string;
+  cardBackground: string;
+  textColor: string;
+  textMutedColor: string;
+  borderColor: string;
+  cardRadius: "none" | "sm" | "md" | "lg" | "xl";
+  cardShadow: "none" | "xs" | "sm" | "md" | "lg";
+  fontFamily: "inter" | "sans" | "serif" | "mono";
+  chartPalette: string[];
+}
+
+export interface DashboardBrandingConfig {
+  logoUrl?: string;
+  title?: string;
+  description?: string;
+  brandColor?: string;
+  faviconUrl?: string;
+  typography?: "inter" | "sans" | "serif" | "mono";
+}
 
 export interface ChartPosition {
   x: number;
@@ -2999,8 +3031,6 @@ export async function apiGetEmbeddedChartData(
     }
   );
 }
-
-
 
 
 
