@@ -278,7 +278,7 @@ export async function apiRemoveWorkspaceMember(
 // DATA SOURCE TYPES & API METHODS
 // ============================================================
 
-export type DataSourceType = "POSTGRESQL" | "MYSQL" | "CSV" | "REST_API" | "XLSX" | "JSON";
+export type DataSourceType = "POSTGRESQL" | "MYSQL" | "SQLITE" | "CSV" | "REST_API" | "XLSX" | "JSON";
 export type DataSourceStatus = "CONNECTED" | "PENDING" | "FAILED" | "INACTIVE";
 
 export interface DataSourceData {
@@ -538,6 +538,22 @@ export async function apiGetSourceTableSchema(
     `/api/v1/datasets/source/${dataSourceId}/tables/${tableName}/schema`
   );
 }
+
+export async function apiImportSourceTable(
+  dataSourceId: string,
+  input: {
+    tableName: string;
+    name?: string;
+    description?: string;
+    workspaceId?: string;
+  }
+): Promise<DatasetData> {
+  return apiFetch<DatasetData>(`/api/v1/datasets/source/${dataSourceId}/import`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 
 // ---- Scheduled Dataset Refresh ----
 export interface DatasetRefreshSchedule {
@@ -1829,6 +1845,12 @@ export async function apiEvaluateAllWorkspaceAlerts(
 // FEATURE 6: DATA QUALITY & PROFILING
 // ============================================================
 
+export interface CategoricalValueDistribution {
+  value: string;
+  count: number;
+  percentage: number;
+}
+
 export interface ColumnProfile {
   name: string;
   type: string;
@@ -1837,16 +1859,24 @@ export interface ColumnProfile {
   nullPercentage: number;
   uniqueCount: number;
   uniquePercentage: number;
+  cardinality?: number;
   sampleValues: unknown[];
   min?: number | null;
   max?: number | null;
   avg?: number | null;
+  mean?: number | null;
   median?: number | null;
   stdDev?: number | null;
   outliersCount?: number;
   outlierPercentage?: number;
+  outliers?: number[];
+  topValues?: CategoricalValueDistribution[];
+  frequency?: Record<string, number>;
+  distribution?: Record<string, number>;
   minDate?: string | null;
   maxDate?: string | null;
+  invalidDates?: number;
+  missingDates?: number;
   minLength?: number | null;
   maxLength?: number | null;
   blankCount?: number;
@@ -1861,8 +1891,23 @@ export interface DataQualityWarning {
   message: string;
 }
 
+export interface QualityScoreBreakdown {
+  completeness: number;
+  validity: number;
+  consistency: number;
+  uniqueness: number;
+  weights: {
+    completeness: number;
+    validity: number;
+    consistency: number;
+    uniqueness: number;
+  };
+  formula: string;
+}
+
 export interface DatasetQualitySummary {
   dataQualityScore: number;
+  completenessPercentage?: number;
   missingDataCount: number;
   missingDataPercentage: number;
   duplicateRowsCount: number;
@@ -1870,6 +1915,8 @@ export interface DatasetQualitySummary {
   typeIssuesCount: number;
   potentialOutliersCount: number;
   grade: "EXCELLENT" | "GOOD" | "FAIR" | "POOR";
+  scoreBreakdown?: QualityScoreBreakdown;
+  dataTypeDistribution?: Record<string, number>;
 }
 
 export interface DatasetProfileResult {
@@ -1878,12 +1925,16 @@ export interface DatasetProfileResult {
   totalRows: number;
   totalColumns: number;
   duplicateRowsCount: number;
+  completenessPercentage?: number;
+  dataTypeDistribution?: Record<string, number>;
   qualityScore: number;
+  scoreBreakdown?: QualityScoreBreakdown;
   summary?: DatasetQualitySummary;
   columns: ColumnProfile[];
   warnings: DataQualityWarning[];
   evaluatedAt: string;
 }
+
 
 export async function apiProfileDataset(
   datasetId: string,

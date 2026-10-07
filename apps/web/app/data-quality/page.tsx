@@ -220,15 +220,15 @@ export default function DataQualityPage() {
                 </div>
               </div>
 
-              {/* 2. Missing Data */}
+              {/* 2. Completeness / Missing Data */}
               <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-                  <span>MISSING DATA</span>
-                  <Percent className="w-4 h-4 text-amber-400" />
+                  <span>COMPLETENESS</span>
+                  <Percent className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-extrabold text-white">
-                    {summary ? `${summary.missingDataPercentage}%` : "0%"}
+                    {profile.completenessPercentage !== undefined ? `${profile.completenessPercentage}%` : `${100 - (summary?.missingDataPercentage ?? 0)}%`}
                   </span>
                   <span className="text-xs text-slate-500">
                     ({summary?.missingDataCount.toLocaleString() ?? 0} nulls)
@@ -236,12 +236,12 @@ export default function DataQualityPage() {
                 </div>
                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-amber-500 transition-all duration-500"
-                    style={{ width: `${Math.min(summary?.missingDataPercentage ?? 0, 100)}%` }}
+                    className="h-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${profile.completenessPercentage ?? (100 - (summary?.missingDataPercentage ?? 0))}%` }}
                   />
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  {(summary?.missingDataPercentage ?? 0) === 0 ? "Complete data records" : "Sparse cells detected"}
+                  {(summary?.missingDataCount ?? 0) === 0 ? "Complete data records" : `${summary?.missingDataPercentage ?? 0}% missing cells`}
                 </div>
               </div>
 
@@ -276,7 +276,7 @@ export default function DataQualityPage() {
                 </div>
               </div>
 
-              {/* 4. Type Issues */}
+              {/* 4. Type & Validity Issues */}
               <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
                   <span>TYPE ISSUES</span>
@@ -322,6 +322,87 @@ export default function DataQualityPage() {
                   />
                 </div>
                 <div className="text-[11px] text-slate-500">1.5x IQR statistical fence rule</div>
+              </div>
+            </div>
+
+            {/* Score Breakdown & Type Distribution Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Score Breakdown (Deterministic 4 Pillars) */}
+              <div className="lg:col-span-2 p-5 rounded-xl bg-slate-900/70 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase text-slate-300 tracking-wider flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    Deterministic Score Breakdown (4 Pillars)
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    Formula: (C×0.35) + (V×0.25) + (U×0.20) + (S×0.20)
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                  <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
+                    <div className="text-[11px] text-slate-400 font-medium flex justify-between">
+                      <span>Completeness</span>
+                      <span className="text-slate-500">35%</span>
+                    </div>
+                    <div className="text-lg font-bold text-emerald-400">
+                      {profile.scoreBreakdown?.completeness ?? 100}%
+                    </div>
+                    <div className="text-[10px] text-slate-500">Non-null values</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
+                    <div className="text-[11px] text-slate-400 font-medium flex justify-between">
+                      <span>Validity</span>
+                      <span className="text-slate-500">25%</span>
+                    </div>
+                    <div className="text-lg font-bold text-cyan-400">
+                      {profile.scoreBreakdown?.validity ?? 100}%
+                    </div>
+                    <div className="text-[10px] text-slate-500">Type & format match</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
+                    <div className="text-[11px] text-slate-400 font-medium flex justify-between">
+                      <span>Uniqueness</span>
+                      <span className="text-slate-500">20%</span>
+                    </div>
+                    <div className="text-lg font-bold text-indigo-400">
+                      {profile.scoreBreakdown?.uniqueness ?? 100}%
+                    </div>
+                    <div className="text-[10px] text-slate-500">Non-duplicate rows</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
+                    <div className="text-[11px] text-slate-400 font-medium flex justify-between">
+                      <span>Consistency</span>
+                      <span className="text-slate-500">20%</span>
+                    </div>
+                    <div className="text-lg font-bold text-amber-400">
+                      {profile.scoreBreakdown?.consistency ?? 100}%
+                    </div>
+                    <div className="text-[10px] text-slate-500">No casing / range conflicts</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Type Distribution */}
+              <div className="p-5 rounded-xl bg-slate-900/70 border border-slate-800 space-y-3">
+                <span className="text-xs font-semibold uppercase text-slate-300 tracking-wider flex items-center gap-2">
+                  <Database className="w-4 h-4 text-cyan-400" />
+                  Data-Type Distribution
+                </span>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {profile.dataTypeDistribution && Object.keys(profile.dataTypeDistribution).length > 0 ? (
+                    Object.entries(profile.dataTypeDistribution).map(([type, count]) => (
+                      <div
+                        key={type}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800 text-xs"
+                      >
+                        <span className="uppercase font-semibold text-slate-300">{type}:</span>
+                        <span className="font-mono font-bold text-emerald-400">{count} cols</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-xs text-slate-500">No type metrics available</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -411,7 +492,8 @@ export default function DataQualityPage() {
                         <th className="py-3 px-4">Type</th>
                         <th className="py-3 px-4">Missing / Nulls</th>
                         <th className="py-3 px-4">Unique Values</th>
-                        <th className="py-3 px-4">Statistics (Min / Max / Mean / Median)</th>
+                        <th className="py-3 px-4">Statistics (Min / Max / Mean / Median / StdDev)</th>
+                        <th className="py-3 px-4">Distribution & Top Values</th>
                         <th className="py-3 px-4">Invalid Values</th>
                         <th className="py-3 px-4">Outliers</th>
                         <th className="py-3 px-4">Sample Values</th>
@@ -467,6 +549,11 @@ export default function DataQualityPage() {
                                   <span className="text-slate-500">Mean:</span> {col.avg}{" "}
                                   <span className="text-slate-500 ml-1">Med:</span> {col.median}
                                 </div>
+                                {col.stdDev !== undefined && (
+                                  <div>
+                                    <span className="text-slate-500">StdDev:</span> {col.stdDev}
+                                  </div>
+                                )}
                               </div>
                             ) : col.minDate ? (
                               <div className="text-[11px] space-y-0.5 font-sans">
@@ -476,6 +563,30 @@ export default function DataQualityPage() {
                                 <div className="truncate max-w-[150px]">
                                   <span className="text-slate-500">Max:</span> {col.maxDate?.slice(0, 10)}
                                 </div>
+                                {col.invalidDates !== undefined && col.invalidDates > 0 && (
+                                  <div className="text-rose-400 text-[10px]">
+                                    Invalid dates: {col.invalidDates}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-600 text-[11px] font-sans">—</span>
+                            )}
+                          </td>
+                          {/* Categorical Distribution / Top Values */}
+                          <td className="py-3 px-4">
+                            {col.topValues && col.topValues.length > 0 ? (
+                              <div className="space-y-1 max-w-[200px]">
+                                {col.topValues.slice(0, 3).map((item, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-[11px] font-sans">
+                                    <span className="text-slate-300 truncate max-w-[110px]" title={item.value}>
+                                      {item.value}
+                                    </span>
+                                    <span className="text-slate-500 font-mono text-[10px]">
+                                      {item.count} ({item.percentage}%)
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
                             ) : (
                               <span className="text-slate-600 text-[11px] font-sans">—</span>
@@ -500,11 +611,11 @@ export default function DataQualityPage() {
                             )}
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            <div className="flex flex-wrap gap-1 max-w-[180px]">
                               {col.sampleValues.slice(0, 3).map((val, i) => (
                                 <span
                                   key={i}
-                                  className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 truncate max-w-[90px]"
+                                  className="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 truncate max-w-[80px]"
                                   title={String(val)}
                                 >
                                   {String(val)}

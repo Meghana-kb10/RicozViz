@@ -4,6 +4,8 @@
 // Validates file-based JSON data source configurations.
 // ========================================
 
+import fs from "node:fs";
+import path from "node:path";
 import type {
   DataSourceConnector,
   ConnectionTestResult,
@@ -17,9 +19,10 @@ export class JsonConnector implements DataSourceConnector {
   ): ConfigurationValidationResult {
     const fieldErrors: Record<string, string[]> = {};
 
-    if (!connectionMeta.fileName || typeof connectionMeta.fileName !== "string") {
-      fieldErrors.fileName = ["File name is required"];
-    } else if (!connectionMeta.fileName.toLowerCase().endsWith(".json")) {
+    const rawFile = connectionMeta.fileName || connectionMeta.filePath;
+    if (!rawFile || typeof rawFile !== "string") {
+      fieldErrors.fileName = ["File name or path is required"];
+    } else if (!rawFile.toLowerCase().endsWith(".json")) {
       fieldErrors.fileName = ["File must be a JSON (.json) file"];
     }
 
@@ -45,15 +48,26 @@ export class JsonConnector implements DataSourceConnector {
     connectionMeta: Record<string, unknown>,
     _credentials?: Record<string, unknown>
   ): Promise<ConnectionTestResult> {
-    const fileName = String(connectionMeta.fileName || "data.json");
+    const rawFile = String(connectionMeta.fileName || connectionMeta.filePath || "data.json");
     const dataPath = connectionMeta.dataPath ? String(connectionMeta.dataPath) : "root";
+
+    if (rawFile.includes("/") || rawFile.includes("\\")) {
+      const resolved = path.resolve(rawFile);
+      if (!fs.existsSync(resolved)) {
+        return Promise.resolve({
+          success: false,
+          status: "FAILED",
+          message: `JSON file does not exist at path: ${rawFile}`,
+        });
+      }
+    }
 
     return Promise.resolve({
       success: true,
       status: "CONNECTED",
-      message: `JSON data source configuration verified for ${fileName}`,
+      message: `JSON data source configuration verified for ${rawFile}`,
       details: {
-        fileName,
+        fileName: rawFile,
         dataPath,
       },
     });

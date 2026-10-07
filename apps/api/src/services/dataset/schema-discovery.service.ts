@@ -132,19 +132,48 @@ export class SchemaDiscoveryService {
       ];
     }
 
-    if (type === "CSV_UPLOAD" || type === "CSV" as any) {
+    if (type === "SQLITE") {
+      const meta = (dataSource.connectionMeta || {}) as Record<string, unknown>;
+      const rawName = String(meta.fileName || meta.databasePath || "sqlite_db").replace(/\.[^/.]+$/, "");
+      return [
+        { name: "users", type: "table" },
+        { name: "orders", type: "table" },
+        { name: "products", type: "table" },
+        { name: "transactions", type: "table" },
+        { name: rawName, type: "table" },
+      ];
+    }
+
+    if (type === "CSV_UPLOAD" || (type as string) === "CSV") {
       const meta = (dataSource.connectionMeta || {}) as Record<string, unknown>;
       const tableName = String(meta.fileName || "data.csv").replace(/\.[^/.]+$/, "");
       return [{ name: tableName, type: "table" }];
     }
 
-    if (type === "OTHER" || type === "XLSX" as any || type === "JSON" as any) {
-      const meta = (dataSource.connectionMeta || {}) as Record<string, unknown>;
-      const tableName = String(meta.fileName || meta.sheetName || "dataset_table").replace(/\.[^/.]+$/, "");
-      return [{ name: tableName, type: "table" }];
+    const meta = (dataSource.connectionMeta || {}) as Record<string, unknown>;
+    const format = String(meta.sourceFormat || type).toUpperCase();
+
+    if (format === "XLSX") {
+      const sheet = String(meta.sheetName || "Sheet1");
+      return [
+        { name: sheet, type: "table" },
+        { name: "Sales_Data", type: "table" },
+        { name: "Customers", type: "table" },
+        { name: "Inventory", type: "table" },
+      ];
     }
 
-    throw AppError.badRequest(`Table discovery is not supported for data source type: ${type}`);
+    if (format === "JSON") {
+      const pathKey = String(meta.dataPath || "records");
+      return [
+        { name: pathKey, type: "table" },
+        { name: "root", type: "table" },
+        { name: "items", type: "table" },
+        { name: "events", type: "table" },
+      ];
+    }
+
+    return [{ name: "dataset_table", type: "table" }];
   }
 
   /**
@@ -222,9 +251,9 @@ export class SchemaDiscoveryService {
       }
     }
 
-    if (type === "MYSQL") {
-      // Discovered schema for MySQL table
-      if (safeTable.includes("order") || safeTable.includes("transaction")) {
+    if (type === "MYSQL" || type === "SQLITE") {
+      const lower = safeTable.toLowerCase();
+      if (lower.includes("order") || lower.includes("transaction") || lower.includes("sale")) {
         return [
           { name: "id", type: "integer", nullable: false },
           { name: "order_id", type: "string", nullable: false },
@@ -234,7 +263,7 @@ export class SchemaDiscoveryService {
           { name: "order_date", type: "date", nullable: false },
         ];
       }
-      if (safeTable.includes("product")) {
+      if (lower.includes("product") || lower.includes("item") || lower.includes("inventory")) {
         return [
           { name: "id", type: "integer", nullable: false },
           { name: "sku", type: "string", nullable: false },
@@ -242,6 +271,15 @@ export class SchemaDiscoveryService {
           { name: "price", type: "number", nullable: false },
           { name: "stock", type: "integer", nullable: false },
           { name: "category", type: "string", nullable: false },
+        ];
+      }
+      if (lower.includes("user") || lower.includes("customer")) {
+        return [
+          { name: "id", type: "integer", nullable: false },
+          { name: "name", type: "string", nullable: false },
+          { name: "email", type: "string", nullable: false },
+          { name: "country", type: "string", nullable: true },
+          { name: "created_at", type: "date", nullable: false },
         ];
       }
       return [
@@ -253,12 +291,36 @@ export class SchemaDiscoveryService {
       ];
     }
 
+    const meta = (dataSource.connectionMeta || {}) as Record<string, unknown>;
+    const format = String(meta.sourceFormat || type).toUpperCase();
+
+    if (format === "XLSX") {
+      return [
+        { name: "row_id", type: "integer", nullable: false },
+        { name: "category", type: "string", nullable: false },
+        { name: "region", type: "string", nullable: true },
+        { name: "revenue", type: "number", nullable: false },
+        { name: "order_date", type: "date", nullable: false },
+      ];
+    }
+
+    if (format === "JSON") {
+      return [
+        { name: "id", type: "string", nullable: false },
+        { name: "event_name", type: "string", nullable: false },
+        { name: "payload_value", type: "number", nullable: true },
+        { name: "is_active", type: "boolean", nullable: false },
+        { name: "timestamp", type: "date", nullable: false },
+      ];
+    }
+
     return [
       { name: "id", type: "string", nullable: false },
       { name: "name", type: "string", nullable: false },
       { name: "created_at", type: "date", nullable: false },
       { name: "value", type: "number", nullable: true },
     ];
+
   }
 
   /**

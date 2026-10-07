@@ -22,7 +22,9 @@ import {
   previewCsvSchemaHandler,
   listSourceTables,
   getSourceTableSchema,
+  importSourceTable,
 } from "../services/dataset/dataset.service.js";
+
 import {
   previewDatasetBlend,
   createDatasetBlend,
@@ -145,6 +147,18 @@ router.get(
   requirePermission("DATASET_CREATE"),
   asyncHandler(getSourceTableSchema)
 );
+
+/**
+ * POST /api/v1/datasets/source/:dataSourceId/import
+ * Import a discovered table or sheet as a Dataset.
+ * Permission: DATASET_CREATE
+ */
+router.post(
+  "/source/:dataSourceId/import",
+  requirePermission("DATASET_CREATE"),
+  asyncHandler(importSourceTable)
+);
+
 
 /**
  * POST /api/v1/datasets/blends/preview

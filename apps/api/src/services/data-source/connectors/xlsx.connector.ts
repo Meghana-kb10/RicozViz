@@ -4,6 +4,8 @@
 // Validates file-based Excel (XLSX) data source configurations.
 // ========================================
 
+import fs from "node:fs";
+import path from "node:path";
 import type {
   DataSourceConnector,
   ConnectionTestResult,
@@ -17,10 +19,11 @@ export class XlsxConnector implements DataSourceConnector {
   ): ConfigurationValidationResult {
     const fieldErrors: Record<string, string[]> = {};
 
-    if (!connectionMeta.fileName || typeof connectionMeta.fileName !== "string") {
-      fieldErrors.fileName = ["File name is required"];
+    const rawFile = connectionMeta.fileName || connectionMeta.filePath;
+    if (!rawFile || typeof rawFile !== "string") {
+      fieldErrors.fileName = ["File name or path is required"];
     } else {
-      const lower = connectionMeta.fileName.toLowerCase();
+      const lower = rawFile.toLowerCase();
       if (!lower.endsWith(".xlsx") && !lower.endsWith(".xls")) {
         fieldErrors.fileName = ["File must be an Excel spreadsheet (.xlsx or .xls)"];
       }
@@ -48,15 +51,26 @@ export class XlsxConnector implements DataSourceConnector {
     connectionMeta: Record<string, unknown>,
     _credentials?: Record<string, unknown>
   ): Promise<ConnectionTestResult> {
-    const fileName = String(connectionMeta.fileName || "data.xlsx");
+    const rawFile = String(connectionMeta.fileName || connectionMeta.filePath || "data.xlsx");
     const sheetName = connectionMeta.sheetName ? String(connectionMeta.sheetName) : "Sheet1";
+
+    if (rawFile.includes("/") || rawFile.includes("\\")) {
+      const resolved = path.resolve(rawFile);
+      if (!fs.existsSync(resolved)) {
+        return Promise.resolve({
+          success: false,
+          status: "FAILED",
+          message: `XLSX file does not exist at path: ${rawFile}`,
+        });
+      }
+    }
 
     return Promise.resolve({
       success: true,
       status: "CONNECTED",
-      message: `Excel (XLSX) data source configuration verified for ${fileName}`,
+      message: `Excel (XLSX) data source configuration verified for ${rawFile}`,
       details: {
-        fileName,
+        fileName: rawFile,
         sheetName,
       },
     });

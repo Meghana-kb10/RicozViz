@@ -15,6 +15,7 @@ import {
   apiListSourceTables,
   apiGetSourceTableSchema,
   apiCreateDataset,
+  apiImportSourceTable,
   type DataSourceData,
   type DataSourceType,
   type SourceTable,
@@ -54,6 +55,14 @@ export default function DataSourcesPage() {
   const [mysqlDatabase, setMysqlDatabase] = useState("");
   const [mysqlUsername, setMysqlUsername] = useState("root");
   const [mysqlPassword, setMysqlPassword] = useState("");
+  // SQLite fields
+  const [sqlitePath, setSqlitePath] = useState("analytics.sqlite");
+  // XLSX fields
+  const [xlsxFileName, setXlsxFileName] = useState("report.xlsx");
+  const [xlsxSheetName, setXlsxSheetName] = useState("Sheet1");
+  // JSON fields
+  const [jsonFileName, setJsonFileName] = useState("data.json");
+  const [jsonDataPath, setJsonDataPath] = useState("records");
   // CSV fields
   const [csvFileName, setCsvFileName] = useState("");
   const [csvDelimiter, setCsvDelimiter] = useState(",");
@@ -62,6 +71,7 @@ export default function DataSourcesPage() {
   const [apiMethod, setApiMethod] = useState<"GET" | "POST">("GET");
   const [apiAuthType, setApiAuthType] = useState<"NONE" | "API_KEY" | "BEARER">("NONE");
   const [apiSecret, setApiSecret] = useState("");
+
 
   // Testing connection state
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -159,6 +169,11 @@ export default function DataSourcesPage() {
     setMysqlDatabase("");
     setMysqlUsername("root");
     setMysqlPassword("");
+    setSqlitePath("analytics.sqlite");
+    setXlsxFileName("report.xlsx");
+    setXlsxSheetName("Sheet1");
+    setJsonFileName("data.json");
+    setJsonDataPath("records");
     setCsvFileName("");
     setCsvDelimiter(",");
     setApiUrl("");
@@ -190,6 +205,14 @@ export default function DataSourcesPage() {
       setMysqlDatabase(String(conn.database || ""));
       setMysqlUsername(String(conn.username || "root"));
       setMysqlPassword(""); // Never prefill passwords
+    } else if (ds.type === "SQLITE") {
+      setSqlitePath(String(conn.databasePath || conn.fileName || "analytics.sqlite"));
+    } else if (ds.type === "XLSX") {
+      setXlsxFileName(String(conn.fileName || "report.xlsx"));
+      setXlsxSheetName(String(conn.sheetName || "Sheet1"));
+    } else if (ds.type === "JSON") {
+      setJsonFileName(String(conn.fileName || "data.json"));
+      setJsonDataPath(String(conn.dataPath || "records"));
     } else if (ds.type === "CSV") {
       setCsvFileName(String(conn.fileName || ""));
       setCsvDelimiter(String(conn.delimiter || ","));
@@ -226,6 +249,21 @@ export default function DataSourcesPage() {
         username: mysqlUsername.trim(),
       };
       if (mysqlPassword) connection.password = mysqlPassword;
+    } else if (formType === "SQLITE") {
+      connection = {
+        databasePath: sqlitePath.trim(),
+        fileName: sqlitePath.trim(),
+      };
+    } else if (formType === "XLSX") {
+      connection = {
+        fileName: xlsxFileName.trim(),
+        sheetName: xlsxSheetName.trim() || "Sheet1",
+      };
+    } else if (formType === "JSON") {
+      connection = {
+        fileName: jsonFileName.trim(),
+        dataPath: jsonDataPath.trim() || "records",
+      };
     } else if (formType === "CSV") {
       connection = {
         fileName: csvFileName.trim(),
@@ -305,21 +343,31 @@ export default function DataSourcesPage() {
     setCreatingDatasetFromTable(true);
     setDiscoveryError(null);
     try {
-      const ds = await apiCreateDataset({
-        name: newDatasetNameFromDiscovery.trim() || `${selectedDiscoveryTable} Dataset`,
-        type: "CONNECTED",
-        dataSourceId: discoverySource.id,
-        tableName: selectedDiscoveryTable,
-        workspaceId: currentWorkspace?.id,
-        columns: discoveredTableCols,
-      });
-      setDiscoverySuccess(`Dataset "${ds.name}" created successfully! Redirecting...`);
+      let ds: any;
+      try {
+        ds = await apiImportSourceTable(discoverySource.id, {
+          tableName: selectedDiscoveryTable,
+          name: newDatasetNameFromDiscovery.trim() || `${selectedDiscoveryTable} Dataset`,
+          workspaceId: currentWorkspace?.id,
+        });
+      } catch {
+        ds = await apiCreateDataset({
+          name: newDatasetNameFromDiscovery.trim() || `${selectedDiscoveryTable} Dataset`,
+          type: "CONNECTED",
+          dataSourceId: discoverySource.id,
+          tableName: selectedDiscoveryTable,
+          workspaceId: currentWorkspace?.id,
+          columns: discoveredTableCols,
+        });
+      }
+
+      setDiscoverySuccess(`Dataset "${ds.name}" imported and profiled successfully! Redirecting...`);
       setTimeout(() => {
         setIsDiscoveryOpen(false);
-        router.push(`/datasets/${ds.id}`);
+        router.push(`/data-quality?datasetId=${ds.id}`);
       }, 1200);
     } catch (err) {
-      setDiscoveryError(err instanceof ApiError ? err.message : "Failed to create dataset from table");
+      setDiscoveryError(err instanceof ApiError ? err.message : "Failed to import dataset from table");
     } finally {
       setCreatingDatasetFromTable(false);
     }
@@ -353,6 +401,21 @@ export default function DataSourcesPage() {
       if (mysqlPassword) {
         connection.password = mysqlPassword;
       }
+    } else if (formType === "SQLITE") {
+      connection = {
+        databasePath: sqlitePath.trim(),
+        fileName: sqlitePath.trim(),
+      };
+    } else if (formType === "XLSX") {
+      connection = {
+        fileName: xlsxFileName.trim(),
+        sheetName: xlsxSheetName.trim() || "Sheet1",
+      };
+    } else if (formType === "JSON") {
+      connection = {
+        fileName: jsonFileName.trim(),
+        dataPath: jsonDataPath.trim() || "records",
+      };
     } else if (formType === "CSV") {
       connection = {
         fileName: csvFileName.trim(),
@@ -388,6 +451,7 @@ export default function DataSourcesPage() {
         });
         setSuccessMsg(`Data source "${formName}" created successfully.`);
       }
+
 
       setIsModalOpen(false);
       refreshDataSources();
@@ -557,7 +621,7 @@ export default function DataSourcesPage() {
 
         {/* Filter Pills */}
         <div className="flex items-center gap-2 mb-6 border-b border-gray-200 pb-3 overflow-x-auto">
-          {["ALL", "POSTGRESQL", "MYSQL", "CSV", "REST_API"].map((type) => (
+          {["ALL", "POSTGRESQL", "MYSQL", "SQLITE", "XLSX", "JSON", "CSV", "REST_API"].map((type) => (
             <button
               key={type}
               onClick={() => setFilterType(type)}
@@ -567,7 +631,19 @@ export default function DataSourcesPage() {
                   : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
               }`}
             >
-              {type === "ALL" ? "All Types" : type === "MYSQL" ? "MySQL" : type.replace("_", " ")}
+              {type === "ALL"
+                ? "All Types"
+                : type === "POSTGRESQL"
+                  ? "PostgreSQL"
+                  : type === "MYSQL"
+                    ? "MySQL"
+                    : type === "SQLITE"
+                      ? "SQLite"
+                      : type === "XLSX"
+                        ? "Excel (XLSX)"
+                        : type === "JSON"
+                          ? "JSON"
+                          : type.replace("_", " ")}
             </button>
           ))}
         </div>
@@ -602,7 +678,12 @@ export default function DataSourcesPage() {
             {filteredSources.map((ds) => {
               const isTesting = testingId === ds.id;
               const result = testResult?.id === ds.id ? testResult : null;
-              const isDb = ds.type === "POSTGRESQL" || ds.type === "MYSQL";
+              const isDiscoverable =
+                ds.type === "POSTGRESQL" ||
+                ds.type === "MYSQL" ||
+                ds.type === "SQLITE" ||
+                ds.type === "XLSX" ||
+                ds.type === "JSON";
 
               return (
                 <div
@@ -615,6 +696,9 @@ export default function DataSourcesPage() {
                       <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">
                         {ds.type === "POSTGRESQL" && "🐘 PostgreSQL"}
                         {ds.type === "MYSQL" && "🐬 MySQL"}
+                        {ds.type === "SQLITE" && "💾 SQLite"}
+                        {ds.type === "XLSX" && "📊 Excel (XLSX)"}
+                        {ds.type === "JSON" && "📦 JSON"}
                         {ds.type === "CSV" && "📄 CSV File"}
                         {ds.type === "REST_API" && "🌐 REST API"}
                       </span>
@@ -656,6 +740,21 @@ export default function DataSourcesPage() {
                           {String(ds.connection.database || "")}
                         </span>
                       )}
+                      {ds.type === "SQLITE" && (
+                        <span>
+                          DB: {String(ds.connection.databasePath || ds.connection.fileName || "")}
+                        </span>
+                      )}
+                      {ds.type === "XLSX" && (
+                        <span>
+                          File: {String(ds.connection.fileName || "")} ({String(ds.connection.sheetName || "Sheet1")})
+                        </span>
+                      )}
+                      {ds.type === "JSON" && (
+                        <span>
+                          File: {String(ds.connection.fileName || "")} (Path: {String(ds.connection.dataPath || "records")})
+                        </span>
+                      )}
                       {ds.type === "CSV" && (
                         <span>File: {String(ds.connection.fileName || "")}</span>
                       )}
@@ -683,17 +782,18 @@ export default function DataSourcesPage() {
                   {/* Actions footer */}
                   <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
-                      {isDb && (
+                      {isDiscoverable && (
                         <button
                           onClick={() => void openDiscoveryModal(ds)}
                           className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition"
                           title="Discover tables & create dataset"
                         >
-                          <span>📑 Tables</span>
+                          <span>📑 Tables & Sheets</span>
                         </button>
                       )}
                       {canTest && (
                         <button
+
                           onClick={() => void handleTestConnection(ds.id)}
                           disabled={isTesting}
                           className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
@@ -780,8 +880,8 @@ export default function DataSourcesPage() {
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Source Type
                 </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(["POSTGRESQL", "MYSQL", "CSV", "REST_API"] as const).map((t) => (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(["POSTGRESQL", "MYSQL", "SQLITE", "XLSX", "JSON", "CSV", "REST_API"] as const).map((t) => (
                     <button
                       type="button"
                       key={t}
@@ -795,6 +895,9 @@ export default function DataSourcesPage() {
                     >
                       {t === "POSTGRESQL" && "🐘 PostgreSQL"}
                       {t === "MYSQL" && "🐬 MySQL"}
+                      {t === "SQLITE" && "💾 SQLite"}
+                      {t === "XLSX" && "📊 Excel"}
+                      {t === "JSON" && "📦 JSON"}
                       {t === "CSV" && "📄 CSV"}
                       {t === "REST_API" && "🌐 REST API"}
                     </button>
@@ -950,6 +1053,91 @@ export default function DataSourcesPage() {
                   </div>
                 </div>
               )}
+
+              {formType === "SQLITE" && (
+                <div className="space-y-3 pt-2 border-t border-gray-100">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      SQLite Database File Path or Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={sqlitePath}
+                      onChange={(e) => setSqlitePath(e.target.value)}
+                      placeholder="e.g. analytics.sqlite, :memory:, or /path/to/database.db"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    />
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Standard SQLite 3 database file or in-memory instance.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {formType === "XLSX" && (
+                <div className="space-y-3 pt-2 border-t border-gray-100">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Excel (XLSX) File Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={xlsxFileName}
+                      onChange={(e) => setXlsxFileName(e.target.value)}
+                      placeholder="e.g. quarterly_financials.xlsx"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Default Sheet Name
+                    </label>
+                    <input
+                      type="text"
+                      value={xlsxSheetName}
+                      onChange={(e) => setXlsxSheetName(e.target.value)}
+                      placeholder="Sheet1"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    />
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      You can discover and choose specific sheets using the Tables & Sheets tool.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {formType === "JSON" && (
+                <div className="space-y-3 pt-2 border-t border-gray-100">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      JSON File Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={jsonFileName}
+                      onChange={(e) => setJsonFileName(e.target.value)}
+                      placeholder="e.g. telemetry_events.json"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Data Path / Root Collection Key
+                    </label>
+                    <input
+                      type="text"
+                      value={jsonDataPath}
+                      onChange={(e) => setJsonDataPath(e.target.value)}
+                      placeholder="records (or root for array)"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
 
               {formType === "CSV" && (
                 <div className="space-y-3 pt-2 border-t border-gray-100">

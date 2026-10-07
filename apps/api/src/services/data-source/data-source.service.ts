@@ -42,6 +42,16 @@ const mysqlConnectionSchema = z.object({
   ssl: z.boolean().optional().default(false),
 });
 
+const sqliteConnectionSchema = z
+  .object({
+    databasePath: z.string().optional(),
+    fileName: z.string().optional(),
+    filePath: z.string().optional(),
+  })
+  .refine((data) => Boolean(data.databasePath || data.fileName || data.filePath), {
+    message: "databasePath, fileName, or filePath is required for SQLite",
+  });
+
 const csvConnectionSchema = z.object({
   fileName: z.string().min(1, "File name is required"),
   delimiter: z.string().min(1).default(","),
@@ -74,7 +84,7 @@ export const createDataSourceSchema = z.object({
   workspaceId: z.string().uuid("Invalid workspace ID").optional().nullable(),
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
-  type: z.enum(["POSTGRESQL", "MYSQL", "CSV", "CSV_UPLOAD", "REST_API", "XLSX", "JSON"]),
+  type: z.enum(["POSTGRESQL", "MYSQL", "SQLITE", "CSV", "CSV_UPLOAD", "REST_API", "XLSX", "JSON"]),
   connection: z.record(z.unknown()),
 }).superRefine((data, ctx) => {
   const normalizedType = data.type === "CSV" ? "CSV_UPLOAD" : data.type;
@@ -87,6 +97,13 @@ export const createDataSourceSchema = z.object({
     }
   } else if (normalizedType === "MYSQL") {
     const res = mysqlConnectionSchema.safeParse(data.connection);
+    if (!res.success) {
+      for (const issue of res.error.issues) {
+        ctx.addIssue({ ...issue, path: ["connection", ...issue.path] });
+      }
+    }
+  } else if (normalizedType === "SQLITE") {
+    const res = sqliteConnectionSchema.safeParse(data.connection);
     if (!res.success) {
       for (const issue of res.error.issues) {
         ctx.addIssue({ ...issue, path: ["connection", ...issue.path] });
@@ -122,6 +139,7 @@ export const createDataSourceSchema = z.object({
     }
   }
 });
+
 
 export const updateDataSourceSchema = z.object({
   name: z.string().min(1, "Name cannot be empty").max(100).optional(),
@@ -557,9 +575,10 @@ export async function testDataSourceConnection(req: Request, res: Response): Pro
 }
 
 export const testRawConnectionSchema = z.object({
-  type: z.enum(["POSTGRESQL", "MYSQL", "CSV", "CSV_UPLOAD", "REST_API", "XLSX", "JSON"]),
+  type: z.enum(["POSTGRESQL", "MYSQL", "SQLITE", "CSV", "CSV_UPLOAD", "REST_API", "XLSX", "JSON"]),
   connection: z.record(z.unknown()),
 });
+
 
 /**
  * POST /api/v1/data-sources/test-connection
