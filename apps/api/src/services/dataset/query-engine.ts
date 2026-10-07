@@ -398,22 +398,26 @@ export class DatasetQueryEngine {
       }
 
       for (const filter of params.filters) {
-        if (!knownColumnNames.includes(filter.column)) {
-          throw AppError.badRequest(`Filter column "${filter.column}" does not exist in dataset schema`);
+        const colName = filter.column || (filter as any).field;
+        if (!knownColumnNames.includes(colName)) {
+          throw AppError.badRequest(`Filter column "${colName}" does not exist in dataset schema`);
         }
         const rawOp = filter.operator;
-        const alias = typeof rawOp === "string" ? FILTER_OPERATOR_ALIASES[rawOp] : undefined;
+        const alias =
+          typeof rawOp === "string"
+            ? FILTER_OPERATOR_ALIASES[rawOp] || FILTER_OPERATOR_ALIASES[rawOp.toLowerCase()]
+            : undefined;
         const op: FilterOperator | string = alias || rawOp;
 
         if (!ALLOWED_FILTER_OPERATORS.includes(op as FilterOperator)) {
           throw AppError.badRequest(`Unsupported filter operator: "${filter.operator}"`);
         }
 
-        const colType = columnTypeMap.get(filter.column) || "string";
-        const validatedValue = this.validateAndCoerceFilterValue(colType, op as FilterOperator, filter.value, filter.column);
+        const colType = columnTypeMap.get(colName) || "string";
+        const validatedValue = this.validateAndCoerceFilterValue(colType, op as FilterOperator, filter.value, colName);
 
         validatedFilters.push({
-          column: filter.column,
+          column: colName,
           operator: op as FilterOperator,
           value: validatedValue,
         });

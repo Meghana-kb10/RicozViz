@@ -47,13 +47,32 @@ import { prisma } from "../lib/prisma.js";
 import { AppError } from "../utils/errors.js";
 
 
+import {
+  handleCollaborationStream,
+  handlePresenceHeartbeat,
+  handleCollaborativeUpdate,
+  handleGetCollaborationState,
+} from "../services/collaboration/realtime-collaboration.service.js";
+import {
+  createOrUpdateDashboardEmbed,
+  getDashboardEmbedStatus,
+  revokeDashboardEmbed,
+  getPublicEmbedDashboard,
+  getPublicEmbedChartData,
+} from "../services/dashboard/dashboard-embed.service.js";
+
 const router = Router();
 
 // ============================================================
-// Public Shared Dashboard Routes (No Authentication Required)
+// Public Shared & Embedded Dashboard Routes (No Authentication Required)
 // ============================================================
 router.get("/shared/:shareToken", asyncHandler(getSharedDashboard));
 router.post("/shared/:shareToken/charts/:chartId/data", asyncHandler(getSharedChartData));
+router.get("/embed/:embedToken", asyncHandler(getPublicEmbedDashboard));
+router.post("/embed/:embedToken/charts/:chartId/data", asyncHandler(getPublicEmbedChartData));
+
+// Real-Time Collaboration SSE Stream (authenticates token from Authorization header or ?token query)
+router.get("/:id/collaboration/stream", asyncHandler(handleCollaborationStream));
 
 // Subrouter for charts nested under a dashboard: /api/v1/dashboards/:dashboardId/charts
 router.use("/:dashboardId/charts", chartRouter);
@@ -92,6 +111,70 @@ router.delete(
   "/:id/share",
   requirePermission("DASHBOARD_EDIT"),
   asyncHandler(disableShareLink)
+);
+
+// ============================================================
+// PHASE 6: REAL-TIME COLLABORATION & EMBEDDED ANALYTICS
+// ============================================================
+
+/**
+ * GET /api/v1/dashboards/:id/collaboration/state
+ * Retrieve active collaborators and latest version info.
+ */
+router.get(
+  "/:id/collaboration/state",
+  requirePermission("DASHBOARD_VIEW"),
+  asyncHandler(handleGetCollaborationState)
+);
+
+/**
+ * POST /api/v1/dashboards/:id/collaboration/presence
+ * Send heartbeat / focus widget update.
+ */
+router.post(
+  "/:id/collaboration/presence",
+  requirePermission("DASHBOARD_VIEW"),
+  asyncHandler(handlePresenceHeartbeat)
+);
+
+/**
+ * POST /api/v1/dashboards/:id/collaboration/update
+ * Conflict-safe collaborative update (enforces version check and RBAC WRITE guard).
+ */
+router.post(
+  "/:id/collaboration/update",
+  requirePermission("DASHBOARD_EDIT"),
+  asyncHandler(handleCollaborativeUpdate)
+);
+
+/**
+ * POST /api/v1/dashboards/:id/embed
+ * Enable or update embedded analytics configuration.
+ */
+router.post(
+  "/:id/embed",
+  requirePermission("DASHBOARD_EDIT"),
+  asyncHandler(createOrUpdateDashboardEmbed)
+);
+
+/**
+ * GET /api/v1/dashboards/:id/embed
+ * Retrieve embed status and configuration.
+ */
+router.get(
+  "/:id/embed",
+  requirePermission("DASHBOARD_VIEW"),
+  asyncHandler(getDashboardEmbedStatus)
+);
+
+/**
+ * DELETE /api/v1/dashboards/:id/embed
+ * Revoke and deactivate embedded analytics.
+ */
+router.delete(
+  "/:id/embed",
+  requirePermission("DASHBOARD_EDIT"),
+  asyncHandler(revokeDashboardEmbed)
 );
 
 // ============================================================

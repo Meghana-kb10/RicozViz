@@ -47,6 +47,16 @@ import {
   apiRestoreDashboardVersion,
   type DashboardVersionRecord,
   type VersionComparisonResult,
+  apiGetCollaborationState,
+  apiSendCollaborationPresence,
+  apiCollaborativeUpdate,
+  apiCreateDashboardEmbed,
+  apiGetDashboardEmbed,
+  apiRevokeDashboardEmbed,
+  type CollaboratorPresence,
+  type EmbedConfig,
+  type EmbedStatusResult,
+  getApiBaseUrl,
   ApiError,
 } from "../../../lib/api";
 
@@ -111,6 +121,8 @@ import {
   History,
   GitCompare,
   RotateCcw,
+  Code,
+  Radio,
 } from "lucide-react";
 
 
@@ -191,7 +203,7 @@ export default function DashboardDetailPage({
 
   // Dashboard Share & Collaboration State
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [shareModalTab, setShareModalTab] = useState<"COLLABORATORS" | "PUBLIC_LINK">("COLLABORATORS");
+  const [shareModalTab, setShareModalTab] = useState<"COLLABORATORS" | "PUBLIC_LINK" | "EMBED">("COLLABORATORS");
   const [shareStatus, setShareStatus] = useState<ShareLinkStatusResponse | null>(null);
   const [loadingShareStatus, setLoadingShareStatus] = useState(false);
   const [updatingShare, setUpdatingShare] = useState(false);
@@ -204,6 +216,21 @@ export default function DashboardDetailPage({
   const [selectedAccessLevel, setSelectedAccessLevel] = useState<"VIEW" | "EDIT" | "ADMIN">("VIEW");
   const [loadingCollaborators, setLoadingCollaborators] = useState(false);
   const [updatingCollaborator, setUpdatingCollaborator] = useState(false);
+
+  // Phase 6: Real-Time Presence & Live Collaboration State
+  const [activeCollaborators, setActiveCollaborators] = useState<CollaboratorPresence[]>([]);
+  const [remoteUpdateNotice, setRemoteUpdateNotice] = useState<string | null>(null);
+
+  // Phase 6: Embedded Analytics State
+  const [embedStatus, setEmbedStatus] = useState<EmbedStatusResult | null>(null);
+  const [loadingEmbedStatus, setLoadingEmbedStatus] = useState(false);
+  const [updatingEmbed, setUpdatingEmbed] = useState(false);
+  const [embedAllowedOrigins, setEmbedAllowedOrigins] = useState("*");
+  const [embedTheme, setEmbedTheme] = useState<"light" | "dark">("light");
+  const [embedShowControls, setEmbedShowControls] = useState(true);
+  const [embedExpiresInDays, setEmbedExpiresInDays] = useState<string>("");
+  const [copiedEmbedCode, setCopiedEmbedCode] = useState(false);
+  const [copiedEmbedUrl, setCopiedEmbedUrl] = useState(false);
 
   // Dashboard Report Schedule & Snapshot State
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -390,6 +417,69 @@ export default function DashboardDetailPage({
       ignore = true;
     };
   }, [auth, id]);
+
+  // Real-time Collaboration (SSE) Stream & Heartbeat Listener
+  useEffect(() => {
+    if (!id || !auth) return;
+    const baseUrl = getApiBaseUrl();
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+    const streamUrl = `${baseUrl}/api/dashboards/${id}/collaboration/stream?token=${encodeURIComponent(token)}`;
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource(streamUrl);
+      eventSource.addEventListener("PRESENCE_STATE", (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (Array.isArray(data.collaborators)) {
+            setActiveCollaborators(data.collaborators);
+          }
+        } catch {}
+      });
+      eventSource.addEventListener("USER_JOINED", (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.user) {
+            setActiveCollaborators((prev) => {
+              const filtered = prev.filter((p) => p.userId !== data.user.userId);
+              return [...filtered, data.user];
+            });
+          }
+        } catch {}
+      });
+      eventSource.addEventListener("USER_LEFT", (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.userId) {
+            setActiveCollaborators((prev) => prev.filter((p) => p.userId !== data.userId));
+          }
+        } catch {}
+      });
+      eventSource.addEventListener("DASHBOARD_UPDATED", (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          setRemoteUpdateNotice(
+            `Dashboard was updated by ${data.updatedBy?.name || "a collaborator"} (Version ${data.newVersionNumber || ""}). Reload to view latest changes.`
+          );
+        } catch {}
+      });
+    } catch (err) {
+      console.warn("Could not initiate collaboration EventSource", err);
+    }
+
+    // Initial heartbeat and periodic heartbeat every 20s
+    void apiSendCollaborationPresence(id).catch(() => {});
+    const interval = setInterval(() => {
+      void apiSendCollaborationPresence(id).catch(() => {});
+    }, 20000);
+
+    return () => {
+      clearInterval(interval);
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [id, auth]);
 
   // Execute query for a chart on the canvas with merged filters and drill-down
   const executeChartQuery = useCallback(
@@ -930,6 +1020,81 @@ export default function DashboardDetailPage({
     }
   };
 
+  // Phase 6: Embedded Analytics Management Handlers
+  const fetchEmbedStatus = async () => {
+    setLoadingEmbedStatus(true);
+    try {
+      const res = await apiGetDashboardEmbed(id);
+      setEmbedStatus(res);
+      if (res?.config) {
+        setEmbedAllowedOrigins(res.config.allowedOrigins?.join(", ") || "*");
+        setEmbedTheme((res.config.theme as "light" | "dark") || "light");
+        setEmbedShowControls(res.config.showControls ?? true);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch embed status", err);
+    } finally {
+      setLoadingEmbedStatus(false);
+    }
+  };
+
+  const handleCreateOrUpdateEmbed = async () => {
+    setUpdatingEmbed(true);
+    try {
+      const origins = embedAllowedOrigins
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const res = await apiCreateDashboardEmbed(id, {
+        enabled: true,
+        allowedOrigins: origins.length > 0 ? origins : ["*"],
+        theme: embedTheme,
+        showControls: embedShowControls,
+        expiresInDays: embedExpiresInDays ? parseInt(embedExpiresInDays, 10) : undefined,
+      });
+      setEmbedStatus(res);
+      setSuccessMsg("Embedded analytics configured and enabled successfully!");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to configure embed access");
+    } finally {
+      setUpdatingEmbed(false);
+    }
+  };
+
+  const handleRevokeEmbed = async () => {
+    const ok = window.confirm(
+      "Are you sure you want to revoke embed access? Any external websites embedding this dashboard will immediately stop displaying it."
+    );
+    if (!ok) return;
+
+    setUpdatingEmbed(true);
+    try {
+      await apiRevokeDashboardEmbed(id);
+      setEmbedStatus(null);
+      setSuccessMsg("Embed access revoked. External iframe displays disabled.");
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to revoke embed access");
+    } finally {
+      setUpdatingEmbed(false);
+    }
+  };
+
+  const handleCopyEmbedCode = () => {
+    if (!embedStatus?.embedCode) return;
+    navigator.clipboard.writeText(embedStatus.embedCode).then(() => {
+      setCopiedEmbedCode(true);
+      setTimeout(() => setCopiedEmbedCode(false), 2000);
+    });
+  };
+
+  const handleCopyEmbedUrl = () => {
+    if (!embedStatus?.embedUrl) return;
+    navigator.clipboard.writeText(embedStatus.embedUrl).then(() => {
+      setCopiedEmbedUrl(true);
+      setTimeout(() => setCopiedEmbedUrl(false), 2000);
+    });
+  };
+
   // Schedule Management Handlers
   const handleOpenScheduleModal = async () => {
     setIsScheduleModalOpen(true);
@@ -1142,6 +1307,31 @@ export default function DashboardDetailPage({
               >
                 {dashboard.status}
               </span>
+
+              {/* Active Collaborators Presence */}
+              {activeCollaborators.length > 0 && (
+                <div
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] shrink-0"
+                  title={`${activeCollaborators.length} user(s) currently active on this dashboard`}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="font-semibold hidden lg:inline">{activeCollaborators.length} Live</span>
+                  <div className="flex -space-x-1 overflow-hidden">
+                    {activeCollaborators.slice(0, 3).map((c) => (
+                      <div
+                        key={c.userId}
+                        title={`${c.name || c.userName || "User"} (${c.email || c.userEmail || ""})`}
+                        className="inline-flex h-4 w-4 rounded-full ring-1 ring-white bg-indigo-600 text-[8px] font-bold text-white items-center justify-center uppercase select-none"
+                      >
+                        {(c.name || c.userName || "U").slice(0, 1)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1247,6 +1437,19 @@ export default function DashboardDetailPage({
               </button>
               <button
                 type="button"
+                onClick={() => {
+                  setIsShareModalOpen(true);
+                  setShareModalTab("EMBED");
+                  void fetchEmbedStatus();
+                }}
+                title="Embed Dashboard via iframe"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-cyan-700 transition"
+              >
+                <Code className="h-3.5 w-3.5 text-cyan-600" />
+                <span className="hidden md:inline">Embed</span>
+              </button>
+              <button
+                type="button"
                 onClick={handlePrintDashboard}
                 title="Export or Print Dashboard as PDF"
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
@@ -1343,6 +1546,28 @@ export default function DashboardDetailPage({
             <span>{successMsg}</span>
           </div>
           <button onClick={() => setSuccessMsg(null)} className="font-bold text-green-500">×</button>
+        </div>
+      )}
+      {remoteUpdateNotice && (
+        <div className="bg-amber-50 px-4 py-2.5 text-xs font-medium text-amber-800 border-b border-amber-200 flex justify-between items-center shadow-2xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+            <span>{remoteUpdateNotice}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setRemoteUpdateNotice(null);
+                void handleReloadDashboard();
+              }}
+              className="rounded-md bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-amber-700 transition"
+            >
+              Reload Now
+            </button>
+            <button onClick={() => setRemoteUpdateNotice(null)} className="font-bold text-amber-700 hover:text-amber-900">
+              ×
+            </button>
+          </div>
         </div>
       )}
 
@@ -2167,6 +2392,26 @@ export default function DashboardDetailPage({
                   </span>
                 )}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShareModalTab("EMBED");
+                  if (!embedStatus) void fetchEmbedStatus();
+                }}
+                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition ${
+                  shareModalTab === "EMBED"
+                    ? "border-indigo-600 text-indigo-600"
+                    : "border-transparent text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <Code className="h-4 w-4" />
+                <span>Embedded Analytics</span>
+                {embedStatus?.enabled && (
+                  <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] text-cyan-700 font-bold">
+                    Active
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Modal Content */}
@@ -2389,6 +2634,231 @@ export default function DashboardDetailPage({
                         )}
                         <span>Create Share Link</span>
                       </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {shareModalTab === "EMBED" && (
+                <div className="space-y-5">
+                  {loadingEmbedStatus ? (
+                    <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs text-gray-500">
+                      <RefreshCw className="h-5 w-5 animate-spin text-indigo-600" />
+                      <span>Loading embed configuration...</span>
+                    </div>
+                  ) : embedStatus?.enabled ? (
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-cyan-200 bg-cyan-50/60 p-3.5 flex items-start gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-cyan-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-cyan-900 space-y-1">
+                          <p className="font-semibold">Embedded Analytics is Active</p>
+                          <p className="text-cyan-700 text-[11px]">
+                            This dashboard can be securely embedded inside external web portals and apps via iframe. Access is protected by cryptographic tokens, origin restrictions, and server-side RLS policies.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Embed Code Snippet */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-semibold text-gray-700">
+                            HTML Iframe Embed Code
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleCopyEmbedCode}
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                          >
+                            {copiedEmbedCode ? (
+                              <>
+                                <Check className="h-3 w-3 text-emerald-600" />
+                                <span className="text-emerald-600">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>Copy Code</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <textarea
+                          readOnly
+                          rows={3}
+                          value={embedStatus.embedCode || embedStatus.iframeCode || ""}
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-mono text-gray-800 focus:outline-none select-all resize-none"
+                        />
+                      </div>
+
+                      {/* Embed URL */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-semibold text-gray-700">
+                            Direct Embed URL
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleCopyEmbedUrl}
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                          >
+                            {copiedEmbedUrl ? (
+                              <>
+                                <Check className="h-3 w-3 text-emerald-600" />
+                                <span className="text-emerald-600">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                <span>Copy URL</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          readOnly
+                          value={embedStatus.embedUrl || ""}
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-mono text-gray-800 focus:outline-none select-all"
+                        />
+                      </div>
+
+                      {/* Config summary */}
+                      <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div>
+                          <span className="text-gray-400 block text-[11px]">Allowed Origins:</span>
+                          <span className="font-semibold text-gray-800 font-mono text-[11px] truncate block" title={embedStatus.config?.allowedOrigins?.join(", ") || "*"}>
+                            {embedStatus.config?.allowedOrigins?.join(", ") || "*"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 block text-[11px]">Theme / Controls:</span>
+                          <span className="font-semibold text-gray-800 capitalize">
+                            {embedStatus.config?.theme || "light"} • {embedStatus.config?.showControls ? "Controls On" : "Controls Off"}
+                          </span>
+                        </div>
+                        {(embedStatus.expiresAt || embedStatus.config?.expiresAt) && (
+                          <div className="col-span-2">
+                            <span className="text-gray-400 block text-[11px]">Expires At:</span>
+                            <span className="font-semibold text-gray-800">
+                              {new Date(embedStatus.expiresAt || embedStatus.config?.expiresAt!).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <a
+                          href={embedStatus.embedUrl || "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          <span>Preview Embed in New Tab</span>
+                        </a>
+
+                        <button
+                          type="button"
+                          disabled={updatingEmbed}
+                          onClick={handleRevokeEmbed}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                        >
+                          {updatingEmbed ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Lock className="h-3.5 w-3.5" />
+                          )}
+                          <span>Revoke Access</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3.5 text-xs text-gray-700">
+                        <p className="font-semibold mb-1">Secure Enterprise Embedding</p>
+                        <p className="text-gray-500 text-[11px]">
+                          Generate an isolated, token-authenticated embed iframe. Embedded views reuse the RicozViz chart canvas, responsive layouts, and cross-filters while strictly isolating backend credentials and enforcing Row-Level Security (RLS).
+                        </p>
+                      </div>
+
+                      {/* Origin Restrictions */}
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          Allowed Origins (Hostnames)
+                        </label>
+                        <input
+                          type="text"
+                          value={embedAllowedOrigins}
+                          onChange={(e) => setEmbedAllowedOrigins(e.target.value)}
+                          placeholder="* or https://portal.example.com, https://app.company.io"
+                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-indigo-500 focus:outline-none font-mono"
+                        />
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Comma-separated origin domains allowed to embed via iframe. Use * to allow all origins.
+                        </p>
+                      </div>
+
+                      {/* Theme & Controls */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Embed Theme
+                          </label>
+                          <select
+                            value={embedTheme}
+                            onChange={(e) => setEmbedTheme(e.target.value as "light" | "dark")}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                          >
+                            <option value="light">Light Mode</option>
+                            <option value="dark">Dark Mode</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Expiration (Days)
+                          </label>
+                          <select
+                            value={embedExpiresInDays}
+                            onChange={(e) => setEmbedExpiresInDays(e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                          >
+                            <option value="">Never Expires</option>
+                            <option value="7">7 Days</option>
+                            <option value="30">30 Days</option>
+                            <option value="90">90 Days</option>
+                            <option value="365">1 Year</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="checkbox"
+                          id="showControlsToggle"
+                          checked={embedShowControls}
+                          onChange={(e) => setEmbedShowControls(e.target.checked)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <label htmlFor="showControlsToggle" className="text-xs text-gray-700 font-medium">
+                          Show interactive filter bar & refresh controls in embed view
+                        </label>
+                      </div>
+
+                      <div className="pt-2 text-center">
+                        <button
+                          type="button"
+                          disabled={updatingEmbed}
+                          onClick={handleCreateOrUpdateEmbed}
+                          className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-5 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-cyan-500 transition disabled:opacity-70"
+                        >
+                          {updatingEmbed ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Code className="h-4 w-4" />
+                          )}
+                          <span>Generate Secure Embed Token</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

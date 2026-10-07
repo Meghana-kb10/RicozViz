@@ -2762,6 +2762,194 @@ export async function apiUpdateWorkspaceMemberRole(
   });
 }
 
+// ============================================================
+// PHASE 6: REAL-TIME COLLABORATION & EMBEDDED ANALYTICS API
+// ============================================================
+
+export interface CollaboratorPresence {
+  clientId: string;
+  userId: string;
+  name: string;
+  email: string;
+  userName?: string;
+  userEmail?: string;
+  role: string;
+  joinedAt: string;
+  lastPing: string;
+  activeWidgetId?: string | null;
+}
+
+export interface CollaborationStateResult {
+  dashboardId: string;
+  currentVersionNumber: number;
+  activeCollaborators: CollaboratorPresence[];
+  collaboratorCount: number;
+}
+
+export interface EmbedConfig {
+  enabled?: boolean;
+  token?: string;
+  allowedOrigins?: string[];
+  expiresAt?: string | null;
+  theme?: "light" | "dark" | "system";
+  showTitle?: boolean;
+  showFilters?: boolean;
+  showRefresh?: boolean;
+  showControls?: boolean;
+  createdAt?: string;
+  createdById?: string;
+}
+
+export interface EmbedStatusResult {
+  enabled: boolean;
+  embedToken: string | null;
+  embedUrl: string | null;
+  iframeCode: string | null;
+  embedCode?: string | null;
+  expiresAt?: string | null;
+  config: EmbedConfig | null;
+}
+
+export async function apiGetCollaborationState(
+  dashboardId: string
+): Promise<CollaborationStateResult> {
+  return apiFetch<CollaborationStateResult>(
+    `/api/v1/dashboards/${dashboardId}/collaboration/state`
+  );
+}
+
+export async function apiSendCollaborationPresence(
+  dashboardId: string,
+  payload?: { clientId?: string; activeWidgetId?: string | null }
+): Promise<{ status: string; timestamp: number }> {
+  return apiFetch<{ status: string; timestamp: number }>(
+    `/api/v1/dashboards/${dashboardId}/collaboration/presence`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload || { clientId: "web-" + Math.random().toString(36).substring(2, 9) }),
+    }
+  );
+}
+
+export async function apiCollaborativeUpdate(
+  dashboardId: string,
+  payload: {
+    baseVersionNumber?: number;
+    name?: string;
+    description?: string | null;
+    layoutConfig?: Record<string, unknown>;
+    chartsSnapshot?: any[];
+    changeSummary?: string;
+    clientId?: string;
+  }
+): Promise<{
+  dashboardId: string;
+  versionNumber: number;
+  name: string;
+  layoutConfig: Record<string, unknown>;
+  changeSummary: string;
+}> {
+  return apiFetch<{
+    dashboardId: string;
+    versionNumber: number;
+    name: string;
+    layoutConfig: Record<string, unknown>;
+    changeSummary: string;
+  }>(`/api/v1/dashboards/${dashboardId}/collaboration/update`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiCreateDashboardEmbed(
+  dashboardId: string,
+  config?: {
+    enabled?: boolean;
+    allowedOrigins?: string[];
+    expiresAt?: string | null;
+    expiresInDays?: number;
+    theme?: "light" | "dark" | "system";
+    showTitle?: boolean;
+    showFilters?: boolean;
+    showRefresh?: boolean;
+    showControls?: boolean;
+  }
+): Promise<EmbedStatusResult> {
+  const result = await apiFetch<{
+    embedToken: string;
+    embedUrl: string;
+    iframeCode: string;
+    config: EmbedConfig;
+  }>(`/api/v1/dashboards/${dashboardId}/embed`, {
+    method: "POST",
+    body: JSON.stringify(config || {}),
+  });
+  return {
+    enabled: true,
+    embedToken: result.embedToken,
+    embedUrl: result.embedUrl,
+    iframeCode: result.iframeCode,
+    embedCode: result.iframeCode,
+    expiresAt: result.config?.expiresAt || null,
+    config: result.config,
+  };
+}
+
+export async function apiGetDashboardEmbed(
+  dashboardId: string
+): Promise<EmbedStatusResult> {
+  const result = await apiFetch<EmbedStatusResult>(`/api/v1/dashboards/${dashboardId}/embed`);
+  return {
+    ...result,
+    embedCode: result.iframeCode || result.embedCode || null,
+    expiresAt: result.config?.expiresAt || result.expiresAt || null,
+  };
+}
+
+export async function apiRevokeDashboardEmbed(
+  dashboardId: string
+): Promise<{ message: string; enabled: boolean }> {
+  return apiFetch<{ message: string; enabled: boolean }>(
+    `/api/v1/dashboards/${dashboardId}/embed`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+export async function apiGetEmbeddedDashboard(
+  embedToken: string
+): Promise<{
+  id: string;
+  name: string;
+  description: string | null;
+  layoutConfig: Record<string, unknown>;
+  embedConfig: {
+    theme: string;
+    showTitle: boolean;
+    showFilters: boolean;
+    showRefresh: boolean;
+  };
+  charts: any[];
+}> {
+  return apiFetch<any>(`/api/v1/dashboards/embed/${embedToken}`);
+}
+
+export async function apiGetEmbeddedChartData(
+  embedToken: string,
+  chartId: string,
+  filters?: unknown[]
+): Promise<DatasetQueryResult> {
+  return apiFetch<DatasetQueryResult>(
+    `/api/v1/dashboards/embed/${embedToken}/charts/${chartId}/data`,
+    {
+      method: "POST",
+      body: JSON.stringify({ filters }),
+    }
+  );
+}
+
+
 
 
 

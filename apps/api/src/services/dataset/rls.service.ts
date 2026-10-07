@@ -427,6 +427,15 @@ export async function deleteRlsRule(
  *    - Rule matching user.email (case-insensitive)
  *    - Rule matching user.roleId
 function normalizeRlsRuleRecord(rule: any): RlsRuleRecord {
+  const col = rule.column || rule.columnName || rule.filterExpression?.field || rule.filterExpression?.column;
+  const rawOp = rule.operator || rule.filterExpression?.operator || "=";
+  const op = rawOp === "EQUALS" ? "=" : rawOp === "NOT_EQUALS" ? "!=" : rawOp;
+  const rawVal = typeof rule.value !== "undefined"
+    ? rule.value
+    : typeof rule.ruleValue !== "undefined"
+      ? rule.ruleValue
+      : rule.filterExpression?.value;
+
   return {
     id: rule.id || `rls-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     organizationId: rule.organizationId,
@@ -436,12 +445,10 @@ function normalizeRlsRuleRecord(rule: any): RlsRuleRecord {
     userId: rule.userId ?? null,
     userEmail: rule.userEmail ?? null,
     roleId: rule.roleId ?? rule.roleName ?? null,
-    column: rule.column || rule.columnName,
-    operator: rule.operator === "EQUALS" ? "=" : rule.operator === "NOT_EQUALS" ? "!=" : rule.operator,
-    value: typeof rule.value !== "undefined"
-      ? (typeof rule.value === "string" ? rule.value : JSON.stringify(rule.value))
-      : (typeof rule.ruleValue === "string" ? rule.ruleValue : JSON.stringify(rule.ruleValue)),
-    enabled: rule.enabled ?? rule.isEnabled ?? true,
+    column: col,
+    operator: op,
+    value: typeof rawVal === "string" ? rawVal : JSON.stringify(rawVal),
+    enabled: rule.enabled ?? rule.isEnabled ?? rule.isActive ?? true,
     createdById: rule.createdById ?? null,
     createdAt: rule.createdAt ? new Date(rule.createdAt) : new Date(),
     updatedAt: rule.updatedAt ? new Date(rule.updatedAt) : new Date(),

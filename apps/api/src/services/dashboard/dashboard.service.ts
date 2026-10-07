@@ -674,6 +674,16 @@ export async function getSharedDashboard(req: Request, res: Response): Promise<v
     })),
   };
 
+  void logAuditEvent({
+    organizationId: dashboard.organizationId,
+    action: "DASHBOARD_PUBLIC_ACCESSED",
+    resourceType: "Dashboard",
+    resourceId: dashboard.id,
+    metadata: { shareToken },
+    ipAddress: req.ip,
+    userAgent: req.get("user-agent"),
+  });
+
   sendSuccess(res, safeData);
 }
 
@@ -793,7 +803,14 @@ export async function getSharedChartData(req: Request, res: Response): Promise<v
     }
   }
 
-  const result = await datasetQueryEngine.executeQuery(chart.dataset, queryParams, req.user);
+  const securityContext = req.user || {
+    userId: "public-viewer",
+    email: "public@viewer.link",
+    organizationId: dashboard.organizationId,
+    roleName: "VIEWER",
+  };
+
+  const result = await datasetQueryEngine.executeQuery(chart.dataset, queryParams, securityContext);
   sendSuccess(res, result);
 }
 

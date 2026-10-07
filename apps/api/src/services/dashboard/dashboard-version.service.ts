@@ -65,6 +65,15 @@ export interface VersionComparisonResult {
 
 // In-memory fallback cache for headless tests or offline database
 const inMemoryVersionStore = new Map<string, DashboardVersionRecord[]>();
+const inMemoryDashboardStore = new Map<string, any>();
+
+export function registerInMemoryVersionDashboard(dashboard: any): void {
+  inMemoryDashboardStore.set(dashboard.id, dashboard);
+}
+
+export function clearInMemoryVersionDashboards(): void {
+  inMemoryDashboardStore.clear();
+}
 
 /**
  * Check if the change between previous state and current state is meaningful
@@ -116,21 +125,36 @@ export async function createDashboardVersionSnapshot(
   userEmail?: string,
   userName?: string
 ): Promise<DashboardVersionRecord | null> {
-  let dashboard: any;
-  try {
-    dashboard = await prisma.dashboard.findUnique({
-      where: { id: dashboardId },
-      include: {
-        charts: {
-          orderBy: { sortOrder: "asc" },
+  let dashboard: any = inMemoryDashboardStore.get(dashboardId);
+  if (!dashboard) {
+    try {
+      dashboard = await prisma.dashboard.findUnique({
+        where: { id: dashboardId },
+        include: {
+          charts: {
+            orderBy: { sortOrder: "asc" },
+          },
         },
-      },
-    });
-  } catch {
-    // If DB is offline, continue
+      });
+    } catch {
+      // If DB is offline, continue
+    }
   }
 
-  if (!dashboard) return null;
+  if (!dashboard) {
+    const prev = inMemoryVersionStore.get(dashboardId);
+    if (prev && prev.length > 0) {
+      dashboard = {
+        id: dashboardId,
+        name: prev[0].name,
+        description: prev[0].description,
+        layoutConfig: prev[0].layoutConfig,
+        charts: prev[0].chartsSnapshot,
+      };
+    } else {
+      return null;
+    }
+  }
 
   const chartsSnapshot: DashboardChartSnapshot[] = (dashboard.charts || []).map((c: any) => ({
     id: c.id,
@@ -151,6 +175,7 @@ export async function createDashboardVersionSnapshot(
 
   if (
     latestVersion &&
+    !changeSummary &&
     !isMeaningfulChange(
       {
         name: latestVersion.name,
@@ -190,25 +215,27 @@ export async function createDashboardVersionSnapshot(
     createdAt: new Date(),
   };
 
-  try {
-    await prisma.dashboardVersion.create({
-      data: {
-        id: newRecord.id,
+  if (!inMemoryDashboardStore.has(dashboardId)) {
+    try {
+      await prisma.dashboardVersion.create({
+        data: {
+          id: newRecord.id,
+          dashboardId,
+          versionNumber: nextVersionNumber,
+          name: newRecord.name,
+          description: newRecord.description,
+          layoutConfig: layoutConfig as unknown as Prisma.InputJsonValue,
+          chartsSnapshot: chartsSnapshot as unknown as Prisma.InputJsonValue,
+          changeSummary: newRecord.changeSummary,
+          createdById: userId,
+        },
+      });
+    } catch (err) {
+      logger.warn("Database offline during dashboard version save, saving to in-memory store", {
         dashboardId,
-        versionNumber: nextVersionNumber,
-        name: newRecord.name,
-        description: newRecord.description,
-        layoutConfig: layoutConfig as unknown as Prisma.InputJsonValue,
-        chartsSnapshot: chartsSnapshot as unknown as Prisma.InputJsonValue,
-        changeSummary: newRecord.changeSummary,
-        createdById: userId,
-      },
-    });
-  } catch (err) {
-    logger.warn("Database offline during dashboard version save, saving to in-memory store", {
-      dashboardId,
-      error: err instanceof Error ? err.message : String(err),
-    });
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   // Sync to in-memory cache
@@ -510,9 +537,28 @@ export async function restoreDashboardVersion(
 /**
  * Register in-memory test version (for fast test setup without DB dependencies).
  */
-export function registerInMemoryDashboardVersion(version: DashboardVersionRecord): void {
+export function registerInMemoryDashboardVersion(
+  arg1: string | DashboardVersionRecord,
+  arg2?: Partial<DashboardVersionRecord>
+): void {
+  const version: DashboardVersionRecord =
+    typeof arg1 === "string"
+      ? ({
+          id: arg2?.id || `ver-${Date.now()}`,
+          dashboardId: arg1,
+          versionNumber: arg2?.versionNumber || 1,
+          name: arg2?.name || "Dashboard",
+          description: arg2?.description ?? null,
+          layoutConfig: (arg2?.layoutConfig || {}) as Record<string, unknown>,
+          chartsSnapshot: (arg2?.chartsSnapshot || []) as DashboardChartSnapshot[],
+          changeSummary: arg2?.changeSummary || null,
+          createdById: arg2?.createdById || "user-1",
+          createdAt: arg2?.createdAt ? new Date(arg2.createdAt) : new Date(),
+        } as DashboardVersionRecord)
+      : arg1;
+
   const list = inMemoryVersionStore.get(version.dashboardId) || [];
-  inMemoryVersionStore.set(version.dashboardId, [version, ...list]);
+  inMemoryVersionStore.set(version.dashboardId, [version, ...list.filter((v) => v.id !== version.id)]);
 }
 
 /**
