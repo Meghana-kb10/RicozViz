@@ -53,73 +53,51 @@ export class PostgresConnector implements DataSourceConnector {
 
   async testConnection(
     connectionMeta: Record<string, unknown>,
-    _credentials?: Record<string, unknown>
+    credentials?: Record<string, unknown>
   ): Promise<ConnectionTestResult> {
-    const host = String(connectionMeta.host || "localhost");
+    const host = String(connectionMeta.host || "localhost").trim();
     const port = Number(connectionMeta.port || 5432);
-    const database = String(connectionMeta.database || "");
+    const database = String(connectionMeta.database || "").trim();
+    const user = String(connectionMeta.username || "").trim();
+    const password = String(credentials?.password || "");
 
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      let isResolved = false;
-
-      const finish = (result: ConnectionTestResult) => {
-        if (!isResolved) {
-          isResolved = true;
-          socket.destroy();
-          resolve(result);
-        }
+    try {
+      const { Client } = await import("pg");
+      const client = new Client({
+        host,
+        port,
+        database,
+        user,
+        password,
+        connectionTimeoutMillis: 3000
+      });
+      
+      await client.connect();
+      await client.end();
+      
+      return {
+        success: true,
+        status: "CONNECTED",
+        message: `Successfully connected to PostgreSQL at ${host}:${port}/${database}`,
+        details: { host, port, database }
       };
-
-      // Set connection timeout (3000ms)
-      socket.setTimeout(3000);
-
-      socket.on("connect", () => {
-        finish({
-          success: true,
-          status: "CONNECTED",
-          message: `Successfully connected to PostgreSQL at ${host}:${port}/${database}`,
-          details: {
-            host,
-            port,
-            database,
-          },
-        });
-      });
-
-      socket.on("timeout", () => {
-        finish({
-          success: false,
-          status: "FAILED",
-          message: `Connection timed out connecting to PostgreSQL host ${host}:${port}`,
-        });
-      });
-
-      socket.on("error", (err: Error) => {
-        // Strip out any potentially sensitive system or network messages
-        const safeMessage =
-          err.message.includes("ECONNREFUSED")
-            ? `Connection refused by host ${host}:${port}`
-            : err.message.includes("ENOTFOUND")
-              ? `Host not found: ${host}`
-              : "Unable to establish connection to PostgreSQL instance";
-
-        finish({
-          success: false,
-          status: "FAILED",
-          message: safeMessage,
-        });
-      });
-
-      try {
-        socket.connect(port, host);
-      } catch {
-        finish({
-          success: false,
-          status: "FAILED",
-          message: `Invalid connection target: ${host}:${port}`,
-        });
+    } catch (err: any) {
+      let safeMessage = "Unable to establish connection to PostgreSQL instance";
+      if (err.message.includes("ECONNREFUSED")) {
+        safeMessage = `Connection refused by host ${host}:${port}`;
+      } else if (err.message.includes("ENOTFOUND")) {
+        safeMessage = `Host not found: ${host}`;
+      } else if (err.message.includes("password") || err.message.includes("authentication")) {
+        safeMessage = `Authentication failed for user ${user}`;
+      } else if (err.message.includes("database")) {
+        safeMessage = `Database "${database}" not found`;
       }
-    });
+      
+      return {
+        success: false,
+        status: "FAILED",
+        message: safeMessage
+      };
+    }
   }
 }

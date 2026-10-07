@@ -53,73 +53,51 @@ export class MysqlConnector implements DataSourceConnector {
 
   async testConnection(
     connectionMeta: Record<string, unknown>,
-    _credentials?: Record<string, unknown>
+    credentials?: Record<string, unknown>
   ): Promise<ConnectionTestResult> {
     const host = String(connectionMeta.host || "localhost").trim();
     const port = Number(connectionMeta.port || 3306);
     const database = String(connectionMeta.database || "").trim();
+    const user = String(connectionMeta.username || "").trim();
+    const password = String(credentials?.password || "");
 
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      let isResolved = false;
-
-      const finish = (result: ConnectionTestResult) => {
-        if (!isResolved) {
-          isResolved = true;
-          socket.destroy();
-          resolve(result);
-        }
+    try {
+      const mysql = await import("mysql2/promise");
+      const connection = await mysql.createConnection({
+        host,
+        port,
+        database,
+        user,
+        password,
+        connectTimeout: 3000
+      });
+      
+      await connection.ping();
+      await connection.end();
+      
+      return {
+        success: true,
+        status: "CONNECTED",
+        message: `Successfully connected to MySQL instance at ${host}:${port}/${database}`,
+        details: { host, port, database }
       };
-
-      // Set connection timeout (3000ms)
-      socket.setTimeout(3000);
-
-      socket.on("connect", () => {
-        finish({
-          success: true,
-          status: "CONNECTED",
-          message: `Successfully connected to MySQL instance at ${host}:${port}/${database}`,
-          details: {
-            host,
-            port,
-            database,
-          },
-        });
-      });
-
-      socket.on("timeout", () => {
-        finish({
-          success: false,
-          status: "FAILED",
-          message: `Connection timed out connecting to MySQL host ${host}:${port}`,
-        });
-      });
-
-      socket.on("error", (err: Error) => {
-        // Strip out any potentially sensitive system or network messages
-        const safeMessage =
-          err.message.includes("ECONNREFUSED")
-            ? `Connection refused by MySQL host ${host}:${port}`
-            : err.message.includes("ENOTFOUND")
-              ? `MySQL host not found: ${host}`
-              : "Unable to establish connection to MySQL instance";
-
-        finish({
-          success: false,
-          status: "FAILED",
-          message: safeMessage,
-        });
-      });
-
-      try {
-        socket.connect(port, host);
-      } catch {
-        finish({
-          success: false,
-          status: "FAILED",
-          message: `Invalid connection target: ${host}:${port}`,
-        });
+    } catch (err: any) {
+      let safeMessage = "Unable to establish connection to MySQL instance";
+      if (err.message.includes("ECONNREFUSED")) {
+        safeMessage = `Connection refused by MySQL host ${host}:${port}`;
+      } else if (err.message.includes("ENOTFOUND")) {
+        safeMessage = `MySQL host not found: ${host}`;
+      } else if (err.message.includes("Access denied")) {
+        safeMessage = `Authentication failed for user ${user}`;
+      } else if (err.message.includes("Unknown database")) {
+        safeMessage = `Database "${database}" not found`;
       }
-    });
+      
+      return {
+        success: false,
+        status: "FAILED",
+        message: safeMessage
+      };
+    }
   }
 }

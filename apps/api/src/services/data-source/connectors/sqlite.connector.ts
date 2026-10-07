@@ -95,35 +95,25 @@ export class SqliteConnector implements DataSourceConnector {
         };
       }
 
-      // Validate SQLite header signature (first 16 bytes: "SQLite format 3\0")
-      const fd = fs.openSync(resolved, "r");
-      const buffer = Buffer.alloc(16);
-      fs.readSync(fd, buffer, 0, 16, 0);
-      fs.closeSync(fd);
-
-      const headerStr = buffer.toString("utf8");
-      if (headerStr.startsWith("SQLite format 3")) {
-        return {
-          success: true,
-          status: "CONNECTED",
-          message: `Successfully connected to SQLite database: ${path.basename(resolved)}`,
-          details: {
-            fileName: path.basename(resolved),
-            sizeBytes: stats.size,
-          },
-        };
-      }
+      const Database = (await import("better-sqlite3")).default;
+      const db = new Database(resolved, { fileMustExist: true });
+      db.pragma("schema_version"); // simple query to test readability
+      db.close();
 
       return {
-        success: false,
-        status: "FAILED",
-        message: "Target file is not a valid SQLite database",
+        success: true,
+        status: "CONNECTED",
+        message: `Successfully connected to SQLite database: ${path.basename(resolved)}`,
+        details: {
+          fileName: path.basename(resolved),
+          sizeBytes: stats.size,
+        },
       };
-    } catch {
+    } catch (err: any) {
       return {
         success: false,
         status: "FAILED",
-        message: `Unable to access SQLite database path: ${path.basename(rawPath)}`,
+        message: `Target file is not a valid SQLite database or cannot be opened: ${err.message}`,
       };
     }
   }
