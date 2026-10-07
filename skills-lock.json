@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "motion-primitives": {
+      "source": "godfreya5/motion-primitives-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/motion-primitives/SKILL.md",
+      "computedHash": "bc9bbe9b154c1273852a2b1ac3cd95494cb7c4ed4a3dc9eb8035a11628703905"
+    }
+  }
+}
