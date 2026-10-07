@@ -42,8 +42,14 @@ import {
   type DatasetColumn,
   type DatasetQueryResult,
   type ShareLinkStatusResponse,
+  apiListDashboardVersions,
+  apiCompareDashboardVersions,
+  apiRestoreDashboardVersion,
+  type DashboardVersionRecord,
+  type VersionComparisonResult,
   ApiError,
 } from "../../../lib/api";
+
 import { buildChartQueryParams } from "../../../lib/chart-query-mapper";
 import { ChartRenderer } from "../../../components/visualization/ChartRenderer";
 import { VisualizationStudio } from "../../../components/visualization/VisualizationStudio";
@@ -102,7 +108,11 @@ import {
   UserPlus,
   ShieldCheck,
   Sparkles,
+  History,
+  GitCompare,
+  RotateCcw,
 } from "lucide-react";
+
 
 const QUICK_CHART_TYPES: { value: ChartType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: "BAR", label: "Bar Chart", icon: BarChart3 },
@@ -211,6 +221,88 @@ export default function DashboardDetailPage({
   const [reportFormat, setReportFormat] = useState<string>("PDF");
   const [scheduleModalTab, setScheduleModalTab] = useState<"CONFIG" | "HISTORY">("CONFIG");
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
+  // Version History states
+  const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
+  const [dashboardVersions, setDashboardVersions] = useState<DashboardVersionRecord[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [comparingVersionNum, setComparingVersionNum] = useState<number | null>(null);
+  const [versionComparison, setVersionComparison] = useState<VersionComparisonResult | null>(null);
+  const [loadingComparison, setLoadingComparison] = useState(false);
+  const [restoringVersionNum, setRestoringVersionNum] = useState<number | null>(null);
+
+  const fetchVersions = useCallback(async () => {
+    if (!dashboard) return;
+    setLoadingVersions(true);
+    try {
+      const res = await apiListDashboardVersions(dashboard.id);
+      setDashboardVersions(res);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to load dashboard versions");
+    } finally {
+      setLoadingVersions(false);
+    }
+  }, [dashboard]);
+
+  const handleOpenVersionModal = () => {
+    setIsVersionModalOpen(true);
+    setVersionComparison(null);
+    setComparingVersionNum(null);
+    void fetchVersions();
+  };
+
+  const handleCompareWithPrevious = async (targetVer: DashboardVersionRecord) => {
+    if (!dashboard) return;
+    const prevVer = dashboardVersions.find((v) => v.versionNumber < targetVer.versionNumber);
+    if (!prevVer) {
+      setErrorMsg("No earlier version available to compare against.");
+      return;
+    }
+    setLoadingComparison(true);
+    setComparingVersionNum(targetVer.versionNumber);
+    try {
+      const diff = await apiCompareDashboardVersions(
+        dashboard.id,
+        prevVer.versionNumber,
+        targetVer.versionNumber
+      );
+      setVersionComparison(diff);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to compare versions");
+    } finally {
+      setLoadingComparison(false);
+    }
+  };
+
+  const handleRestoreVersion = async (targetVersionNum: number) => {
+    if (!dashboard) return;
+    const ok = window.confirm(
+      `Are you sure you want to restore Version ${targetVersionNum}? This will create a new current state while preserving complete history.`
+    );
+    if (!ok) return;
+
+    setRestoringVersionNum(targetVersionNum);
+    try {
+      const result = await apiRestoreDashboardVersion(dashboard.id, targetVersionNum);
+      setSuccessMsg(
+        `Successfully restored to Version ${targetVersionNum} (saved as new Version ${result.newVersionNumber})!`
+      );
+      const [updatedDash, updatedCharts] = await Promise.all([
+        apiGetDashboard(dashboard.id),
+        apiListCharts(dashboard.id),
+      ]);
+      setDashboard(updatedDash);
+      setCharts(updatedCharts);
+      void fetchVersions();
+      setVersionComparison(null);
+      setComparingVersionNum(null);
+    } catch (err) {
+      setErrorMsg(err instanceof ApiError ? err.message : "Failed to restore dashboard version");
+    } finally {
+      setRestoringVersionNum(null);
+    }
+  };
+
 
   const handleAddAiGeneratedChart = async (chartSpec: NlToChartResponse) => {
     if (!dashboard) return;
@@ -1123,14 +1215,24 @@ export default function DashboardDetailPage({
               )}
             </div>
 
-            {/* Action Group: Schedule, Share, Export */}
+            {/* Action Group: History, Schedule, Share, Export */}
             <div className="flex items-center rounded-lg border border-gray-200 bg-white shadow-2xs divide-x divide-gray-100">
+              <button
+                type="button"
+                onClick={handleOpenVersionModal}
+                title="View Dashboard Version History"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-700 transition"
+              >
+                <History className="h-3.5 w-3.5 text-blue-600" />
+                <span className="hidden md:inline">History</span>
+              </button>
               <button
                 type="button"
                 onClick={handleOpenScheduleModal}
                 title="Configure Automated Report Schedule"
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-purple-700 transition"
               >
+
                 <Clock className="h-3.5 w-3.5 text-purple-600" />
                 <span className="hidden md:inline">Schedule</span>
               </button>
@@ -2669,7 +2771,207 @@ export default function DashboardDetailPage({
         </div>
       )}
 
+      {/* ============================================================ */}
+      {/* PHASE 5: DASHBOARD VERSION HISTORY MODAL */}
+      {/* ============================================================ */}
+      {isVersionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="flex w-full max-w-3xl flex-col max-h-[85vh] rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gradient-to-r from-blue-50/70 to-indigo-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                  <History className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Dashboard Version History</h2>
+                  <p className="text-xs text-gray-500">
+                    Track configuration changes, inspect snapshot differences, and restore past versions.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVersionModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200/60 hover:text-gray-700 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {loadingVersions ? (
+                <div className="py-12 text-center text-sm text-gray-400">
+                  <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
+                  Loading version timeline...
+                </div>
+              ) : dashboardVersions.length === 0 ? (
+                <div className="py-12 text-center text-sm text-gray-400">
+                  <History className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  No version history found for this dashboard yet.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Active Comparison Card if Open */}
+                  {versionComparison && (
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <GitCompare className="h-4 w-4 text-blue-600" />
+                          <h4 className="text-xs font-bold text-blue-900">
+                            Diff: Version {versionComparison.baseVersion} → Version {versionComparison.targetVersion}
+                          </h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVersionComparison(null)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                        >
+                          Close Diff
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                        <div className="rounded-lg bg-white p-2 border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] uppercase font-bold text-gray-400">Total Changes</span>
+                          <p className="text-base font-bold text-blue-700">{versionComparison.totalChanges}</p>
+                        </div>
+                        <div className="rounded-lg bg-white p-2 border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] uppercase font-bold text-gray-400">Layout Modified</span>
+                          <p className="text-xs font-semibold text-gray-700 mt-1">
+                            {versionComparison.layoutChanged ? "Yes" : "No"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-white p-2 border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] uppercase font-bold text-gray-400">Charts Added</span>
+                          <p className="text-base font-bold text-emerald-600">+{versionComparison.addedCharts.length}</p>
+                        </div>
+                        <div className="rounded-lg bg-white p-2 border border-blue-100 shadow-2xs">
+                          <span className="text-[10px] uppercase font-bold text-gray-400">Charts Removed</span>
+                          <p className="text-base font-bold text-red-600">-{versionComparison.removedCharts.length}</p>
+                        </div>
+                      </div>
+
+                      {versionComparison.modifiedCharts.length > 0 && (
+                        <div className="space-y-1 text-xs">
+                          <p className="font-semibold text-gray-700">Modified Charts:</p>
+                          {versionComparison.modifiedCharts.map((mc) => (
+                            <div key={mc.id} className="rounded bg-white p-2 border border-blue-100 text-[11px] text-gray-600">
+                              <span className="font-bold text-gray-800">{mc.title}: </span>
+                              {mc.changes.join(", ")}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Versions Timeline List */}
+                  <div className="space-y-3">
+                    {dashboardVersions.map((ver, idx) => {
+                      const isCurrent = idx === 0;
+                      return (
+                        <div
+                          key={ver.id}
+                          className={`rounded-xl border p-4 transition ${
+                            isCurrent
+                              ? "border-blue-300 bg-blue-50/20 shadow-2xs"
+                              : "border-gray-200 bg-white hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold ${
+                                  isCurrent
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-gray-100 text-gray-700 border border-gray-200"
+                                }`}
+                              >
+                                v{ver.versionNumber}
+                              </span>
+                              <div>
+                                <h3 className="text-xs font-bold text-gray-900">
+                                  {ver.changeSummary || `Version ${ver.versionNumber}`}
+                                  {isCurrent && (
+                                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                                      Current
+                                    </span>
+                                  )}
+                                </h3>
+                                <p className="text-[11px] text-gray-500">
+                                  {new Date(ver.createdAt).toLocaleString()} · by{" "}
+                                  <span className="font-medium text-gray-700">
+                                    {ver.createdBy?.name || "System"}
+                                  </span>{" "}
+                                  · {ver.chartsSnapshot?.length ?? 0} charts
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
+                              {/* Compare Button */}
+                              {idx < dashboardVersions.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleCompareWithPrevious(ver)}
+                                  disabled={loadingComparison && comparingVersionNum === ver.versionNumber}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                                >
+                                  <GitCompare className="h-3.5 w-3.5 text-blue-600" />
+                                  <span>
+                                    {loadingComparison && comparingVersionNum === ver.versionNumber
+                                      ? "Comparing..."
+                                      : "Compare"}
+                                  </span>
+                                </button>
+                              )}
+
+                              {/* Restore Button */}
+                              {!isCurrent && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleRestoreVersion(ver.versionNumber)}
+                                  disabled={!canEdit || restoringVersionNum === ver.versionNumber}
+                                  title={!canEdit ? "Only Editors and Admins can restore versions" : "Restore this version"}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition disabled:opacity-50"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5" />
+                                  <span>
+                                    {restoringVersionNum === ver.versionNumber ? "Restoring..." : "Restore"}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3 bg-gray-50">
+              <span className="text-[11px] text-gray-500">
+                Restoring a version creates a new snapshot state without overwriting past history.
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsVersionModalOpen(false)}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Analytics Modal */}
+
       <AiAnalyticsModal
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}

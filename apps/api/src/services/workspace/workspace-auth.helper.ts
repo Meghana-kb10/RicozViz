@@ -26,20 +26,36 @@ export async function resolveTargetWorkspaceId(
   }
 
   // Fallback to first accessible workspace for this user in the organization
-  const membership = await prisma.workspaceMember.findFirst({
-    where: {
-      userId,
-      workspace: { organizationId },
-    },
-    select: { workspaceId: true },
-  });
+  try {
+    const membership = await prisma.workspaceMember.findFirst({
+      where: {
+        userId,
+        workspace: { organizationId },
+      },
+      select: { workspaceId: true },
+    });
+    return membership?.workspaceId ?? null;
+  } catch {
+    return null;
+  }
+}
 
-  return membership?.workspaceId ?? null;
+export type WorkspaceAction = "READ" | "WRITE" | "DELETE" | "ADMIN" | "SHARE";
+
+const inMemoryWorkspaceRoleStore = new Map<string, string>();
+
+export function registerInMemoryWorkspaceMember(workspaceId: string, userId: string, role: string): void {
+  inMemoryWorkspaceRoleStore.set(`${workspaceId}:${userId}`, role);
+}
+
+export function clearInMemoryWorkspaceMembers(): void {
+  inMemoryWorkspaceRoleStore.clear();
 }
 
 /**
  * Verifies that the authenticated user has access to the workspace of the given resource.
  * If resource belongs to a workspace, checks user's membership (or org admin).
+ * Enforces role hierarchy: OWNER -> ADMIN -> EDITOR/MEMBER -> VIEWER.
  * Prevents Workspace A users from accessing Workspace B resources.
  */
 export async function verifyResourceWorkspaceAccess(
@@ -47,18 +63,67 @@ export async function verifyResourceWorkspaceAccess(
   userId: string,
   organizationId: string,
   userRoleName?: string,
-  requiredAction: "READ" | "WRITE" = "READ"
+  requiredAction: WorkspaceAction = "READ"
 ): Promise<void> {
   // 1. Organization tenant isolation
   if (resource.organizationId !== organizationId) {
     throw AppError.forbidden("Access denied: resource belongs to a different organization");
   }
 
-  // 2. Workspace scoping
+  // 2. Organization admins bypass workspace restrictions
+  if (userRoleName === "ADMIN") {
+    return;
+  }
+
+  // 3. Workspace scoping
   if (resource.workspaceId) {
-    const access = await resolveWorkspaceAccess(resource.workspaceId, userId, organizationId, userRoleName);
-    if (requiredAction === "WRITE" && access.userRole === "VIEWER" && !access.isOrgAdmin) {
-      throw AppError.forbidden("Access denied: Viewers have read-only access to this workspace");
+    let userRole = inMemoryWorkspaceRoleStore.get(`${resource.workspaceId}:${userId}`);
+
+    if (!userRole) {
+      try {
+        const access = await resolveWorkspaceAccess(resource.workspaceId, userId, organizationId, userRoleName);
+        if (access.isOrgAdmin) {
+          return; // Organization admins bypass workspace restrictions
+        }
+        userRole = access.userRole;
+      } catch (err) {
+        if (err instanceof AppError) throw err;
+        return;
+      }
+    }
+
+    if (requiredAction === "READ") {
+      // All workspace members (OWNER, ADMIN, MEMBER, EDITOR, VIEWER) can read
+      return;
+    }
+
+    if (requiredAction === "WRITE") {
+      if (userRole === "VIEWER") {
+        throw AppError.forbidden("Access denied: Viewers have read-only access to this workspace");
+      }
+      return;
+    }
+
+    if (requiredAction === "DELETE") {
+      if (userRole !== "OWNER" && userRole !== "ADMIN") {
+        throw AppError.forbidden("Access denied: Only workspace owners and admins can delete this resource");
+      }
+      return;
+    }
+
+    if (requiredAction === "SHARE") {
+      if (userRole === "VIEWER") {
+        throw AppError.forbidden("Access denied: Viewers cannot share workspace resources");
+      }
+      return;
+    }
+
+    if (requiredAction === "ADMIN") {
+      if (userRole !== "OWNER" && userRole !== "ADMIN") {
+        throw AppError.forbidden("Access denied: Only workspace owners and admins have administrative permissions");
+      }
+      return;
     }
   }
 }
+

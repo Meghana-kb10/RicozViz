@@ -60,6 +60,17 @@ import {
   deleteDatasetRefreshSchedule,
   executeDatasetRefresh,
 } from "../services/dataset/dataset-refresh.service.js";
+import {
+  createRlsRuleSchema,
+  updateRlsRuleSchema,
+  listDatasetRlsRules,
+  createRlsRule,
+  updateRlsRule,
+  deleteRlsRule,
+} from "../services/dataset/rls.service.js";
+import { prisma } from "../lib/prisma.js";
+import { verifyResourceWorkspaceAccess } from "../services/workspace/workspace-auth.helper.js";
+import { AppError } from "../utils/errors.js";
 import { multipartUpload } from "../middleware/upload.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -580,6 +591,88 @@ router.post(
       { userId: user.userId, roleName: user.roleName }
     );
     sendSuccess(res, result, 200);
+  })
+);
+
+// ============================================================
+// ROW-LEVEL SECURITY (RLS) ROUTES
+// ============================================================
+
+async function resolveDatasetForRls(datasetId: string, user: any, requiredAction: "READ" | "WRITE" = "READ") {
+  let dataset = await prisma.dataset.findFirst({
+    where: { id: datasetId, organizationId: user.organizationId },
+    include: { columns: true },
+  });
+  if (!dataset) {
+    throw AppError.notFound(`Dataset with ID "${datasetId}" not found`);
+  }
+  await verifyResourceWorkspaceAccess(dataset, user.userId, user.organizationId, user.roleName, requiredAction);
+  return dataset;
+}
+
+/**
+ * GET /api/v1/datasets/:id/rls
+ * List all Row-Level Security rules configured for this dataset.
+ * Permission: DATASET_VIEW
+ */
+router.get(
+  "/:id/rls",
+  requirePermission("DATASET_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const dataset = await resolveDatasetForRls(req.params.id as string, user, "READ");
+    const rules = await listDatasetRlsRules(dataset.id, user.organizationId);
+    sendSuccess(res, rules, 200);
+  })
+);
+
+/**
+ * POST /api/v1/datasets/:id/rls
+ * Create a new Row-Level Security rule on this dataset.
+ * Permission: DATASET_EDIT
+ */
+router.post(
+  "/:id/rls",
+  requirePermission("DATASET_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const dataset = await resolveDatasetForRls(req.params.id as string, user, "WRITE");
+    const parsed = createRlsRuleSchema.parse(req.body);
+    const rule = await createRlsRule(dataset, parsed, user);
+    sendSuccess(res, rule, 201);
+  })
+);
+
+/**
+ * PATCH /api/v1/datasets/:id/rls/:ruleId
+ * Update an existing Row-Level Security rule.
+ * Permission: DATASET_EDIT
+ */
+router.patch(
+  "/:id/rls/:ruleId",
+  requirePermission("DATASET_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const dataset = await resolveDatasetForRls(req.params.id as string, user, "WRITE");
+    const parsed = updateRlsRuleSchema.parse(req.body);
+    const updated = await updateRlsRule(dataset, req.params.ruleId as string, parsed, user);
+    sendSuccess(res, updated, 200);
+  })
+);
+
+/**
+ * DELETE /api/v1/datasets/:id/rls/:ruleId
+ * Delete a Row-Level Security rule.
+ * Permission: DATASET_EDIT
+ */
+router.delete(
+  "/:id/rls/:ruleId",
+  requirePermission("DATASET_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const dataset = await resolveDatasetForRls(req.params.id as string, user, "WRITE");
+    await deleteRlsRule(dataset, req.params.ruleId as string, user);
+    sendSuccess(res, { message: "RLS rule deleted successfully" }, 200);
   })
 );
 

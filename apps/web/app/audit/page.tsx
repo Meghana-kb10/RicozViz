@@ -227,9 +227,15 @@ export default function AuditLogsPage() {
               <option value="DATASET_CREATED">DATASET_CREATED</option>
               <option value="DATASET_UPDATED">DATASET_UPDATED</option>
               <option value="DATASET_DELETED">DATASET_DELETED</option>
+              <option value="DATASET_RLS_RULE_CREATED">DATASET_RLS_RULE_CREATED</option>
+              <option value="DATASET_RLS_RULE_UPDATED">DATASET_RLS_RULE_UPDATED</option>
+              <option value="DATASET_RLS_RULE_DELETED">DATASET_RLS_RULE_DELETED</option>
               <option value="DASHBOARD_CREATED">DASHBOARD_CREATED</option>
               <option value="DASHBOARD_UPDATED">DASHBOARD_UPDATED</option>
               <option value="DASHBOARD_DELETED">DASHBOARD_DELETED</option>
+              <option value="DASHBOARD_VERSION_CREATED">DASHBOARD_VERSION_CREATED</option>
+              <option value="DASHBOARD_VERSION_RESTORED">DASHBOARD_VERSION_RESTORED</option>
+              <option value="WORKSPACE_MEMBER_ROLE_UPDATED">WORKSPACE_MEMBER_ROLE_UPDATED</option>
               <option value="METRIC_CREATED">METRIC_CREATED</option>
               <option value="ALERT_CREATED">ALERT_CREATED</option>
               <option value="DATA_EXPORTED">DATA_EXPORTED</option>
@@ -249,11 +255,15 @@ export default function AuditLogsPage() {
               <option value="User">User</option>
               <option value="Dataset">Dataset</option>
               <option value="Dashboard">Dashboard</option>
+              <option value="DashboardVersion">DashboardVersion</option>
+              <option value="RowLevelSecurityRule">RowLevelSecurityRule</option>
+              <option value="WORKSPACE">WORKSPACE</option>
               <option value="DataSource">DataSource</option>
               <option value="Metric">Metric</option>
               <option value="Alert">Alert</option>
               <option value="DashboardTemplate">DashboardTemplate</option>
             </select>
+
 
             {/* Status filter */}
             <select

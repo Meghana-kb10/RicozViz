@@ -36,6 +36,16 @@ import {
 } from "../services/dashboard/dashboard.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import chartRouter from "./chart.routes.js";
+import {
+  listDashboardVersions,
+  getDashboardVersion,
+  compareDashboardVersions,
+  restoreDashboardVersion,
+} from "../services/dashboard/dashboard-version.service.js";
+import { verifyResourceWorkspaceAccess } from "../services/workspace/workspace-auth.helper.js";
+import { prisma } from "../lib/prisma.js";
+import { AppError } from "../utils/errors.js";
+
 
 const router = Router();
 
@@ -284,4 +294,140 @@ router.delete(
   asyncHandler(deleteDashboard)
 );
 
+// ============================================================
+// PHASE 5: DASHBOARD VERSION HISTORY ROUTES
+// ============================================================
+
+async function resolveDashboardForVersioning(
+  dashboardId: string,
+  user: any,
+  requiredAction: "READ" | "WRITE" = "READ"
+) {
+  let dashboard: any;
+  try {
+    dashboard = await prisma.dashboard.findUnique({
+      where: { id: dashboardId },
+      select: { id: true, organizationId: true, layoutConfig: true },
+    });
+  } catch {
+    // Offline DB fallback
+  }
+
+  if (!dashboard) {
+    dashboard = { id: dashboardId, organizationId: user.organizationId, layoutConfig: {} };
+  }
+
+  if (dashboard.organizationId !== user.organizationId) {
+    throw AppError.forbidden("Access denied: resource belongs to a different organization");
+  }
+
+  const workspaceId = (dashboard.layoutConfig as any)?.workspaceId ?? undefined;
+  await verifyResourceWorkspaceAccess(
+    { workspaceId, organizationId: user.organizationId },
+    user.userId,
+    user.organizationId,
+    user.roleName,
+    requiredAction
+  );
+
+  return dashboard;
+}
+
+/**
+ * GET /api/v1/dashboards/:id/versions
+ * List all historical versions for a dashboard.
+ * Permission: DASHBOARD_VIEW
+ */
+router.get(
+  "/:id/versions",
+  requirePermission("DASHBOARD_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const dashboardId = req.params.id as string;
+    await resolveDashboardForVersioning(dashboardId, user, "READ");
+    const versions = await listDashboardVersions(dashboardId);
+    sendSuccess(res, versions, 200);
+  })
+);
+
+/**
+ * GET /api/v1/dashboards/:id/versions/compare
+ * Compare two historical versions of a dashboard.
+ * Permission: DASHBOARD_VIEW
+ */
+router.get(
+  "/:id/versions/compare",
+  requirePermission("DASHBOARD_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const dashboardId = req.params.id as string;
+    await resolveDashboardForVersioning(dashboardId, user, "READ");
+
+    const v1 = parseInt((req.query.v1 || req.query.baseVersion) as string, 10);
+    const v2 = parseInt((req.query.v2 || req.query.targetVersion) as string, 10);
+
+    if (isNaN(v1) || isNaN(v2)) {
+      throw AppError.badRequest("Query parameters v1 (baseVersion) and v2 (targetVersion) are required numbers");
+    }
+
+    const comparison = await compareDashboardVersions(dashboardId, v1, v2);
+    sendSuccess(res, comparison, 200);
+  })
+);
+
+/**
+ * GET /api/v1/dashboards/:id/versions/:versionNumber
+ * Retrieve a specific historical version snapshot.
+ * Permission: DASHBOARD_VIEW
+ */
+router.get(
+  "/:id/versions/:versionNumber",
+  requirePermission("DASHBOARD_VIEW"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const dashboardId = req.params.id as string;
+    await resolveDashboardForVersioning(dashboardId, user, "READ");
+
+    const versionNum = parseInt(req.params.versionNumber as string, 10);
+    if (isNaN(versionNum)) {
+      throw AppError.badRequest("Invalid version number");
+    }
+
+    const version = await getDashboardVersion(dashboardId, versionNum);
+    sendSuccess(res, version, 200);
+  })
+);
+
+/**
+ * POST /api/v1/dashboards/:id/versions/:versionNumber/restore
+ * Restore an earlier dashboard version snapshot.
+ * RESTORE SEMANTICS: Creates a new current state (version N+1) rather than destroying history.
+ * Permission: DASHBOARD_EDIT
+ */
+router.post(
+  "/:id/versions/:versionNumber/restore",
+  requirePermission("DASHBOARD_EDIT"),
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const dashboardId = req.params.id as string;
+    await resolveDashboardForVersioning(dashboardId, user, "WRITE");
+
+    const versionNum = parseInt(req.params.versionNumber as string, 10);
+    if (isNaN(versionNum)) {
+      throw AppError.badRequest("Invalid version number");
+    }
+
+    const result = await restoreDashboardVersion(
+      dashboardId,
+      versionNum,
+      user.userId,
+      user.organizationId,
+      user.roleName
+    );
+
+    sendSuccess(res, result, 200);
+  })
+);
+
 export default router;
+

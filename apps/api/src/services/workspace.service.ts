@@ -659,3 +659,118 @@ export async function removeWorkspaceMember(req: Request, res: Response): Promis
     userId: targetUserId,
   });
 }
+
+export const updateWorkspaceMemberRoleSchema = z.object({
+  role: z.enum(["OWNER", "ADMIN", "MEMBER", "EDITOR", "VIEWER"]),
+});
+
+/**
+ * PATCH /api/v1/workspaces/:id/members/:userId
+ * Update role of a workspace member (OWNER/ADMIN only).
+ */
+export async function updateWorkspaceMemberRole(req: Request, res: Response): Promise<void> {
+  const { userId: currentUserId, organizationId, roleName } = req.user!;
+  const workspaceId = req.params["id"];
+  const targetUserId = req.params["userId"];
+  if (!workspaceId) {
+    throw AppError.badRequest("Workspace ID is required");
+  }
+  if (!targetUserId) {
+    throw AppError.badRequest("Target User ID is required");
+  }
+
+  const input = updateWorkspaceMemberRoleSchema.parse(req.body);
+
+  const { userRole, isOrgAdmin } = await resolveWorkspaceAccess(
+    workspaceId,
+    currentUserId,
+    organizationId,
+    roleName
+  );
+
+  if (userRole !== "OWNER" && userRole !== "ADMIN" && !isOrgAdmin) {
+    throw AppError.forbidden("Only workspace owners or admins can update member roles");
+  }
+
+  const existingMember = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: targetUserId,
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  if (!existingMember) {
+    throw AppError.notFound("Member not found in this workspace");
+  }
+
+  // Safeguard: cannot demote the final OWNER
+  if (existingMember.role === "OWNER" && input.role !== "OWNER") {
+    const ownerCount = await prisma.workspaceMember.count({
+      where: {
+        workspaceId,
+        role: "OWNER",
+      },
+    });
+
+    if (ownerCount <= 1) {
+      throw AppError.badRequest("Cannot demote the final owner of a workspace");
+    }
+  }
+
+  const updatedMember = await prisma.workspaceMember.update({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: targetUserId,
+      },
+    },
+    data: {
+      role: input.role,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  void logAuditEvent({
+    userId: currentUserId,
+    organizationId,
+    action: "WORKSPACE_MEMBER_ROLE_UPDATED",
+    resourceType: "WORKSPACE",
+    resourceId: workspaceId,
+    metadata: {
+      targetUserId,
+      previousRole: existingMember.role,
+      newRole: input.role,
+    },
+  });
+
+  sendSuccess(res, {
+    id: updatedMember.id,
+    workspaceId: updatedMember.workspaceId,
+    role: updatedMember.role,
+    user: updatedMember.user,
+  });
+}
+

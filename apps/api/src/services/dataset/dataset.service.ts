@@ -363,7 +363,18 @@ export async function createDataset(req: Request, res: Response): Promise<void> 
     roleName
   );
 
+  if (workspaceId) {
+    await verifyResourceWorkspaceAccess(
+      { workspaceId, organizationId },
+      userId,
+      organizationId,
+      roleName,
+      "WRITE"
+    );
+  }
+
   let determinedType: DatasetType = input.type || "UPLOADED";
+
   let resolvedDataSourceId: string | null = input.dataSourceId || null;
   let schemaColumns: Array<{ name: string; type: string; nullable: boolean }> = input.columns || [];
   let sampleRows = input.sampleData || [];
@@ -611,6 +622,17 @@ export async function uploadDataset(req: Request, res: Response): Promise<void> 
     roleName
   );
 
+  if (workspaceId) {
+    await verifyResourceWorkspaceAccess(
+      { workspaceId, organizationId },
+      userId,
+      organizationId,
+      roleName,
+      "WRITE"
+    );
+  }
+
+
   const rawName = (req.body?.name as string | undefined)?.trim();
   const defaultName = safeFilename ? safeFilename.replace(/\.[^/.]+$/, "") : "Uploaded Dataset";
   const datasetName = rawName || defaultName;
@@ -806,7 +828,7 @@ export async function updateDataset(req: Request, res: Response): Promise<void> 
     throw AppError.notFound("Dataset");
   }
 
-  await verifyResourceWorkspaceAccess(existing, userId, organizationId, roleName);
+  await verifyResourceWorkspaceAccess(existing, userId, organizationId, roleName, "WRITE");
 
   const input = updateDatasetSchema.parse(req.body);
 
@@ -868,7 +890,8 @@ export async function deleteDataset(req: Request, res: Response): Promise<void> 
     throw AppError.notFound("Dataset");
   }
 
-  await verifyResourceWorkspaceAccess(existing, userId, organizationId, roleName);
+  await verifyResourceWorkspaceAccess(existing, userId, organizationId, roleName, "DELETE");
+
 
   // Referential check: prevent deletion if charts depend on it
   const chartCount = await prisma.chart.count({
@@ -924,7 +947,11 @@ export async function previewDataset(req: Request, res: Response): Promise<void>
 
   await verifyResourceWorkspaceAccess(dataset, userId, organizationId, roleName);
 
-  const result = await datasetQueryEngine.executeQuery(dataset, { limit: effectiveLimit });
+  const result = await datasetQueryEngine.executeQuery(
+    dataset,
+    { limit: effectiveLimit },
+    req.user
+  );
   const previewRows = result.rows.slice(0, 50);
 
   await logAuditEvent({
@@ -998,7 +1025,11 @@ export async function queryDataset(req: Request, res: Response): Promise<void> {
     await verifyResourceWorkspaceAccess(ds, userId, organizationId, roleName);
   }
 
-  const result = await datasetQueryEngine.executeQuery(dataset, queryParams as unknown as DatasetQueryParams);
+  const result = await datasetQueryEngine.executeQuery(
+    dataset,
+    queryParams as unknown as DatasetQueryParams,
+    req.user
+  );
 
   const isAggregate =
     (queryParams.dimensions && queryParams.dimensions.length > 0) ||

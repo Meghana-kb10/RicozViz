@@ -2560,6 +2560,209 @@ export async function apiGetDashboardSummary(params: {
   });
 }
 
+// ============================================================
+// PHASE 5: ROW-LEVEL SECURITY (RLS) API
+// ============================================================
+
+export type RlsOperator =
+  | "EQUALS"
+  | "NOT_EQUALS"
+  | "IN"
+  | "NOT_IN"
+  | "GREATER_THAN"
+  | "LESS_THAN"
+  | "CONTAINS";
+
+export interface RowLevelSecurityRule {
+  id: string;
+  name: string;
+  description?: string | null;
+  datasetId: string;
+  organizationId: string;
+  columnName: string;
+  operator: RlsOperator;
+  ruleValue: unknown;
+  roleName?: string | null;
+  userId?: string | null;
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiListDatasetRlsRules(
+  datasetId: string
+): Promise<RowLevelSecurityRule[]> {
+  return apiFetch<RowLevelSecurityRule[]>(`/api/v1/datasets/${datasetId}/rls`);
+}
+
+export async function apiCreateRlsRule(
+  datasetId: string,
+  rule: {
+    name: string;
+    description?: string;
+    columnName: string;
+    operator: RlsOperator;
+    ruleValue: unknown;
+    roleName?: string;
+    userId?: string;
+    isEnabled?: boolean;
+  }
+): Promise<RowLevelSecurityRule> {
+  return apiFetch<RowLevelSecurityRule>(`/api/v1/datasets/${datasetId}/rls`, {
+    method: "POST",
+    body: JSON.stringify(rule),
+  });
+}
+
+export async function apiUpdateRlsRule(
+  datasetId: string,
+  ruleId: string,
+  rule: Partial<{
+    name: string;
+    description: string;
+    columnName: string;
+    operator: RlsOperator;
+    ruleValue: unknown;
+    roleName: string;
+    userId: string;
+    isEnabled: boolean;
+  }>
+): Promise<RowLevelSecurityRule> {
+  return apiFetch<RowLevelSecurityRule>(`/api/v1/datasets/${datasetId}/rls/${ruleId}`, {
+    method: "PATCH",
+    body: JSON.stringify(rule),
+  });
+}
+
+export async function apiDeleteRlsRule(
+  datasetId: string,
+  ruleId: string
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/api/v1/datasets/${datasetId}/rls/${ruleId}`, {
+    method: "DELETE",
+  });
+}
+
+// ============================================================
+// PHASE 5: DASHBOARD VERSION HISTORY API
+// ============================================================
+
+export interface DashboardChartSnapshot {
+  id: string;
+  title: string;
+  description?: string | null;
+  chartType: string;
+  config: unknown;
+  position: unknown;
+  sortOrder?: number;
+  datasetId?: string | null;
+}
+
+export interface DashboardVersionRecord {
+  id: string;
+  dashboardId: string;
+  versionNumber: number;
+  name: string;
+  description?: string | null;
+  layoutConfig: Record<string, unknown>;
+  chartsSnapshot: DashboardChartSnapshot[];
+  changeSummary?: string | null;
+  createdById: string;
+  createdBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  createdAt: string;
+}
+
+export interface VersionComparisonResult {
+  dashboardId: string;
+  baseVersion: number;
+  targetVersion: number;
+  nameChanged: boolean;
+  baseName: string;
+  targetName: string;
+  descriptionChanged: boolean;
+  baseDescription: string | null;
+  targetDescription: string | null;
+  layoutChanged: boolean;
+  addedCharts: DashboardChartSnapshot[];
+  removedCharts: DashboardChartSnapshot[];
+  modifiedCharts: Array<{
+    id: string;
+    title: string;
+    changes: string[];
+  }>;
+  totalChanges: number;
+}
+
+export async function apiListDashboardVersions(
+  dashboardId: string
+): Promise<DashboardVersionRecord[]> {
+  return apiFetch<DashboardVersionRecord[]>(`/api/v1/dashboards/${dashboardId}/versions`);
+}
+
+export async function apiGetDashboardVersion(
+  dashboardId: string,
+  versionNumber: number
+): Promise<DashboardVersionRecord> {
+  return apiFetch<DashboardVersionRecord>(`/api/v1/dashboards/${dashboardId}/versions/${versionNumber}`);
+}
+
+export async function apiCompareDashboardVersions(
+  dashboardId: string,
+  baseVersion: number,
+  targetVersion: number
+): Promise<VersionComparisonResult> {
+  return apiFetch<VersionComparisonResult>(
+    `/api/v1/dashboards/${dashboardId}/versions/compare?v1=${baseVersion}&v2=${targetVersion}`
+  );
+}
+
+export async function apiRestoreDashboardVersion(
+  dashboardId: string,
+  versionNumber: number
+): Promise<{
+  dashboard: any;
+  restoredFromVersion: number;
+  newVersionNumber: number;
+}> {
+  return apiFetch<{
+    dashboard: any;
+    restoredFromVersion: number;
+    newVersionNumber: number;
+  }>(`/api/v1/dashboards/${dashboardId}/versions/${versionNumber}/restore`, {
+    method: "POST",
+  });
+}
+
+// ============================================================
+// PHASE 5: WORKSPACE MEMBER ROLE API
+// ============================================================
+
+export async function apiUpdateWorkspaceMemberRole(
+  workspaceId: string,
+  userId: string,
+  role: "OWNER" | "ADMIN" | "MEMBER" | "EDITOR" | "VIEWER"
+): Promise<{
+  id: string;
+  workspaceId: string;
+  role: string;
+  user: { id: string; name: string; email: string };
+}> {
+  return apiFetch<{
+    id: string;
+    workspaceId: string;
+    role: string;
+    user: { id: string; name: string; email: string };
+  }>(`/api/v1/workspaces/${workspaceId}/members/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+}
+
+
 
 
 

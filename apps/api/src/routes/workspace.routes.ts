@@ -14,6 +14,7 @@ import {
   listWorkspaceMembers,
   addWorkspaceMember,
   removeWorkspaceMember,
+  updateWorkspaceMemberRole,
 } from "../services/workspace.service.js";
 
 const router = Router();
@@ -64,9 +65,16 @@ router.get("/:id/members", asyncHandler(listWorkspaceMembers));
 router.post("/:id/members", asyncHandler(addWorkspaceMember));
 
 /**
+ * PATCH /api/v1/workspaces/:id/members/:userId
+ * Update a workspace member's role (OWNER/ADMIN only).
+ */
+router.patch("/:id/members/:userId", asyncHandler(updateWorkspaceMemberRole));
+
+/**
  * DELETE /api/v1/workspaces/:id/members/:userId
  * Remove a member from this workspace (OWNER/ADMIN only, or self).
  */
 router.delete("/:id/members/:userId", asyncHandler(removeWorkspaceMember));
 
 export default router;
+

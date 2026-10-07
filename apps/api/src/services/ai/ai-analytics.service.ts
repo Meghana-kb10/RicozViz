@@ -546,7 +546,12 @@ export async function askDataAnalyst(
   }
 
   const startTime = Date.now();
-  const queryResult = await datasetQueryEngine.executeQuery(dataset, queryParams);
+  const queryResult = await datasetQueryEngine.executeQuery(dataset, queryParams, {
+    userId,
+    email: "",
+    organizationId,
+    roleName,
+  });
   const executionTimeMs = Date.now() - startTime;
 
   if (queryResult.rows.length === 0) {
@@ -706,7 +711,12 @@ export async function nlToChart(
     filterLogic: "AND",
   };
 
-  const queryResult = await datasetQueryEngine.executeQuery(dataset, queryParams);
+  const queryResult = await datasetQueryEngine.executeQuery(dataset, queryParams, {
+    userId,
+    email: "",
+    organizationId,
+    roleName,
+  });
 
   const title = dimension
     ? `${aggregation} ${measure} by ${dimension}`
@@ -783,13 +793,22 @@ export async function generateDatasetInsights(
       };
     }
 
-    const queryResult = await datasetQueryEngine.executeQuery(dataset, {
-      dimensions: [dimCol],
-      measures: [{ column: measCol, aggregation: "SUM", alias: "val" }],
-      filters: filters.length > 0 ? filters : undefined,
-      orderBy: { column: "val", direction: "desc" },
-      limit: 25,
-    });
+    const queryResult = await datasetQueryEngine.executeQuery(
+      dataset,
+      {
+        dimensions: [dimCol],
+        measures: [{ column: measCol, aggregation: "SUM", alias: "val" }],
+        filters: filters.length > 0 ? filters : undefined,
+        orderBy: { column: "val", direction: "desc" },
+        limit: 25,
+      },
+      {
+        userId,
+        email: "",
+        organizationId,
+        roleName,
+      }
+    );
 
     rows = queryResult.rows;
   }
@@ -961,12 +980,21 @@ export async function generateDashboardSummary(
 
       const mergedFilters = [...chartFilters, ...activeFilters];
 
-      const queryResult = await datasetQueryEngine.executeQuery(chart.dataset, {
-        dimensions: dims.length > 0 ? dims : undefined,
-        measures: measures.length > 0 ? measures : undefined,
-        filters: mergedFilters.length > 0 ? mergedFilters : undefined,
-        limit: 25,
-      });
+      const queryResult = await datasetQueryEngine.executeQuery(
+        chart.dataset,
+        {
+          dimensions: dims.length > 0 ? dims : undefined,
+          measures: measures.length > 0 ? measures : undefined,
+          filters: mergedFilters.length > 0 ? mergedFilters : undefined,
+          limit: 25,
+        },
+        {
+          userId,
+          email: "",
+          organizationId,
+          roleName,
+        }
+      );
 
       if (queryResult.rows.length === 0) continue;
 

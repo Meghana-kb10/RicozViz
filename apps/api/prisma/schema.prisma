@@ -190,6 +190,8 @@ model User {
   exportJobs           ExportJob[]
   dashboardAccess      DashboardAccess[]
   createdDatasetVersions DatasetVersion[]   @relation("DatasetVersionCreator")
+  createdDashboardVersions DashboardVersion[] @relation("DashboardVersionCreator")
+  createdRlsRules      RowLevelSecurityRule[] @relation("RlsRuleCreator")
   auditLogs            AuditLog[]
 
   @@map("users")
@@ -441,6 +443,7 @@ model Dataset {
   parentDataset  Dataset?         @relation("DatasetLineage", fields: [parentDatasetId], references: [id], onDelete: SetNull)
   derivedDatasets Dataset[]       @relation("DatasetLineage")
   versions       DatasetVersion[]
+  rlsRules       RowLevelSecurityRule[]
 
   columns DatasetColumn[]
   charts  Chart[]
@@ -504,6 +507,7 @@ model Dashboard {
   charts  Chart[]
   access  DashboardAccess[]
   reports Report[]
+  versions DashboardVersion[]
 
   @@index([organizationId])
   @@index([ownerId])
@@ -859,4 +863,63 @@ model DatasetVersion {
   @@index([createdById])
   @@map("dataset_versions")
 }
+
+// ============================================================
+// DASHBOARD VERSION HISTORY
+// ============================================================
+// Stores immutable snapshots of dashboard state, layout, and chart configurations.
+
+model DashboardVersion {
+  id             String   @id @default(uuid())
+  dashboardId    String
+  versionNumber  Int
+  name           String
+  description    String?
+  layoutConfig   Json     @default("{}")
+  chartsSnapshot Json     @default("[]")
+  changeSummary  String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  dashboard      Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  createdBy      User      @relation("DashboardVersionCreator", fields: [createdById], references: [id])
+
+  @@unique([dashboardId, versionNumber])
+  @@index([dashboardId])
+  @@index([createdById])
+  @@index([createdAt])
+  @@map("dashboard_versions")
+}
+
+// ============================================================
+// ROW-LEVEL SECURITY (RLS) RULES
+// ============================================================
+// Restricts dataset row access by predicate condition for users and roles.
+
+model RowLevelSecurityRule {
+  id             String   @id @default(uuid())
+  organizationId String
+  workspaceId    String?
+  datasetId      String
+  name           String?
+  userId         String?
+  userEmail      String?
+  roleId         String?
+  column         String
+  operator       String   @default("=")
+  value          String
+  enabled        Boolean  @default(true)
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  dataset        Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  createdBy      User?    @relation("RlsRuleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([datasetId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("row_level_security_rules")
+}
+
 

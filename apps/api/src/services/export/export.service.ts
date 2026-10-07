@@ -110,10 +110,19 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
     let currentOffset = 0;
     while (rows.length < maxRows) {
       const batchLimit = Math.min(1000, maxRows - rows.length);
-      const queryRes = await datasetQueryEngine.executeQuery(dataset, {
-        limit: batchLimit,
-        offset: currentOffset,
-      });
+      const queryRes = await datasetQueryEngine.executeQuery(
+        dataset,
+        {
+          limit: batchLimit,
+          offset: currentOffset,
+        },
+        {
+          userId,
+          email: "",
+          organizationId,
+          roleName: userRoleName,
+        }
+      );
       const batchRows = queryRes.rows || [];
       if (batchRows.length === 0) break;
       rows.push(...batchRows);
@@ -153,10 +162,19 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
       let currentOffset = 0;
       while (rows.length < maxRows) {
         const batchLimit = Math.min(1000, maxRows - rows.length);
-        const queryRes = await datasetQueryEngine.executeQuery(chart.dataset, {
-          limit: batchLimit,
-          offset: currentOffset,
-        });
+        const queryRes = await datasetQueryEngine.executeQuery(
+          chart.dataset,
+          {
+            limit: batchLimit,
+            offset: currentOffset,
+          },
+          {
+            userId,
+            email: "",
+            organizationId,
+            roleName: userRoleName,
+          }
+        );
         const batchRows = queryRes.rows || [];
         if (batchRows.length === 0) break;
         rows.push(...batchRows);
@@ -193,10 +211,19 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
       let chartRows: Record<string, unknown>[] = [];
       if (c.dataset) {
         try {
-          const res = await datasetQueryEngine.executeQuery(c.dataset, {
-            limit: 1000,
-            offset: 0,
-          });
+          const res = await datasetQueryEngine.executeQuery(
+            c.dataset,
+            {
+              limit: 1000,
+              offset: 0,
+            },
+            {
+              userId,
+              email: "",
+              organizationId,
+              roleName: userRoleName,
+            }
+          );
           chartRows = res.rows || [];
         } catch {
           chartRows = [];

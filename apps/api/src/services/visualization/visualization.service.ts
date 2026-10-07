@@ -463,7 +463,12 @@ export async function executeVisualizationQuery(
     ];
   }
 
-  return datasetQueryEngine.executeQuery(dataset, queryParams);
+  return datasetQueryEngine.executeQuery(dataset, queryParams, {
+    userId,
+    email: "",
+    organizationId,
+    roleName,
+  });
 }
 
 // ============================================================

@@ -16,6 +16,9 @@ import { sendSuccess } from "../../utils/response.js";
 import { logAuditEvent } from "../audit.service.js";
 import { datasetQueryEngine, type DatasetQueryParams } from "../dataset/query-engine.js";
 import { validateWebhookUrl, isValidEmail } from "../report/report-delivery.dispatcher.js";
+import { createDashboardVersionSnapshot } from "./dashboard-version.service.js";
+import { verifyResourceWorkspaceAccess } from "../workspace/workspace-auth.helper.js";
+import { resolveWorkspaceAccess } from "../workspace.service.js";
 
 // ============================================================
 // ZOD VALIDATION SCHEMAS
@@ -117,6 +120,16 @@ export async function createDashboard(req: Request, res: Response): Promise<void
   if (Array.isArray(input.layout)) {
     initialLayoutConfig["layout"] = input.layout;
   }
+  if (input.workspaceId) {
+    initialLayoutConfig["workspaceId"] = input.workspaceId;
+    await verifyResourceWorkspaceAccess(
+      { workspaceId: input.workspaceId, organizationId },
+      userId,
+      organizationId,
+      req.user?.roleName,
+      "WRITE"
+    );
+  }
 
   const dashboard = await prisma.dashboard.create({
     data: {
@@ -170,6 +183,14 @@ export async function createDashboard(req: Request, res: Response): Promise<void
     ipAddress: req.ip,
     userAgent: req.get("user-agent"),
   });
+
+  void createDashboardVersionSnapshot(
+    dashboard.id,
+    "Initial dashboard creation",
+    userId,
+    req.user?.email,
+    req.user?.roleName
+  );
 
   sendSuccess(res, buildSafeDashboard(dashboard), 201);
 }
@@ -309,6 +330,15 @@ export async function updateDashboard(req: Request, res: Response): Promise<void
     throw AppError.forbidden("Access denied: resource belongs to a different organization");
   }
 
+  const workspaceId = (existing.layoutConfig as any)?.workspaceId ?? undefined;
+  await verifyResourceWorkspaceAccess(
+    { workspaceId, organizationId },
+    userId,
+    organizationId,
+    req.user?.roleName,
+    "WRITE"
+  );
+
   const data: Prisma.DashboardUpdateInput = {};
   if (input.name !== undefined) data.name = input.name;
   if (input.description !== undefined) data.description = input.description;
@@ -341,6 +371,14 @@ export async function updateDashboard(req: Request, res: Response): Promise<void
     userAgent: req.get("user-agent"),
   });
 
+  void createDashboardVersionSnapshot(
+    updated.id,
+    input.name ? `Updated name to "${input.name}"` : "Updated dashboard layout and configuration",
+    userId,
+    req.user?.email,
+    req.user?.roleName
+  );
+
   sendSuccess(res, buildSafeDashboard(updated));
 }
 
@@ -366,6 +404,24 @@ export async function deleteDashboard(req: Request, res: Response): Promise<void
 
   if (existing.organizationId !== organizationId) {
     throw AppError.forbidden("Access denied: resource belongs to a different organization");
+  }
+
+  const deleteWsId = (existing.layoutConfig as any)?.workspaceId ?? undefined;
+  await verifyResourceWorkspaceAccess(
+    { workspaceId: deleteWsId, organizationId },
+    userId,
+    organizationId,
+    req.user?.roleName,
+    "WRITE"
+  );
+
+  if (existing.ownerId !== userId && req.user?.roleName !== "ADMIN") {
+    if (deleteWsId) {
+      const access = await resolveWorkspaceAccess(deleteWsId, userId, organizationId, req.user?.roleName);
+      if (access.userRole !== "OWNER" && access.userRole !== "ADMIN" && !access.isOrgAdmin) {
+        throw AppError.forbidden("Only workspace owners or admins can delete this dashboard");
+      }
+    }
   }
 
   // Delete associated reports first to satisfy foreign key constraint
@@ -737,7 +793,7 @@ export async function getSharedChartData(req: Request, res: Response): Promise<v
     }
   }
 
-  const result = await datasetQueryEngine.executeQuery(chart.dataset, queryParams);
+  const result = await datasetQueryEngine.executeQuery(chart.dataset, queryParams, req.user);
   sendSuccess(res, result);
 }
 
@@ -1042,6 +1098,7 @@ export async function generateDashboardReportSnapshot(
       isCrossFilter?: boolean;
     }>;
     format?: string;
+    user?: any;
   }
 ): Promise<DashboardReportSnapshot> {
   const startTime = Date.now();
@@ -1177,7 +1234,7 @@ export async function generateDashboardReportSnapshot(
     }
 
     try {
-      const qRes = await datasetQueryEngine.executeQuery(chart.dataset, queryParams);
+      const qRes = await datasetQueryEngine.executeQuery(chart.dataset, queryParams, options?.user);
       totalRecords += qRes.rowCount;
       reportCharts.push({
         chartId: chart.id,

@@ -14,6 +14,10 @@ import {
   compileCalculatedField,
   evaluateExpression,
 } from "./calculated-field.engine.js";
+import {
+  resolveUserRlsFilters,
+  type UserSecurityContext,
+} from "./rls.service.js";
 
 // ============================================================
 // CONSTANTS & SAFETY LIMITS
@@ -140,6 +144,8 @@ export interface DatasetQueryParams {
     aggregation?: AggregationFunction | string;
     alias?: string;
   }>;
+  user?: UserSecurityContext | null;
+  userContext?: UserSecurityContext | null;
 }
 
 export interface QueryResultColumn {
@@ -179,9 +185,14 @@ export class DatasetQueryEngine {
    */
   async executeQuery(
     dataset: Dataset,
-    params: DatasetQueryParams = {}
+    params: DatasetQueryParams = {},
+    userContext?: UserSecurityContext | null
   ): Promise<DatasetQueryResult> {
     const startTime = Date.now();
+
+    // 0. Resolve Row-Level Security (RLS) constraints for the requesting user
+    const resolvedUser = userContext ?? params.userContext ?? params.user ?? null;
+    const rlsFilters = await resolveUserRlsFilters(dataset, resolvedUser);
 
     // 1. Extract schema metadata and known columns
     const meta = (dataset.schemaMeta || {}) as Record<string, unknown>;
@@ -453,6 +464,7 @@ export class DatasetQueryEngine {
           measures: validatedMeasures,
           filters: validatedFilters,
           filterLogic,
+          rlsFilters,
           orderBy: validatedOrderBy,
           limit,
           offset,
@@ -477,6 +489,7 @@ export class DatasetQueryEngine {
       measures: validatedMeasures,
       filters: validatedFilters,
       filterLogic,
+      rlsFilters,
       orderBy: validatedOrderBy,
       limit,
       offset,
@@ -503,6 +516,7 @@ export class DatasetQueryEngine {
     }>;
     filters: DatasetQueryFilter[];
     filterLogic: "AND" | "OR";
+    rlsFilters?: DatasetQueryFilter[];
     orderBy?: { column: string; direction: "asc" | "desc" };
     limit: number;
     offset: number;
@@ -545,49 +559,73 @@ export class DatasetQueryEngine {
     }
 
     // Construct WHERE clause with parameterized values
-    let whereClause = "";
+    const allWhereSegments: string[] = [];
+
+    const buildFilterSql = (f: DatasetQueryFilter, outList: string[]) => {
+      const quotedCol = `"${f.column}"`;
+      if (f.operator === "isNull") {
+        outList.push(`${quotedCol} IS NULL`);
+      } else if (f.operator === "isNotNull") {
+        outList.push(`${quotedCol} IS NOT NULL`);
+      } else if (f.operator === "=") {
+        sqlParams.push(f.value);
+        outList.push(`${quotedCol} = $${sqlParams.length}`);
+      } else if (f.operator === "!=") {
+        sqlParams.push(f.value);
+        outList.push(`${quotedCol} != $${sqlParams.length}`);
+      } else if (f.operator === ">") {
+        sqlParams.push(f.value);
+        outList.push(`${quotedCol} > $${sqlParams.length}`);
+      } else if (f.operator === ">=") {
+        sqlParams.push(f.value);
+        outList.push(`${quotedCol} >= $${sqlParams.length}`);
+      } else if (f.operator === "<") {
+        sqlParams.push(f.value);
+        outList.push(`${quotedCol} < $${sqlParams.length}`);
+      } else if (f.operator === "<=") {
+        sqlParams.push(f.value);
+        outList.push(`${quotedCol} <= $${sqlParams.length}`);
+      } else if (f.operator === "contains") {
+        sqlParams.push(`%${String(f.value)}%`);
+        outList.push(`${quotedCol}::text ILIKE $${sqlParams.length}`);
+      } else if (f.operator === "startsWith") {
+        sqlParams.push(`${String(f.value)}%`);
+        outList.push(`${quotedCol}::text ILIKE $${sqlParams.length}`);
+      } else if (f.operator === "endsWith") {
+        sqlParams.push(`%${String(f.value)}`);
+        outList.push(`${quotedCol}::text ILIKE $${sqlParams.length}`);
+      } else if (f.operator === "in") {
+        const rawItems = Array.isArray(f.value) ? f.value : [f.value];
+        sqlParams.push(rawItems.map((v) => String(v)));
+        outList.push(`${quotedCol}::text = ANY($${sqlParams.length}::text[])`);
+      }
+    };
+
+    // 1. Mandatory Row-Level Security (RLS) constraints
+    if (opts.rlsFilters && opts.rlsFilters.length > 0) {
+      const rlsConditions: string[] = [];
+      for (const f of opts.rlsFilters) {
+        buildFilterSql(f, rlsConditions);
+      }
+      if (rlsConditions.length > 0) {
+        allWhereSegments.push(`(${rlsConditions.join(" AND ")})`);
+      }
+    }
+
+    // 2. User query filters
     if (opts.filters.length > 0) {
       const filterConditions: string[] = [];
       for (const f of opts.filters) {
-        const quotedCol = `"${f.column}"`;
-        if (f.operator === "isNull") {
-          filterConditions.push(`${quotedCol} IS NULL`);
-        } else if (f.operator === "isNotNull") {
-          filterConditions.push(`${quotedCol} IS NOT NULL`);
-        } else if (f.operator === "=") {
-          sqlParams.push(f.value);
-          filterConditions.push(`${quotedCol} = $${sqlParams.length}`);
-        } else if (f.operator === "!=") {
-          sqlParams.push(f.value);
-          filterConditions.push(`${quotedCol} != $${sqlParams.length}`);
-        } else if (f.operator === ">") {
-          sqlParams.push(f.value);
-          filterConditions.push(`${quotedCol} > $${sqlParams.length}`);
-        } else if (f.operator === ">=") {
-          sqlParams.push(f.value);
-          filterConditions.push(`${quotedCol} >= $${sqlParams.length}`);
-        } else if (f.operator === "<") {
-          sqlParams.push(f.value);
-          filterConditions.push(`${quotedCol} < $${sqlParams.length}`);
-        } else if (f.operator === "<=") {
-          sqlParams.push(f.value);
-          filterConditions.push(`${quotedCol} <= $${sqlParams.length}`);
-        } else if (f.operator === "contains") {
-          sqlParams.push(`%${String(f.value)}%`);
-          filterConditions.push(`${quotedCol}::text ILIKE $${sqlParams.length}`);
-        } else if (f.operator === "startsWith") {
-          sqlParams.push(`${String(f.value)}%`);
-          filterConditions.push(`${quotedCol}::text ILIKE $${sqlParams.length}`);
-        } else if (f.operator === "endsWith") {
-          sqlParams.push(`%${String(f.value)}`);
-          filterConditions.push(`${quotedCol}::text ILIKE $${sqlParams.length}`);
-        } else if (f.operator === "in") {
-          const rawItems = Array.isArray(f.value) ? f.value : [f.value];
-          sqlParams.push(rawItems.map((v) => String(v)));
-          filterConditions.push(`${quotedCol}::text = ANY($${sqlParams.length}::text[])`);
-        }
+        buildFilterSql(f, filterConditions);
       }
-      whereClause = ` WHERE ${filterConditions.join(` ${opts.filterLogic} `)}`;
+      if (filterConditions.length > 0) {
+        allWhereSegments.push(`(${filterConditions.join(` ${opts.filterLogic} `)})`);
+      }
+    }
+
+    let whereClause = "";
+    if (allWhereSegments.length > 0) {
+      whereClause = ` WHERE ${allWhereSegments.join(" AND ")}`;
     }
 
     // Construct GROUP BY clause
@@ -652,6 +690,7 @@ export class DatasetQueryEngine {
     }>;
     filters: DatasetQueryFilter[];
     filterLogic: "AND" | "OR";
+    rlsFilters?: DatasetQueryFilter[];
     orderBy?: { column: string; direction: "asc" | "desc" };
     limit: number;
     offset: number;
@@ -695,79 +734,91 @@ export class DatasetQueryEngine {
       }
     }
 
-    // 1. Filter rows
-    const filteredRows = processedSourceRows.filter((row) => {
+    // Helper to evaluate a filter against a row
+    const evalFilterCondition = (f: DatasetQueryFilter, row: Record<string, unknown>): boolean => {
+      const val = row[f.column];
+
+      if (f.operator === "isNull") {
+        return val === null || val === undefined;
+      }
+      if (f.operator === "isNotNull") {
+        return val !== null && val !== undefined;
+      }
+      if (val === null || val === undefined) {
+        return false;
+      }
+
+      const colType = opts.columnTypeMap.get(f.column) || "string";
+
+      if (colType === "number" || colType === "integer") {
+        const numVal = Number(val);
+        const filterVal = Number(f.value);
+        if (f.operator === "=") return numVal === filterVal;
+        if (f.operator === "!=") return numVal !== filterVal;
+        if (f.operator === ">") return numVal > filterVal;
+        if (f.operator === ">=") return numVal >= filterVal;
+        if (f.operator === "<") return numVal < filterVal;
+        if (f.operator === "<=") return numVal <= filterVal;
+      }
+
+      if (colType === "date") {
+        const rowTime = new Date(val as string | number | Date).getTime();
+        const filterTime = new Date(f.value as string | number | Date).getTime();
+        if (f.operator === "=") return rowTime === filterTime;
+        if (f.operator === "!=") return rowTime !== filterTime;
+        if (f.operator === ">") return rowTime > filterTime;
+        if (f.operator === ">=") return rowTime >= filterTime;
+        if (f.operator === "<") return rowTime < filterTime;
+        if (f.operator === "<=") return rowTime <= filterTime;
+      }
+
+      if (colType === "boolean") {
+        const boolVal = Boolean(val);
+        const filterBool = Boolean(f.value);
+        if (f.operator === "=") return boolVal === filterBool;
+        if (f.operator === "!=") return boolVal !== filterBool;
+      }
+
+      // String comparisons & text matching
+      const strVal = String(val).toLowerCase();
+      const filterStr = String(f.value ?? "").toLowerCase();
+
+      if (f.operator === "=") return strVal === filterStr;
+      if (f.operator === "!=") return strVal !== filterStr;
+      if (f.operator === ">") return strVal > filterStr;
+      if (f.operator === ">=") return strVal >= filterStr;
+      if (f.operator === "<") return strVal < filterStr;
+      if (f.operator === "<=") return strVal <= filterStr;
+      if (f.operator === "contains") return strVal.includes(filterStr);
+      if (f.operator === "startsWith") return strVal.startsWith(filterStr);
+      if (f.operator === "endsWith") return strVal.endsWith(filterStr);
+      if (f.operator === "in") {
+        const rawList = Array.isArray(f.value) ? f.value : [f.value];
+        if (colType === "number" || colType === "integer") {
+          const numList = rawList.map((v) => Number(v));
+          return numList.includes(Number(val));
+        }
+        const strList = rawList.map((v) => String(v).toLowerCase());
+        return strList.includes(String(val).toLowerCase());
+      }
+
+      return false;
+    };
+
+    // 0. Mandatory Row-Level Security (RLS) enforcement
+    // Drop all rows failing RLS so unauthorized rows are completely inaccessible
+    let permittedSourceRows = processedSourceRows;
+    if (opts.rlsFilters && opts.rlsFilters.length > 0) {
+      permittedSourceRows = processedSourceRows.filter((row) => {
+        return opts.rlsFilters!.every((f) => evalFilterCondition(f, row));
+      });
+    }
+
+    // 1. Filter permitted rows with user query filters
+    const filteredRows = permittedSourceRows.filter((row) => {
       if (opts.filters.length === 0) return true;
 
-      const evalFilter = (f: DatasetQueryFilter): boolean => {
-        const val = row[f.column];
-
-        if (f.operator === "isNull") {
-          return val === null || val === undefined;
-        }
-        if (f.operator === "isNotNull") {
-          return val !== null && val !== undefined;
-        }
-        if (val === null || val === undefined) {
-          return false;
-        }
-
-        const colType = opts.columnTypeMap.get(f.column) || "string";
-
-        if (colType === "number" || colType === "integer") {
-          const numVal = Number(val);
-          const filterVal = Number(f.value);
-          if (f.operator === "=") return numVal === filterVal;
-          if (f.operator === "!=") return numVal !== filterVal;
-          if (f.operator === ">") return numVal > filterVal;
-          if (f.operator === ">=") return numVal >= filterVal;
-          if (f.operator === "<") return numVal < filterVal;
-          if (f.operator === "<=") return numVal <= filterVal;
-        }
-
-        if (colType === "date") {
-          const rowTime = new Date(val as string | number | Date).getTime();
-          const filterTime = new Date(f.value as string | number | Date).getTime();
-          if (f.operator === "=") return rowTime === filterTime;
-          if (f.operator === "!=") return rowTime !== filterTime;
-          if (f.operator === ">") return rowTime > filterTime;
-          if (f.operator === ">=") return rowTime >= filterTime;
-          if (f.operator === "<") return rowTime < filterTime;
-          if (f.operator === "<=") return rowTime <= filterTime;
-        }
-
-        if (colType === "boolean") {
-          const boolVal = Boolean(val);
-          const filterBool = Boolean(f.value);
-          if (f.operator === "=") return boolVal === filterBool;
-          if (f.operator === "!=") return boolVal !== filterBool;
-        }
-
-        // String comparisons & text matching
-        const strVal = String(val).toLowerCase();
-        const filterStr = String(f.value ?? "").toLowerCase();
-
-        if (f.operator === "=") return strVal === filterStr;
-        if (f.operator === "!=") return strVal !== filterStr;
-        if (f.operator === ">") return strVal > filterStr;
-        if (f.operator === ">=") return strVal >= filterStr;
-        if (f.operator === "<") return strVal < filterStr;
-        if (f.operator === "<=") return strVal <= filterStr;
-        if (f.operator === "contains") return strVal.includes(filterStr);
-        if (f.operator === "startsWith") return strVal.startsWith(filterStr);
-        if (f.operator === "endsWith") return strVal.endsWith(filterStr);
-        if (f.operator === "in") {
-          const rawList = Array.isArray(f.value) ? f.value : [f.value];
-          if (colType === "number" || colType === "integer") {
-            const numList = rawList.map((v) => Number(v));
-            return numList.includes(Number(val));
-          }
-          const strList = rawList.map((v) => String(v).toLowerCase());
-          return strList.includes(String(val).toLowerCase());
-        }
-
-        return false;
-      };
+      const evalFilter = (f: DatasetQueryFilter): boolean => evalFilterCondition(f, row);
 
       if (opts.filterLogic === "OR") {
         return opts.filters.some(evalFilter);

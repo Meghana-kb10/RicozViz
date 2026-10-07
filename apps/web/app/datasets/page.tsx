@@ -21,6 +21,12 @@ import {
   apiSaveDatasetRefreshSchedule,
   apiDeleteDatasetRefreshSchedule,
   apiTriggerDatasetRefresh,
+  apiListDatasetRlsRules,
+  apiCreateRlsRule,
+  apiUpdateRlsRule,
+  apiDeleteRlsRule,
+  type RowLevelSecurityRule,
+  type RlsOperator,
   type DatasetData,
   type DatasetColumn,
   type DataSourceData,
@@ -30,6 +36,7 @@ import {
   type DatasetRefreshSchedule,
   ApiError,
 } from "../../lib/api";
+
 
 export default function DatasetsPage() {
   const { auth, isLoading, logout, hasPermission } = useAuth();
@@ -99,9 +106,110 @@ export default function DatasetsPage() {
   const [refreshFrequency, setRefreshFrequency] = useState<string>("6H");
   const [refreshEnabled, setRefreshEnabled] = useState<boolean>(true);
 
+  // RLS (Row-Level Security) Modal state
+  const [isRlsModalOpen, setIsRlsModalOpen] = useState(false);
+  const [rlsDataset, setRlsDataset] = useState<DatasetData | null>(null);
+  const [rlsRules, setRlsRules] = useState<RowLevelSecurityRule[]>([]);
+  const [loadingRlsRules, setLoadingRlsRules] = useState(false);
+  const [savingRlsRule, setSavingRlsRule] = useState(false);
+  const [rlsFormName, setRlsFormName] = useState("");
+  const [rlsFormCol, setRlsFormCol] = useState("");
+  const [rlsFormOp, setRlsFormOp] = useState<RlsOperator>("EQUALS");
+  const [rlsFormVal, setRlsFormVal] = useState("");
+  const [rlsFormRole, setRlsFormRole] = useState("ALL");
+  const [rlsFormUserEmail, setRlsFormUserEmail] = useState("");
+  const [rlsFormDescription, setRlsFormDescription] = useState("");
+  const [rlsError, setRlsError] = useState<string | null>(null);
+
+  const openRlsModal = async (ds: DatasetData) => {
+    setRlsDataset(ds);
+    setIsRlsModalOpen(true);
+    setRlsError(null);
+    setRlsFormName("");
+    setRlsFormCol(ds.columns?.[0]?.name || "");
+    setRlsFormOp("EQUALS");
+    setRlsFormVal("");
+    setRlsFormRole("ALL");
+    setRlsFormUserEmail("");
+    setRlsFormDescription("");
+    setLoadingRlsRules(true);
+    try {
+      const rules = await apiListDatasetRlsRules(ds.id);
+      setRlsRules(rules);
+    } catch (err) {
+      setRlsError(err instanceof ApiError ? err.message : "Failed to load RLS rules");
+    } finally {
+      setLoadingRlsRules(false);
+    }
+  };
+
+  const handleCreateRlsRule = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!rlsDataset || !rlsFormName.trim() || !rlsFormCol || !rlsFormVal.trim()) {
+      setRlsError("Please enter rule name, column, and rule value");
+      return;
+    }
+    setSavingRlsRule(true);
+    setRlsError(null);
+    try {
+      let parsedVal: unknown = rlsFormVal.trim();
+      if (rlsFormOp === "IN" || rlsFormOp === "NOT_IN") {
+        parsedVal = rlsFormVal.split(",").map((s) => s.trim()).filter(Boolean);
+      } else if (!isNaN(Number(parsedVal)) && parsedVal !== "") {
+        parsedVal = Number(parsedVal);
+      }
+
+      await apiCreateRlsRule(rlsDataset.id, {
+        name: rlsFormName.trim(),
+        description: rlsFormDescription.trim() || undefined,
+        columnName: rlsFormCol,
+        operator: rlsFormOp,
+        ruleValue: parsedVal,
+        roleName: rlsFormRole !== "ALL" ? rlsFormRole : undefined,
+        userId: rlsFormUserEmail.trim() || undefined,
+        isEnabled: true,
+      });
+
+      setSuccessMsg(`Created RLS rule "${rlsFormName.trim()}".`);
+      setRlsFormName("");
+      setRlsFormVal("");
+      setRlsFormDescription("");
+      const rules = await apiListDatasetRlsRules(rlsDataset.id);
+      setRlsRules(rules);
+    } catch (err) {
+      setRlsError(err instanceof ApiError ? err.message : "Failed to create RLS rule");
+    } finally {
+      setSavingRlsRule(false);
+    }
+  };
+
+  const handleToggleRlsRule = async (rule: RowLevelSecurityRule) => {
+    if (!rlsDataset) return;
+    try {
+      await apiUpdateRlsRule(rlsDataset.id, rule.id, { isEnabled: !rule.isEnabled });
+      const rules = await apiListDatasetRlsRules(rlsDataset.id);
+      setRlsRules(rules);
+    } catch (err) {
+      setRlsError(err instanceof ApiError ? err.message : "Failed to update RLS rule");
+    }
+  };
+
+  const handleDeleteRlsRule = async (ruleId: string) => {
+    if (!rlsDataset) return;
+    try {
+      await apiDeleteRlsRule(rlsDataset.id, ruleId);
+      setRlsRules((prev) => prev.filter((r) => r.id !== ruleId));
+      setSuccessMsg("RLS rule deleted successfully.");
+    } catch (err) {
+      setRlsError(err instanceof ApiError ? err.message : "Failed to delete RLS rule");
+    }
+  };
+
   // Permissions
   const canCreate = hasPermission("DATASET_CREATE");
+  const canEdit = hasPermission("DATASET_EDIT");
   const canDelete = hasPermission("DATASET_DELETE");
+
 
   // ---- Auth guard ----
   useEffect(() => {
@@ -894,7 +1002,15 @@ export default function DatasetsPage() {
                     >
                       🔄 Refresh
                     </button>
+                    <button
+                      onClick={() => void openRlsModal(ds)}
+                      className="rounded-lg border border-purple-200 bg-purple-50/80 px-2 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100 flex items-center gap-1"
+                      title="Manage Row-Level Security (RLS) rules"
+                    >
+                      🔒 RLS
+                    </button>
                   </div>
+
 
                   {canDelete && (
                     <button
@@ -1752,6 +1868,248 @@ export default function DatasetsPage() {
           </div>
         </div>
       )}
+
+      {/* ============================================================ */}
+      {/* PHASE 5: ROW-LEVEL SECURITY (RLS) MANAGEMENT MODAL */}
+      {/* ============================================================ */}
+      {isRlsModalOpen && rlsDataset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="flex w-full max-w-2xl flex-col max-h-[85vh] rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gradient-to-r from-purple-50/70 to-indigo-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 text-white font-bold text-sm shadow-sm">
+                  🔒
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Row-Level Security (RLS)</h2>
+                  <p className="text-xs text-gray-500">
+                    Restricts dataset rows returned to specific roles or users for {rlsDataset.name}.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRlsModalOpen(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200/60 hover:text-gray-700 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+              {rlsError && (
+                <div className="rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+                  {rlsError}
+                </div>
+              )}
+
+              {/* Add Rule Form (Hidden/disabled if !canEdit) */}
+              {canEdit ? (
+                <form onSubmit={handleCreateRlsRule} className="rounded-xl border border-purple-100 bg-purple-50/30 p-4 space-y-3">
+                  <h3 className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>+ Add Security Rule</span>
+                  </h3>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Rule Name</label>
+                      <input
+                        type="text"
+                        value={rlsFormName}
+                        onChange={(e) => setRlsFormName(e.target.value)}
+                        placeholder="e.g. India Region Only"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Column</label>
+                      <select
+                        value={rlsFormCol}
+                        onChange={(e) => setRlsFormCol(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        required
+                      >
+                        {rlsDataset.columns?.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name} ({c.type})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Condition Operator</label>
+                      <select
+                        value={rlsFormOp}
+                        onChange={(e) => setRlsFormOp(e.target.value as RlsOperator)}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                      >
+                        <option value="EQUALS">= Equals</option>
+                        <option value="NOT_EQUALS">!= Not Equals</option>
+                        <option value="IN">IN (comma-separated)</option>
+                        <option value="NOT_IN">NOT IN (comma-separated)</option>
+                        <option value="GREATER_THAN">&gt; Greater Than</option>
+                        <option value="LESS_THAN">&lt; Less Than</option>
+                        <option value="CONTAINS">CONTAINS substring</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Filter Value</label>
+                      <input
+                        type="text"
+                        value={rlsFormVal}
+                        onChange={(e) => setRlsFormVal(e.target.value)}
+                        placeholder="e.g. India or USA"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Target Workspace Role</label>
+                      <select
+                        value={rlsFormRole}
+                        onChange={(e) => setRlsFormRole(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                      >
+                        <option value="ALL">All Non-Admin Users</option>
+                        <option value="VIEWER">VIEWER only</option>
+                        <option value="EDITOR">EDITOR only</option>
+                        <option value="MEMBER">MEMBER only</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">
+                        Specific User Email / ID (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={rlsFormUserEmail}
+                        onChange={(e) => setRlsFormUserEmail(e.target.value)}
+                        placeholder="Leave blank for all users in role"
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="submit"
+                      disabled={savingRlsRule}
+                      className="rounded-lg bg-purple-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 transition disabled:opacity-50"
+                    >
+                      {savingRlsRule ? "Saving..." : "Add Rule"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">
+                  ℹ️ Read-only view: You do not have permissions to modify Row-Level Security rules.
+                </div>
+              )}
+
+              {/* Existing Rules List */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                  Configured RLS Rules ({rlsRules.length})
+                </h3>
+
+                {loadingRlsRules ? (
+                  <p className="text-xs text-gray-500 py-4 text-center">Loading security rules...</p>
+                ) : rlsRules.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic py-3 text-center border border-dashed border-gray-200 rounded-lg">
+                    No active RLS rules. All workspace members with read access see all rows.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {rlsRules.map((rule) => (
+                      <div
+                        key={rule.id}
+                        className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-2xs flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-900 truncate">{rule.name}</span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                rule.isEnabled
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {rule.isEnabled ? "Active" : "Disabled"}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 mt-1 font-mono">
+                            <span className="text-purple-700 font-semibold">{rule.columnName}</span>{" "}
+                            {rule.operator} &quot;
+                            <span className="font-bold text-gray-800">
+                              {Array.isArray(rule.ruleValue)
+                                ? (rule.ruleValue as string[]).join(", ")
+                                : String(rule.ruleValue)}
+                            </span>
+                            &quot;
+                            {rule.roleName && (
+                              <span className="ml-2 font-sans text-gray-400">
+                                (Applies to: {rule.roleName})
+                              </span>
+                            )}
+                            {rule.userId && (
+                              <span className="ml-2 font-sans text-gray-400">
+                                (User: {rule.userId})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+
+                        {canEdit && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => void handleToggleRlsRule(rule)}
+                              className="rounded border border-gray-200 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-50"
+                            >
+                              {rule.isEnabled ? "Disable" : "Enable"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteRlsRule(rule.id)}
+                              className="rounded border border-red-200 px-2 py-1 text-[11px] font-medium text-red-600 hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3 bg-gray-50">
+              <span className="text-[11px] text-gray-500">
+                Row-Level Security rules are automatically enforced across all charts, AI queries, and exports.
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsRlsModalOpen(false)}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
