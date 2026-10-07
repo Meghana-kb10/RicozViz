@@ -59,7 +59,6 @@ import {
   validateChartCompatibility,
   type ChartRecommendation,
 } from "../../lib/chart-recommender";
-import { AppShell } from "../../components/shell/AppShell";
 
 const CHART_TYPES: Array<{
   id: ChartType;
@@ -792,24 +791,31 @@ function VisualizationsStudioContent() {
   if (!auth) return null;
 
   return (
-    <AppShell
-      title="Visualizations Studio"
-      subtitle="Curate 14+ chart architectures powered by AI heuristics and realtime DuckDB analytics."
-      breadcrumbs={[
-        { label: "App", href: "/" },
-        { label: "Datasets", href: "/datasets" },
-        { label: "Visualizations Studio" },
-      ]}
-      actions={
-        <div className="flex items-center gap-2.5">
+    <div className="min-h-screen bg-gray-50 flex flex-col text-gray-900">
+      {/* HEADER */}
+      <header className="border-b border-gray-200 bg-white px-6 py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-xs">
+        <div className="flex items-center gap-4">
+          <Link href="/workspace" className="flex items-center gap-2 group">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white text-sm shadow-sm group-hover:bg-indigo-700 transition">
+              R
+            </div>
+            <span className="font-bold text-gray-900 tracking-tight">RicozViz</span>
+          </Link>
+          <span className="text-gray-300">/</span>
+          <Link href="/datasets" className="text-sm text-gray-500 hover:text-gray-900 transition">
+            Datasets
+          </Link>
+          <span className="text-gray-300">/</span>
+          <span className="text-sm font-semibold text-gray-800">Visualizations Studio</span>
+
           {/* Tab switcher */}
-          <div className="flex items-center bg-[hsl(var(--surface-subtle))] p-0.5 rounded-lg border border-[hsl(var(--surface-border))] text-xs font-semibold">
+          <div className="ml-4 flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-xs font-medium">
             <button
               onClick={() => setActiveTab("builder")}
               className={`px-3 py-1 rounded-md transition ${
                 activeTab === "builder"
-                  ? "bg-[hsl(var(--surface))] text-indigo-600 dark:text-indigo-400 shadow-2xs font-bold"
-                  : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  ? "bg-white text-indigo-700 shadow-xs font-semibold"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Studio Builder
@@ -818,39 +824,56 @@ function VisualizationsStudioContent() {
               onClick={() => setActiveTab("saved")}
               className={`px-3 py-1 rounded-md transition flex items-center gap-1.5 ${
                 activeTab === "saved"
-                  ? "bg-[hsl(var(--surface))] text-indigo-600 dark:text-indigo-400 shadow-2xs font-bold"
-                  : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  ? "bg-white text-indigo-700 shadow-xs font-semibold"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <FolderOpen className="h-3.5 w-3.5" />
-              <span>Saved ({savedVisualizations.length})</span>
+              Saved Visualizations ({savedVisualizations.length})
             </button>
           </div>
+        </div>
 
+        <div className="flex items-center gap-3">
           {activeTab === "builder" && (
             <>
               <button
                 type="button"
                 onClick={() => openAddToDashboard()}
-                className="btn-tactile btn-secondary text-xs py-1.5 px-3 inline-flex items-center gap-1.5 font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 transition"
               >
-                <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600" />
                 <span>Add to Dashboard</span>
               </button>
               <button
                 type="button"
                 onClick={handleSaveVisualization}
                 disabled={isSaving}
-                className="btn-tactile btn-primary text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-semibold"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 disabled:opacity-50 transition"
               >
                 <Save className="h-3.5 w-3.5" />
                 <span>{isSaving ? "Saving…" : editingVizId ? "Update" : "Save Visualization"}</span>
               </button>
             </>
           )}
+
+          <div className="text-right hidden sm:block border-l border-gray-200 pl-3">
+            <p className="text-xs font-medium text-gray-900">{auth.user.name}</p>
+            <p className="text-2xs text-gray-500">
+              {auth.role} · {auth.organization.name}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              void logout();
+              router.replace("/login");
+            }}
+            className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+          >
+            Sign out
+          </button>
         </div>
-      }
-    >
+      </header>
 
       {/* FEEDBACK TOAST */}
       {feedbackMessage && (
@@ -1865,7 +1888,7 @@ function VisualizationsStudioContent() {
           </div>
         </div>
       )}
-    </AppShell>
+    </div>
   );
 }
 
