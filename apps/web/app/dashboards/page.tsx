@@ -14,6 +14,7 @@ import {
   type DashboardVisibility,
   ApiError,
 } from "../../lib/api";
+import { AppShell } from "../../components/shell/AppShell";
 
 export default function DashboardsPage() {
   const { auth, isLoading, logout } = useAuth();
@@ -190,112 +191,66 @@ export default function DashboardsPage() {
   const canDelete = auth.role === "ADMIN";
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Top Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 font-bold text-gray-900">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-sm">
-                R
-              </span>
-              <span>RicozViz</span>
-            </Link>
-            <span className="text-gray-300">/</span>
-            <Link href="/workspace" className="text-sm text-gray-500 hover:text-gray-900">
-              Workspace
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-sm font-semibold text-gray-900">Dashboards</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">{auth.user.name}</p>
-              <p className="text-xs text-gray-500">
-                {auth.role} · {auth.organization.name}
-              </p>
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100">
-              <span className="text-xs font-semibold text-indigo-700">{userInitials}</span>
-            </div>
-            <button
-              onClick={() => {
-                void logout();
-                router.replace("/login");
-              }}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 flex-1 w-full">
-        {/* Page Title & Action */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboards</h1>
-            <p className="mt-1 text-xs text-gray-500">
-              Create, organize, and explore executive dashboards and real-time visualization views.
-            </p>
-          </div>
-
-          {canCreate && (
-            <button
-              onClick={() => {
-                setModalError(null);
-                setIsCreateModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500"
-            >
-              <span>➕</span>
-              <span>New Dashboard</span>
-            </button>
-          )}
-        </div>
-
+    <AppShell
+      title="Dashboards"
+      subtitle="Create, organize, and explore executive dashboards and real-time visualization views."
+      breadcrumbs={[
+        { label: "App", href: "/" },
+        { label: "Workspace", href: "/workspace" },
+        { label: "Dashboards" },
+      ]}
+      actions={
+        canCreate ? (
+          <button
+            onClick={() => {
+              setModalError(null);
+              setIsCreateModalOpen(true);
+            }}
+            className="btn-tactile btn-primary text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5"
+          >
+            <span>+</span>
+            <span>New Dashboard</span>
+          </button>
+        ) : null
+      }
+    >
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Alerts */}
         {errorMsg && (
-          <div className="mb-4 rounded-lg bg-red-50 p-4 text-xs font-medium text-red-700 border border-red-200 flex justify-between items-center">
+          <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-xs font-semibold text-red-600 dark:text-red-400 flex justify-between items-center">
             <span>{errorMsg}</span>
             <button onClick={() => setErrorMsg(null)} className="font-bold text-red-500">×</button>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-4 rounded-lg bg-green-50 p-4 text-xs font-medium text-green-700 border border-green-200 flex justify-between items-center">
+          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex justify-between items-center">
             <span>{successMsg}</span>
-            <button onClick={() => setSuccessMsg(null)} className="font-bold text-green-500">×</button>
+            <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-500">×</button>
           </div>
         )}
 
         {/* Filters & Search Toolbar */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <div className="relative w-full sm:w-72">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-              🔍
-            </span>
+        <div className="bento-card p-3 flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full sm:w-80">
             <input
               type="text"
               placeholder="Search dashboards..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 py-1.5 pl-9 pr-3 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] py-1.5 px-3 text-xs text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:border-indigo-500 focus:outline-none"
             />
           </div>
 
-          <div className="flex gap-2 w-full sm:w-auto overflow-x-auto">
+          <div className="flex gap-1.5 w-full sm:w-auto overflow-x-auto">
             {["ALL", "DRAFT", "PUBLISHED", "ARCHIVED"].map((s) => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`btn-tactile rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                   statusFilter === s
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? "btn-primary"
+                    : "btn-secondary text-[hsl(var(--muted-foreground))]"
                 }`}
               >
                 {s === "ALL" ? "All Statuses" : s}
@@ -306,14 +261,16 @@ export default function DashboardsPage() {
 
         {/* Dashboard Grid */}
         {loading ? (
-          <div className="p-12 text-center text-sm text-gray-500">Loading dashboards...</div>
+          <div className="p-16 text-center text-xs font-mono text-[hsl(var(--muted-foreground))]">
+            Loading dashboards...
+          </div>
         ) : dashboards.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center bg-white shadow-sm">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-2xl">
+          <div className="bento-card border-dashed p-12 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-2xl">
               📊
             </div>
-            <h3 className="mt-4 text-sm font-bold text-gray-900">No dashboards created yet</h3>
-            <p className="mt-1 text-xs text-gray-500 max-w-sm mx-auto">
+            <h3 className="mt-4 text-sm font-bold text-[hsl(var(--foreground))]">No dashboards created yet</h3>
+            <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))] max-w-sm mx-auto">
               Dashboards allow you to combine multiple charts, KPI widgets, and metrics into a unified presentation.
             </p>
             {canCreate && (
@@ -322,67 +279,67 @@ export default function DashboardsPage() {
                   setModalError(null);
                   setIsCreateModalOpen(true);
                 }}
-                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500"
+                className="btn-tactile btn-primary mt-6 text-xs py-2 px-4 inline-flex items-center gap-1.5"
               >
-                <span>➕</span>
+                <span>+</span>
                 <span>Create Your First Dashboard</span>
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {dashboards.map((dash) => (
               <div
                 key={dash.id}
-                className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md flex flex-col justify-between"
+                className="bento-card p-5 transition-all hover:border-indigo-500/50 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h2 className="text-base font-bold text-gray-900 line-clamp-1">
+                    <h2 className="text-base font-bold text-[hsl(var(--foreground))] line-clamp-1">
                       {dash.name}
                     </h2>
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider font-mono ${
                         dash.status === "PUBLISHED"
-                          ? "bg-green-50 text-green-700 border border-green-200"
+                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
                           : dash.status === "ARCHIVED"
-                            ? "bg-gray-100 text-gray-600"
-                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                            ? "bg-[hsl(var(--surface-subtle))] text-[hsl(var(--muted-foreground))]"
+                            : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300"
                       }`}
                     >
                       {dash.status}
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-500 line-clamp-2 mb-4 min-h-[32px]">
+                  <p className="text-xs text-[hsl(var(--muted-foreground))] line-clamp-2 mb-4 min-h-[32px]">
                     {dash.description || "No description provided."}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 mb-4">
-                    <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-gray-700 font-medium">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-[hsl(var(--muted-foreground))] mb-4">
+                    <span className="inline-flex items-center gap-1 rounded bg-[hsl(var(--surface-subtle))] px-2 py-0.5 border border-[hsl(var(--surface-border))]">
                       📈 {dash.chartCount} {dash.chartCount === 1 ? "chart" : "charts"}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-gray-700 font-medium">
+                    <span className="inline-flex items-center gap-1 rounded bg-[hsl(var(--surface-subtle))] px-2 py-0.5 border border-[hsl(var(--surface-border))]">
                       🔒 {dash.visibility}
                     </span>
-                    <span className="text-gray-400">·</span>
+                    <span className="opacity-40">·</span>
                     <span>{new Date(dash.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-gray-100 pt-3 text-xs">
+                <div className="flex items-center justify-between border-t border-[hsl(var(--surface-border))] pt-3 text-xs">
                   <Link
                     href={`/dashboards/${dash.id}`}
-                    className="font-semibold text-indigo-600 hover:text-indigo-800"
+                    className="btn-tactile btn-primary text-xs py-1 px-3 inline-flex items-center gap-1 font-semibold"
                   >
                     Open Canvas →
                   </Link>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {canCreate && (
                       <button
                         onClick={() => openEditModal(dash)}
-                        className="text-gray-500 hover:text-gray-800 font-medium text-xs px-2 py-1"
+                        className="btn-tactile btn-ghost text-xs py-1 px-2.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                       >
                         Edit
                       </button>
@@ -390,7 +347,7 @@ export default function DashboardsPage() {
                     {canDelete && (
                       <button
                         onClick={() => confirmDelete(dash)}
-                        className="text-red-500 hover:text-red-700 font-medium text-xs px-2 py-1"
+                        className="btn-tactile btn-ghost text-xs py-1 px-2.5 text-red-500 hover:text-red-700"
                       >
                         Delete
                       </button>
@@ -404,27 +361,27 @@ export default function DashboardsPage() {
 
         {/* Create Dashboard Modal */}
         {isCreateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
-                <h3 className="text-base font-bold text-gray-900">Create New Dashboard</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <div className="w-full max-w-md bento-card border-[hsl(var(--surface-border))] bg-[hsl(var(--surface))] p-6 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-[hsl(var(--surface-border))] pb-3 mb-4">
+                <h3 className="text-base font-extrabold text-[hsl(var(--foreground))]">Create New Dashboard</h3>
                 <button
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 font-bold"
+                  className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] font-bold text-lg"
                 >
                   ✕
                 </button>
               </div>
 
               {modalError && (
-                <div className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+                <div className="mb-4 rounded-lg bg-red-500/10 p-3 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-500/30">
                   {modalError}
                 </div>
               )}
 
               <form onSubmit={handleCreate} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block text-xs font-semibold text-[hsl(var(--foreground))] mb-1">
                     Dashboard Name *
                   </label>
                   <input
@@ -434,12 +391,12 @@ export default function DashboardsPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g., Executive Q3 Sales Performance"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] px-3 py-2 text-xs text-[hsl(var(--foreground))] focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block text-xs font-semibold text-[hsl(var(--foreground))] mb-1">
                     Description (optional)
                   </label>
                   <textarea
@@ -448,19 +405,19 @@ export default function DashboardsPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Summary of what this dashboard tracks..."
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] px-3 py-2 text-xs text-[hsl(var(--foreground))] focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-[hsl(var(--foreground))] mb-1">
                       Initial Status
                     </label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value as DashboardStatus)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] px-3 py-2 text-xs text-[hsl(var(--foreground))] focus:border-indigo-500 focus:outline-none"
                     >
                       <option value="DRAFT">Draft</option>
                       <option value="PUBLISHED">Published</option>
@@ -468,13 +425,13 @@ export default function DashboardsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-[hsl(var(--foreground))] mb-1">
                       Visibility
                     </label>
                     <select
                       value={visibility}
                       onChange={(e) => setVisibility(e.target.value as DashboardVisibility)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] px-3 py-2 text-xs text-[hsl(var(--foreground))] focus:border-indigo-500 focus:outline-none"
                     >
                       <option value="ORGANIZATION">Organization</option>
                       <option value="PRIVATE">Private (Only Me)</option>
@@ -482,18 +439,18 @@ export default function DashboardsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                <div className="flex justify-end gap-2.5 pt-3 border-t border-[hsl(var(--surface-border))]">
                   <button
                     type="button"
                     onClick={() => setIsCreateModalOpen(false)}
-                    className="rounded-lg border border-gray-300 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                    className="btn-tactile btn-secondary text-xs px-3.5 py-1.5"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                    className="btn-tactile btn-primary text-xs px-3.5 py-1.5"
                   >
                     {submitting ? "Creating..." : "Create Dashboard"}
                   </button>
@@ -505,27 +462,27 @@ export default function DashboardsPage() {
 
         {/* Edit Dashboard Modal */}
         {editingDashboard && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
-                <h3 className="text-base font-bold text-gray-900">Edit Dashboard</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <div className="w-full max-w-md bento-card border-[hsl(var(--surface-border))] bg-[hsl(var(--surface))] p-6 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-[hsl(var(--surface-border))] pb-3 mb-4">
+                <h3 className="text-base font-extrabold text-[hsl(var(--foreground))]">Edit Dashboard</h3>
                 <button
                   onClick={() => setEditingDashboard(null)}
-                  className="text-gray-400 hover:text-gray-600 font-bold"
+                  className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] font-bold text-lg"
                 >
                   ✕
                 </button>
               </div>
 
               {modalError && (
-                <div className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+                <div className="mb-4 rounded-lg bg-red-500/10 p-3 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-500/30">
                   {modalError}
                 </div>
               )}
 
               <form onSubmit={handleUpdate} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block text-xs font-semibold text-[hsl(var(--foreground))] mb-1">
                     Dashboard Name *
                   </label>
                   <input
@@ -534,12 +491,12 @@ export default function DashboardsPage() {
                     maxLength={100}
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] px-3 py-2 text-xs text-[hsl(var(--foreground))] focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  <label className="block text-xs font-semibold text-[hsl(var(--foreground))] mb-1">
                     Description
                   </label>
                   <textarea
@@ -547,19 +504,19 @@ export default function DashboardsPage() {
                     maxLength={500}
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] px-3 py-2 text-xs text-[hsl(var(--foreground))] focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-[hsl(var(--foreground))] mb-1">
                       Status
                     </label>
                     <select
                       value={editStatus}
                       onChange={(e) => setEditStatus(e.target.value as DashboardStatus)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] px-3 py-2 text-xs text-[hsl(var(--foreground))] focus:border-indigo-500 focus:outline-none"
                     >
                       <option value="DRAFT">Draft</option>
                       <option value="PUBLISHED">Published</option>
@@ -568,13 +525,13 @@ export default function DashboardsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-semibold text-[hsl(var(--foreground))] mb-1">
                       Visibility
                     </label>
                     <select
                       value={editVisibility}
                       onChange={(e) => setEditVisibility(e.target.value as DashboardVisibility)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-lg border border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))] px-3 py-2 text-xs text-[hsl(var(--foreground))] focus:border-indigo-500 focus:outline-none"
                     >
                       <option value="ORGANIZATION">Organization</option>
                       <option value="PRIVATE">Private (Only Me)</option>
@@ -582,18 +539,18 @@ export default function DashboardsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                <div className="flex justify-end gap-2.5 pt-3 border-t border-[hsl(var(--surface-border))]">
                   <button
                     type="button"
                     onClick={() => setEditingDashboard(null)}
-                    className="rounded-lg border border-gray-300 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                    className="btn-tactile btn-secondary text-xs px-3.5 py-1.5"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={editSubmitting}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                    className="btn-tactile btn-primary text-xs px-3.5 py-1.5"
                   >
                     {editSubmitting ? "Saving..." : "Save Changes"}
                   </button>
@@ -605,21 +562,21 @@ export default function DashboardsPage() {
 
         {/* Delete Confirmation Modal */}
         {deleteConfirmOpen && dashboardToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-              <h3 className="text-base font-bold text-gray-900 mb-2">Delete Dashboard</h3>
-              <p className="text-xs text-gray-500 mb-4">
-                Are you sure you want to delete <span className="font-semibold text-gray-900">&ldquo;{dashboardToDelete.name}&rdquo;</span>? This action will permanently remove the dashboard and all its configured views.
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+            <div className="w-full max-w-sm bento-card border-[hsl(var(--surface-border))] bg-[hsl(var(--surface))] p-6 shadow-2xl">
+              <h3 className="text-base font-extrabold text-red-600 dark:text-red-400 mb-2">Delete Dashboard</h3>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mb-4 leading-relaxed">
+                Are you sure you want to delete <span className="font-semibold text-[hsl(var(--foreground))]">&ldquo;{dashboardToDelete.name}&rdquo;</span>? This action will permanently remove the dashboard and all its configured views.
               </p>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
                     setDeleteConfirmOpen(false);
                     setDashboardToDelete(null);
                   }}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                  className="btn-tactile btn-secondary text-xs px-3 py-1.5"
                 >
                   Cancel
                 </button>
@@ -627,7 +584,7 @@ export default function DashboardsPage() {
                   type="button"
                   disabled={deletingId !== null}
                   onClick={handleDelete}
-                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+                  className="btn-tactile text-xs px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white"
                 >
                   {deletingId ? "Deleting..." : "Delete Forever"}
                 </button>
@@ -635,7 +592,7 @@ export default function DashboardsPage() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
