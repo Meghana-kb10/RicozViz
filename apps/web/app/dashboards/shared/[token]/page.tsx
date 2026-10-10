@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
+import { BrandLogo } from "@/components/shell/BrandLogo";
 import {
   apiGetSharedDashboard,
   apiGetSharedChartData,
@@ -341,12 +342,7 @@ export default function SharedDashboardPage({
                   className="h-7 max-w-[100px] object-contain rounded"
                 />
               ) : (
-                <span
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-white font-bold text-xs shadow-xs"
-                  style={{ backgroundColor: dashboardBranding.brandColor || "#4f46e5" }}
-                >
-                  R
-                </span>
+                <BrandLogo size={28} />
               )}
               <span className="text-sm tracking-tight">
                 {dashboardBranding.title ? "RicozViz" : "RicozViz"}

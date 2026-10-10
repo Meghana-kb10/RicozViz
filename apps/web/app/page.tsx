@@ -24,6 +24,7 @@ import { IsometricPipeline } from "@/components/3d/IsometricPipeline";
 import { DataNetworkGraph } from "@/components/3d/DataNetworkGraph";
 import { BentoGrid, BentoCard } from "@/components/shell/BentoGrid";
 import { HaikeiBackground } from "@/components/shell/HaikeiBackground";
+import { BrandLogo } from "@/components/shell/BrandLogo";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & Governed Analytics",
@@ -45,9 +46,7 @@ export default function HomePage() {
           {/* Logo */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-sm shadow-sm shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-200">
-                R
-              </span>
+              <BrandLogo size={32} priority className="group-hover:scale-105" />
               <div className="flex flex-col leading-none">
                 <span className="text-base font-extrabold tracking-tight text-[hsl(var(--foreground))]">
                   Ricoz<span className="text-indigo-600 dark:text-indigo-400">Viz</span>
@@ -524,9 +523,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded bg-indigo-600 text-white font-bold text-xs">
-                R
-              </span>
+              <BrandLogo size={24} />
               <span className="text-sm font-bold text-[hsl(var(--foreground))]">RicozViz</span>
               <span className="text-[10px] font-mono text-[hsl(var(--muted-foreground))] ml-2">© 2026 Enterprise Intelligence OS</span>
             </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getApiBaseUrl } from "../../lib/api";
+import { BrandLogo } from "@/components/shell/BrandLogo";
 
 interface SystemStatus {
   apiStatus: "checking" | "online" | "offline";
@@ -49,9 +50,7 @@ export default function StatusPage() {
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col p-8">
       <header className="max-w-3xl mx-auto w-full mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-sm">
-            R
-          </div>
+          <BrandLogo size={32} />
           <span className="font-semibold text-lg">RicozViz System Status</span>
         </div>
         <Link

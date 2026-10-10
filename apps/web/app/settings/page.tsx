@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../contexts/auth-context";
+import { BrandLogo } from "@/components/shell/BrandLogo";
 
 export default function SettingsPage() {
   const { auth, isLoading, logout } = useAuth();
@@ -33,9 +34,7 @@ export default function SettingsPage() {
       <header className="border-b border-gray-200 bg-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/workspace" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 font-bold text-white text-sm">
-              R
-            </div>
+            <BrandLogo size={32} />
             <span className="font-semibold text-gray-900">RicozViz</span>
           </Link>
           <span className="text-gray-300">/</span>

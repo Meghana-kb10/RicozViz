@@ -23,6 +23,7 @@ import {
   getShadowStyle,
   getFontFamilyClass,
 } from "../../lib/theme-utils";
+import { BrandLogo } from "../shell/BrandLogo";
 
 export interface DashboardAppearanceModalProps {
   isOpen: boolean;
@@ -577,12 +578,7 @@ export function DashboardAppearanceModal({
                       className="h-6 w-auto object-contain rounded"
                     />
                   ) : (
-                    <div
-                      className="h-6 w-6 rounded flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{ backgroundColor: branding.brandColor || "#4f46e5" }}
-                    >
-                      R
-                    </div>
+                    <BrandLogo size={24} />
                   )}
                   <div>
                     <h4

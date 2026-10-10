@@ -23,6 +23,7 @@ import {
   Sparkles,
   Command,
 } from "lucide-react";
+import { BrandLogo } from "./BrandLogo";
 
 interface AppShellProps {
   children: ReactNode;
@@ -95,9 +96,7 @@ export function AppShell({
           {/* Left: Brand Identity & Mobile Collapse */}
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200">
-                R
-              </span>
+              <BrandLogo size={32} priority className="group-hover:scale-105" />
               <div className="flex flex-col leading-none">
                 <span className="text-sm font-bold tracking-tight text-[hsl(var(--foreground))]">
                   Ricoz<span className="text-indigo-600 dark:text-indigo-400">Viz</span>

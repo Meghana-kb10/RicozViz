@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../contexts/auth-context";
 import { useWorkspace } from "../../contexts/workspace-context";
+import { BrandLogo } from "@/components/shell/BrandLogo";
 import {
   apiListMetrics,
   apiCreateMetric,
@@ -218,9 +219,7 @@ export default function MetricsPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
             <Link href="/workspace" className="flex items-center gap-2 font-bold text-gray-900 text-lg hover:text-indigo-600 transition">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white font-extrabold text-sm shadow-xs">
-                R
-              </span>
+              <BrandLogo size={32} />
               <span>RicozViz</span>
             </Link>
             <span className="text-gray-300">/</span>

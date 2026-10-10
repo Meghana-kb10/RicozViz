@@ -4,6 +4,7 @@ import { useEffect, useState, use, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../contexts/auth-context";
+import { BrandLogo } from "@/components/shell/BrandLogo";
 import {
   apiGetDashboard,
   apiUpdateDashboard,
@@ -1348,9 +1349,7 @@ export default function DashboardDetailPage({
         <div className="mx-auto flex h-14 items-center justify-between px-3 sm:px-5 gap-2">
           <div className="flex items-center gap-2 min-w-0 shrink">
             <Link href="/" className="flex items-center gap-1.5 font-bold text-gray-900 shrink-0">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-sm">
-                R
-              </span>
+              <BrandLogo size={28} />
               <span className="text-sm tracking-tight hidden sm:inline">RicozViz</span>
             </Link>
 
