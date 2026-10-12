@@ -25,6 +25,7 @@ import { DataNetworkGraph } from "@/components/3d/DataNetworkGraph";
 import { BentoGrid, BentoCard } from "@/components/shell/BentoGrid";
 import { HaikeiBackground } from "@/components/shell/HaikeiBackground";
 import { BrandLogo } from "@/components/shell/BrandLogo";
+import { TechnicalFooter } from "@/components/shell/TechnicalFooter";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & Governed Analytics",
@@ -540,24 +541,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Enterprise Footer */}
-      <footer className="border-t border-white/[0.08] bg-[#06090E] py-12 text-xs text-slate-400">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <BrandLogo size={24} />
-              <span className="text-sm font-bold text-white">RicozViz</span>
-              <span className="text-[10px] font-mono text-slate-500 ml-2">© 2026 Enterprise Intelligence OS</span>
-            </div>
-            <div className="flex items-center gap-6 font-mono text-[11px]">
-              <Link href="/dashboards" className="hover:text-white transition">Dashboards</Link>
-              <Link href="/visualizations" className="hover:text-white transition">Visualizations</Link>
-              <Link href="/datasets" className="hover:text-white transition">Datasets</Link>
-              <Link href="/workspace" className="hover:text-white transition">Workspace</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Comprehensive Multi-Column Technical Footer */}
+      <TechnicalFooter />
     </div>
   );
 }
