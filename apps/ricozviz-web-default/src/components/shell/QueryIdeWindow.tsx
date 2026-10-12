@@ -199,6 +199,10 @@ interface QueryIdeWindowProps {
   onBenchmarkRun?: (metrics: BenchmarkMetrics) => void;
 }
 
+function formatCount(num: number): string {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
   const [activeTabId, setActiveTabId] = useState<string>("duckdb-sql");
   const [copied, setCopied] = useState<boolean>(false);
@@ -364,10 +368,11 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
           {/* Real-time Sub-15ms Latency Badge */}
           <div
             className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 font-bold"
-            title={`Real-time measured execution: ${executionTime}ms (Sub-15ms verified across ${rowCount.toLocaleString()} rows)`}
+            title={`Real-time measured execution: ${executionTime}ms (Sub-15ms verified across ${formatCount(rowCount)} rows)`}
+            suppressHydrationWarning
           >
             <Zap className="h-3 w-3 text-emerald-400" />
-            <span>{executionTime}ms</span>
+            <span suppressHydrationWarning>{executionTime}ms</span>
             <span className="text-[9px] font-normal text-emerald-400/80 hidden sm:inline">
               (&lt;15ms)
             </span>
@@ -458,7 +463,7 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
                 }`}
               >
                 <Activity className="h-2.5 w-2.5" />
-                <span>Telemetry ({rowCount.toLocaleString()} Rows)</span>
+                <span suppressHydrationWarning>Telemetry ({formatCount(rowCount)} Rows)</span>
               </button>
               <button
                 onClick={() => setActiveConsoleTab("security")}
@@ -478,12 +483,12 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
           {/* Right Status Badge */}
           <div className="flex items-center gap-2 text-[10px]">
             {isRunning ? (
-              <span className="flex items-center gap-1 text-amber-400 animate-pulse">
+              <span className="flex items-center gap-1 text-amber-400 animate-pulse" suppressHydrationWarning>
                 <RotateCcw className="h-2.5 w-2.5 animate-spin" />
-                <span>Scanning {rowCount.toLocaleString()} rows in-memory...</span>
+                <span>Scanning {formatCount(rowCount)} rows in-memory...</span>
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-emerald-400 font-mono">
+              <span className="flex items-center gap-1 text-emerald-400 font-mono" suppressHydrationWarning>
                 <CheckCircle2 className="h-2.5 w-2.5" />
                 <span>200 OK · {executionTime}ms execution (run #{runCount})</span>
               </span>
@@ -509,19 +514,19 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
                     <td className="py-1 text-[#D9A441]">2026-09</td>
                     <td className="py-1 text-[#4F9D8E] font-semibold">$1,428,950.00</td>
                     <td className="py-1">14,210</td>
-                    <td className="py-1 text-right text-emerald-400 font-semibold">{executionTime}ms</td>
+                    <td className="py-1 text-right text-emerald-400 font-semibold" suppressHydrationWarning>{executionTime}ms</td>
                   </tr>
                   <tr>
                     <td className="py-1 text-[#D9A441]">2026-08</td>
                     <td className="py-1 text-[#4F9D8E] font-semibold">$1,284,300.00</td>
                     <td className="py-1">12,850</td>
-                    <td className="py-1 text-right text-emerald-400 font-semibold">{(executionTime * 0.95).toFixed(2)}ms</td>
+                    <td className="py-1 text-right text-emerald-400 font-semibold" suppressHydrationWarning>{(executionTime * 0.95).toFixed(2)}ms</td>
                   </tr>
                   <tr>
                     <td className="py-1 text-[#D9A441]">2026-07</td>
                     <td className="py-1 text-[#4F9D8E] font-semibold">$1,192,400.00</td>
                     <td className="py-1">11,430</td>
-                    <td className="py-1 text-right text-emerald-400 font-semibold">{(executionTime * 1.03).toFixed(2)}ms</td>
+                    <td className="py-1 text-right text-emerald-400 font-semibold" suppressHydrationWarning>{(executionTime * 1.03).toFixed(2)}ms</td>
                   </tr>
                 </tbody>
               </table>
@@ -529,7 +534,7 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
               <div className="pt-2 border-t border-[#374151]/40 flex flex-wrap items-center justify-between text-[10px] text-[#9CA3AF]">
                 <span>
                   Showing 3 aggregated months across{" "}
-                  <strong className="text-[#E5E7EB]">{rowCount.toLocaleString()}</strong> rows
+                  <strong className="text-[#E5E7EB]" suppressHydrationWarning>{formatCount(rowCount)}</strong> rows
                 </span>
                 <span className="text-[#4F9D8E] font-semibold">
                   Zero-Copy Columnar Buffer · Arrow IPC
@@ -542,14 +547,14 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10.5px]">
               <div className="p-2 rounded bg-[#111827] border border-[#374151]">
                 <span className="text-[#9CA3AF] text-[9.5px] block">Throughput Rate</span>
-                <span className="text-emerald-400 font-bold text-xs mt-0.5 block">
-                  {throughputRps.toLocaleString()} rps
+                <span className="text-emerald-400 font-bold text-xs mt-0.5 block" suppressHydrationWarning>
+                  {formatCount(throughputRps)} rps
                 </span>
                 <span className="text-[9px] text-[#596775]">(&gt; 100k+ rps verified)</span>
               </div>
               <div className="p-2 rounded bg-[#111827] border border-[#374151]">
                 <span className="text-[#9CA3AF] text-[9.5px] block">P95 Execution</span>
-                <span className="text-emerald-400 font-bold text-xs mt-0.5 block">
+                <span className="text-emerald-400 font-bold text-xs mt-0.5 block" suppressHydrationWarning>
                   {executionTime}ms
                 </span>
                 <span className="text-[9px] text-emerald-400/80">Sub-15ms guaranteed</span>
@@ -601,8 +606,8 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
             <Zap className="h-3 w-3 text-amber-400" />
             <span>Throughput (1M Rows)</span>
           </span>
-          <p className="text-base sm:text-lg font-bold text-emerald-400 mt-0.5 font-mono">
-            {throughputRps.toLocaleString()} rps
+          <p className="text-base sm:text-lg font-bold text-emerald-400 mt-0.5 font-mono" suppressHydrationWarning>
+            {formatCount(throughputRps)} rps
           </p>
           <span className="text-[9.5px] text-[#9CA3AF]/80">
             &gt; 100k+ rps verified
@@ -614,7 +619,7 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
             <CheckCircle2 className="h-3 w-3 text-emerald-400" />
             <span>P95 Execution Latency</span>
           </span>
-          <p className="text-base sm:text-lg font-bold text-emerald-400 mt-0.5 font-mono">
+          <p className="text-base sm:text-lg font-bold text-emerald-400 mt-0.5 font-mono" suppressHydrationWarning>
             {executionTime}ms
           </p>
           <span className="text-[9.5px] text-emerald-400 font-semibold">
@@ -627,8 +632,8 @@ export function QueryIdeWindow({ onBenchmarkRun }: QueryIdeWindowProps = {}) {
             <Database className="h-3 w-3 text-[#4F9D8E]" />
             <span>Columnar Dataset Scale</span>
           </span>
-          <p className="text-base sm:text-lg font-bold text-[#E5E7EB] mt-0.5 font-mono">
-            {rowCount.toLocaleString()} Rows
+          <p className="text-base sm:text-lg font-bold text-[#E5E7EB] mt-0.5 font-mono" suppressHydrationWarning>
+            {formatCount(rowCount)} Rows
           </p>
           <span className="text-[9.5px] text-[#9CA3AF]/80">
             Zero-Copy Apache Arrow IPC
