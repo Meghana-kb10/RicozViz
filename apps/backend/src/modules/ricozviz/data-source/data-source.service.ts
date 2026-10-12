@@ -32,6 +32,7 @@ import { CsvConnector } from './connectors/csv.connector.js';
 import { XlsxConnector } from './connectors/xlsx.connector.js';
 import { JsonConnector } from './connectors/json.connector.js';
 import { RestApiConnector } from './connectors/rest-api.connector.js';
+import { WarehouseConnector } from './connectors/warehouse.connector.js';
 import {
   resolveTargetWorkspaceId,
   verifyResourceWorkspaceAccess,
@@ -117,7 +118,22 @@ export const createDataSourceSchema = z
     workspaceId: objectIdString('Invalid workspace ID').optional().nullable(),
     name: z.string().min(1, 'Name is required').max(100),
     description: z.string().max(500).optional(),
-    type: z.enum(['POSTGRESQL', 'MYSQL', 'SQLITE', 'CSV', 'CSV_UPLOAD', 'REST_API', 'XLSX', 'JSON']),
+    type: z.enum([
+      'POSTGRESQL',
+      'MYSQL',
+      'SQLITE',
+      'CSV',
+      'CSV_UPLOAD',
+      'REST_API',
+      'XLSX',
+      'JSON',
+      'SNOWFLAKE',
+      'CLICKHOUSE',
+      'BIGQUERY',
+      'DATABRICKS',
+      'REDSHIFT',
+      'S3_PARQUET'
+    ]),
     connection: z.record(z.unknown())
   })
   .superRefine((data, ctx) => {
@@ -182,7 +198,22 @@ export const updateDataSourceSchema = z.object({
 });
 
 export const testRawConnectionSchema = z.object({
-  type: z.enum(['POSTGRESQL', 'MYSQL', 'SQLITE', 'CSV', 'CSV_UPLOAD', 'REST_API', 'XLSX', 'JSON']),
+  type: z.enum([
+    'POSTGRESQL',
+    'MYSQL',
+    'SQLITE',
+    'CSV',
+    'CSV_UPLOAD',
+    'REST_API',
+    'XLSX',
+    'JSON',
+    'SNOWFLAKE',
+    'CLICKHOUSE',
+    'BIGQUERY',
+    'DATABRICKS',
+    'REDSHIFT',
+    'S3_PARQUET'
+  ]),
   connection: z.record(z.unknown())
 });
 
@@ -202,7 +233,13 @@ const connectors: Record<string, DataSourceConnector> = {
   CSV_UPLOAD: new CsvConnector(),
   XLSX: new XlsxConnector(),
   JSON: new JsonConnector(),
-  REST_API: new RestApiConnector()
+  REST_API: new RestApiConnector(),
+  SNOWFLAKE: new WarehouseConnector('SNOWFLAKE'),
+  CLICKHOUSE: new WarehouseConnector('CLICKHOUSE'),
+  BIGQUERY: new WarehouseConnector('BIGQUERY'),
+  DATABRICKS: new WarehouseConnector('DATABRICKS'),
+  REDSHIFT: new WarehouseConnector('REDSHIFT'),
+  S3_PARQUET: new WarehouseConnector('S3_PARQUET')
 };
 
 export function getConnector(type: string): DataSourceConnector | null {

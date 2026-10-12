@@ -22,6 +22,16 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import {
+  SnowflakeIcon,
+  ClickHouseIcon,
+  BigQueryIcon,
+  DatabricksIcon,
+  RedshiftIcon,
+  S3ParquetIcon,
+  PostgreSQLIcon,
+} from "../shell/ConnectorGridLogoCloud";
+
 interface PipelineStage {
   step: string;
   id: string;
@@ -49,42 +59,47 @@ const STAGES: PipelineStage[] = [
     step: "01",
     id: "sources",
     name: "Data Sources",
-    tagline: "Secure Ingestion & Pooling",
+    tagline: "Enterprise Ingestion & Warehouses",
     summary:
-      "Direct connection pools and continuous streaming pipelines with TLS 1.3 encryption, connection pooling, and automated credential rotation.",
+      "Direct pushdown execution and continuous streaming across enterprise warehouses (Snowflake, ClickHouse, BigQuery, Databricks, Redshift), object storage (S3 Parquet), and relational pools with TLS 1.3 encryption and automated credential rotation.",
     bulletPoints: [
-      "PostgreSQL SSL connection pool (max 25 pool units)",
-      "High-throughput CSV streaming parser",
-      "AES-256 credential encryption at rest",
+      "Enterprise Warehouses: Snowflake, ClickHouse, BigQuery, Databricks, Redshift",
+      "Object Storage: S3 Parquet columnar streams with zero-copy pushdown",
+      "Relational & Streaming: PostgreSQL, MySQL, DuckDB, Apache Kafka",
     ],
     icon: Database,
     codeSnippet: {
-      language: "SQL (Connection Config)",
-      filename: "connection_pool.sql",
-      code: `-- Establish TLS 1.3 encrypted connection pool
-CONNECT 'postgresql://analytics_ro@db.internal:5432/core_prod'
+      language: "SQL (Warehouse Pushdown Config)",
+      filename: "warehouse_connectors.sql",
+      code: `-- Establish TLS 1.3 encrypted warehouse & lakehouse connections
+CONNECT 'snowflake://prod_account.us-east-1.snowflakecomputing.com/analytics_wh'
 WITH (
-  ssl_mode = 'verify-full',
-  max_connections = 25,
-  connection_timeout = '3000ms',
-  idle_timeout = '10000ms',
-  credential_ref = 'vault://secret/prod/db_creds'
-);`,
+  driver = 'Snowpipe & Flight SQL',
+  pushdown_mode = 'vectorized',
+  tls_version = 'TLSv1.3',
+  credential_ref = 'vault://secret/prod/snowflake_key'
+);
+
+-- Federation with ClickHouse columnar cluster & S3 Parquet
+ATTACH 'clickhouse://ch-node.internal:9000/events' AS ch_events;
+ATTACH 's3://analytics-lake-prod/parquets/*.parquet' AS lake_parquet;`,
     },
     dataSample: {
       type: "json",
       jsonText: `{
-  "source_id": "src_pg_prod_01",
-  "driver": "postgresql",
-  "endpoint": "db.internal:5432",
-  "ssl_enabled": true,
+  "active_warehouses": [
+    { "type": "SNOWFLAKE", "status": "CONNECTED", "latency_ms": 2.1, "pushdown": "ENABLED" },
+    { "type": "CLICKHOUSE", "status": "CONNECTED", "latency_ms": 1.4, "mode": "COLUMNAR_TCP" },
+    { "type": "BIGQUERY", "status": "CONNECTED", "latency_ms": 3.2, "stream": "ARROW_STORAGE_API" },
+    { "type": "DATABRICKS", "status": "CONNECTED", "latency_ms": 2.8, "catalog": "UNITY_PROD" },
+    { "type": "S3_PARQUET", "status": "CONNECTED", "latency_ms": 1.9, "compression": "SNAPPY" },
+    { "type": "POSTGRESQL", "status": "CONNECTED", "latency_ms": 1.8, "pool_size": 25 }
+  ],
   "tls_version": "TLSv1.3",
-  "active_connections": 14,
-  "health_status": "OPTIMAL",
-  "latency_p50_ms": 1.8
+  "audit_governance": "ENFORCED"
 }`,
     },
-    previewBadge: "PostgreSQL · CSV · REST APIs",
+    previewBadge: "Snowflake · ClickHouse · BigQuery · S3 · PG",
   },
   {
     step: "02",
@@ -570,36 +585,76 @@ export function IsometricPipeline() {
               <div className="mt-5">
                 {/* 01. SOURCES VISUAL PREVIEW */}
                 {currentStage.id === "sources" && (
-                  <div className="space-y-3">
-                    <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20">
+                  <div className="space-y-2.5">
+                    {/* Primary Warehouse Card */}
+                    <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                          PostgreSQL 16 Connection Pool
+                          <SnowflakeIcon className="h-4 w-4" />
+                          <span>Snowflake Enterprise Virtual Warehouse</span>
                         </span>
-                        <span className="text-[10px] font-mono bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
-                          TLSv1.3 Active
+                        <span className="text-[10px] font-mono bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-semibold">
+                          Pushdown Active
                         </span>
                       </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-mono text-[#596775] dark:text-[#9CA3AF]">
-                        <div>Connections: 14 / 25 Active</div>
-                        <div>Latency: 1.8ms (p50)</div>
-                        <div>SSL Cipher: AES-256-GCM</div>
-                        <div>Status: Healthy</div>
+                      <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px] font-mono text-[#596775] dark:text-[#9CA3AF]">
+                        <div>Protocol: Flight SQL</div>
+                        <div>Latency: 2.1ms (p50)</div>
+                        <div>Encryption: TLS 1.3</div>
+                        <div>Status: Vectorized</div>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/60 dark:bg-[#111827]/60 flex items-center justify-between text-xs font-mono">
-                      <span className="text-[#172B3A] dark:text-[#E5E7EB]">CSV Stream Buffer</span>
-                      <span className="text-[#147D78] dark:text-[#4F9D8E] font-semibold">
-                        24.8 MB / Ready
+                    {/* Compact Connected Warehouses Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+                      <div className="p-2.5 rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/60 dark:bg-[#111827]/60 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-[#172B3A] dark:text-[#E5E7EB]">
+                          <ClickHouseIcon className="h-3.5 w-3.5" />
+                          <span>ClickHouse Columnar</span>
+                        </span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                          1.4ms · Ready
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/60 dark:bg-[#111827]/60 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-[#172B3A] dark:text-[#E5E7EB]">
+                          <BigQueryIcon className="h-3.5 w-3.5" />
+                          <span>Google BigQuery</span>
+                        </span>
+                        <span className="text-[#147D78] dark:text-[#4F9D8E] font-semibold text-[11px]">
+                          Arrow Stream
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/60 dark:bg-[#111827]/60 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-[#172B3A] dark:text-[#E5E7EB]">
+                          <DatabricksIcon className="h-3.5 w-3.5" />
+                          <span>Databricks Delta</span>
+                        </span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                          Unity Catalog
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/60 dark:bg-[#111827]/60 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-[#172B3A] dark:text-[#E5E7EB]">
+                          <S3ParquetIcon className="h-3.5 w-3.5" />
+                          <span>S3 Parquet Lake</span>
+                        </span>
+                        <span className="text-[#147D78] dark:text-[#4F9D8E] font-semibold text-[11px]">
+                          Zero-Copy IPC
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/60 dark:bg-[#111827]/60 flex items-center justify-between text-xs font-mono">
+                      <span className="flex items-center gap-1.5 text-[#172B3A] dark:text-[#E5E7EB]">
+                        <PostgreSQLIcon className="h-3.5 w-3.5" />
+                        <span>PostgreSQL Pool</span>
                       </span>
-                    </div>
-
-                    <div className="p-3 rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/60 dark:bg-[#111827]/60 flex items-center justify-between text-xs font-mono">
-                      <span className="text-[#172B3A] dark:text-[#E5E7EB]">REST Ingestion Webhook</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                        Listening (Port 4000)
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                        14 / 25 Conns · 1.8ms
                       </span>
                     </div>
                   </div>

@@ -18,6 +18,7 @@ import { TechnicalFooter } from "@/components/shell/TechnicalFooter";
 import { HeroDashboardPreview } from "@/components/dashboard/HeroDashboardPreview";
 import { QueryIdeWindow } from "@/components/shell/QueryIdeWindow";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
+import { ConnectorGridLogoCloud } from "@/components/shell/ConnectorGridLogoCloud";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
@@ -51,6 +52,9 @@ export default function HomePage() {
             <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-[#596775] dark:text-[#9CA3AF]">
               <a href="#capabilities" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Platform
+              </a>
+              <a href="#connectors" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
+                Connectors
               </a>
               <a href="#workflow" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Pipeline
@@ -271,7 +275,31 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* 4. DATA WORKFLOW PIPELINE                                   */}
+      {/* 4. ENTERPRISE DATA CONNECTOR GRID & LOGO CLOUD               */}
+      {/* ============================================================ */}
+      <section
+        id="connectors"
+        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
+              Enterprise Integrations
+            </span>
+            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
+              Native connectors for modern data warehouses & lakehouses
+            </h2>
+            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
+              Direct pushdown execution and zero-copy streaming across Snowflake, ClickHouse, BigQuery, Databricks, Redshift, and S3 Parquet with cryptographic access tokens.
+            </p>
+          </div>
+
+          <ConnectorGridLogoCloud />
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 5. DATA WORKFLOW PIPELINE                                   */}
       {/* ============================================================ */}
       <section
         id="workflow"

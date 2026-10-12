@@ -51,6 +51,9 @@ export const DATA_SOURCE_TYPE = {
   BIGQUERY: 'BIGQUERY',
   SNOWFLAKE: 'SNOWFLAKE',
   REDSHIFT: 'REDSHIFT',
+  CLICKHOUSE: 'CLICKHOUSE',
+  DATABRICKS: 'DATABRICKS',
+  S3_PARQUET: 'S3_PARQUET',
   OTHER: 'OTHER'
 } as const;
 export type DataSourceType = (typeof DATA_SOURCE_TYPE)[keyof typeof DATA_SOURCE_TYPE];
@@ -67,9 +70,8 @@ export type DataSourceStatus = (typeof DATA_SOURCE_STATUS)[keyof typeof DATA_SOU
  * Connectors the web UI can actually configure.
  *
  * Distinct from the persisted `DataSourceType` enum: the database also records
- * warehouse types (BIGQUERY, SNOWFLAKE, REDSHIFT, GOOGLE_SHEETS) and the
- * `CSV_UPLOAD` marker, none of which the connector form offers. The API accepts
- * both; the UI offers these.
+ * warehouse types (BIGQUERY, SNOWFLAKE, REDSHIFT, CLICKHOUSE, DATABRICKS, S3_PARQUET)
+ * and the `CSV_UPLOAD` marker.
  */
 export const DATA_SOURCE_CONNECTOR_TYPE = {
   POSTGRESQL: 'POSTGRESQL',
@@ -78,7 +80,13 @@ export const DATA_SOURCE_CONNECTOR_TYPE = {
   CSV: 'CSV',
   REST_API: 'REST_API',
   XLSX: 'XLSX',
-  JSON: 'JSON'
+  JSON: 'JSON',
+  SNOWFLAKE: 'SNOWFLAKE',
+  CLICKHOUSE: 'CLICKHOUSE',
+  BIGQUERY: 'BIGQUERY',
+  DATABRICKS: 'DATABRICKS',
+  REDSHIFT: 'REDSHIFT',
+  S3_PARQUET: 'S3_PARQUET'
 } as const;
 export type DataSourceConnectorType =
   (typeof DATA_SOURCE_CONNECTOR_TYPE)[keyof typeof DATA_SOURCE_CONNECTOR_TYPE];
