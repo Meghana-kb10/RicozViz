@@ -108,7 +108,7 @@ export default function HomePage() {
       {/* 2. HERO SECTION WITH 3D CANVAS & EDITORIAL HEADLINE         */}
       {/* ============================================================ */}
       <section className="relative overflow-hidden pt-16 pb-20 lg:pt-24 lg:pb-32">
-        <HaikeiBackground variant="waves" className="top-0 opacity-15" />
+        <HaikeiBackground variant="tech-grid" className="top-0 opacity-20" />
         <Hero3DCanvas />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
