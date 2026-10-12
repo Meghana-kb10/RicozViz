@@ -1,1 +1,0 @@
-export { LogoIcon, UserIcon, ShieldIcon, LogOutIcon, ArrowRightIcon, CheckCircleIcon } from './icons';
