@@ -17,6 +17,7 @@ import { BrandLogo } from "@/components/shell/BrandLogo";
 import { TechnicalFooter } from "@/components/shell/TechnicalFooter";
 import { HeroDashboardPreview } from "@/components/dashboard/HeroDashboardPreview";
 import { QueryIdeWindow } from "@/components/shell/QueryIdeWindow";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
@@ -26,63 +27,61 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col bg-[#090D16] text-slate-100 selection:bg-indigo-600 selection:text-white antialiased relative overflow-x-hidden">
-      {/* Precision Dark Technical Grid Texture */}
-      <HaikeiBackground variant="tech-grid" className="opacity-80" />
-
+    <div className="flex min-h-screen flex-col bg-[#F4F1EA] dark:bg-[#111827] text-[#172B3A] dark:text-[#E5E7EB] selection:bg-[#147D78] selection:text-white antialiased relative overflow-x-hidden font-sans transition-colors duration-200">
       {/* ============================================================ */}
       {/* 1. TOPBAR: Precision Navigation & Actions                    */}
       {/* ============================================================ */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-[#090D16]/90 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/90 dark:bg-[#111827]/90 backdrop-blur-md transition-colors duration-200">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo & Navigation */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 group">
               <BrandLogo size={30} priority />
               <div className="flex flex-col leading-none">
-                <span className="text-base font-bold tracking-tight text-white">
-                  Ricoz<span className="text-indigo-400">Viz</span>
+                <span className="text-base font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
+                  Ricoz<span className="text-[#147D78] dark:text-[#4F9D8E]">Viz</span>
                 </span>
-                <span className="text-[9px] uppercase tracking-wider font-mono text-slate-400">
+                <span className="text-[9px] uppercase tracking-wider font-mono text-[#596775] dark:text-[#9CA3AF]">
                   Intelligence OS
                 </span>
               </div>
             </Link>
 
             {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-400">
-              <a href="#capabilities" className="hover:text-white transition">
+            <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-[#596775] dark:text-[#9CA3AF]">
+              <a href="#capabilities" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Platform
               </a>
-              <a href="#workflow" className="hover:text-white transition">
+              <a href="#workflow" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Pipeline
               </a>
-              <a href="#topology" className="hover:text-white transition">
+              <a href="#topology" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Topology
               </a>
-              <Link href="/docs" className="hover:text-white transition">
+              <Link href="/docs" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Docs
               </Link>
-              <Link href="/benchmarks" className="hover:text-white transition">
+              <Link href="/benchmarks" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Benchmarks
               </Link>
-              <Link href="/status" className="hover:text-white transition">
+              <Link href="/status" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Status
               </Link>
             </nav>
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-3">
+          {/* Right Actions with Theme Toggle */}
+          <div className="flex items-center gap-2.5">
+            <ThemeToggle />
             <Link
               href="/login"
-              className="px-3.5 py-1.5 text-xs rounded-lg border border-white/10 bg-slate-900/80 hover:bg-slate-800 text-slate-200 transition font-medium"
+              className="px-3.5 py-1.5 text-xs rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#1F2937] hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] transition font-medium shadow-xs"
             >
               Sign In
             </Link>
             <Link
               href="/register"
-              className="px-4 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition flex items-center gap-1.5 shadow-xs"
+              className="px-4 py-1.5 text-xs rounded-lg bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] text-white font-medium transition flex items-center gap-1.5 shadow-xs"
             >
               <span>Launch Workspace</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -94,19 +93,19 @@ export default function HomePage() {
       {/* ============================================================ */}
       {/* 2. HERO SECTION: Editorial Hierarchy & Dashboard Focus      */}
       {/* ============================================================ */}
-      <section className="relative overflow-hidden pt-14 pb-20 lg:pt-20 lg:pb-28">
+      <section className="relative overflow-hidden pt-12 pb-16 lg:pt-16 lg:pb-24">
         <Hero3DCanvas />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
           <div className="text-center max-w-3xl mx-auto">
             {/* Confident, High-Contrast Typography */}
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.12]">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB] leading-[1.16]">
               Turn enterprise data into{" "}
-              <span className="text-indigo-400">decisions</span>.
+              <span className="text-[#147D78] dark:text-[#4F9D8E]">decisions</span>.
             </h1>
 
             {/* Clear, Professional Subtext */}
-            <p className="mt-5 text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-4 text-base sm:text-lg text-[#596775] dark:text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed">
               Connect relational databases, stream in-memory columnar datasets,
               and explore sub-12ms analytics with cryptographic row-level
               security.
@@ -116,22 +115,22 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/register"
-                className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 text-xs rounded-lg font-semibold flex items-center gap-2 shadow-xs transition"
+                className="bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] text-white px-5 py-2.5 text-xs rounded-lg font-medium flex items-center gap-2 shadow-xs transition"
               >
                 <span>Launch Workspace</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
                 href="/benchmarks"
-                className="bg-slate-900/90 border border-white/10 hover:border-white/20 text-slate-200 px-5 py-2.5 text-xs rounded-lg flex items-center gap-2 transition"
+                className="bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/40 hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] px-5 py-2.5 text-xs rounded-lg flex items-center gap-2 transition shadow-xs"
               >
-                <Database className="h-3.5 w-3.5 text-indigo-400" />
+                <Database className="h-3.5 w-3.5 text-[#147D78] dark:text-[#4F9D8E]" />
                 <span>View DuckDB Benchmarks</span>
               </Link>
             </div>
 
             {/* Technical Sub-Caption */}
-            <p className="mt-4 text-[11px] font-mono text-slate-500">
+            <p className="mt-4 text-[11px] font-mono text-[#596775] dark:text-[#9CA3AF]">
               In-Memory DuckDB OLAP · Zero-Copy Arrow Buffers · Cryptographic RLS
             </p>
           </div>
@@ -150,18 +149,17 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         id="capabilities"
-        className="py-20 bg-[#0B1120] border-t border-white/[0.08] relative"
+        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
       >
-        <HaikeiBackground variant="emerald-grid" className="opacity-25" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-indigo-400">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
               Architectural Capabilities
             </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
               Engineered for speed, isolation, and craft.
             </h2>
-            <p className="mt-3 text-sm text-slate-400 leading-relaxed">
+            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] leading-relaxed">
               Built with dedicated in-memory OLAP acceleration, cryptographic
               row-level security, and real-time multiplayer state synchronization.
             </p>
@@ -181,27 +179,27 @@ export default function HomePage() {
                 <QueryIdeWindow />
 
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="p-3 rounded-lg bg-[#131B2E] border border-white/[0.06]">
-                    <span className="text-[10px] font-mono text-slate-400">
+                  <div className="p-3 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151]">
+                    <span className="text-[10px] font-mono text-[#596775] dark:text-[#9CA3AF]">
                       Throughput
                     </span>
-                    <p className="text-base sm:text-lg font-bold font-mono text-white mt-0.5">
+                    <p className="text-base sm:text-lg font-bold font-mono text-[#172B3A] dark:text-[#E5E7EB] mt-0.5">
                       100k+ rps
                     </p>
                   </div>
-                  <div className="p-3 rounded-lg bg-[#131B2E] border border-white/[0.06]">
-                    <span className="text-[10px] font-mono text-slate-400">
+                  <div className="p-3 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151]">
+                    <span className="text-[10px] font-mono text-[#596775] dark:text-[#9CA3AF]">
                       Memory Footprint
                     </span>
-                    <p className="text-base sm:text-lg font-bold font-mono text-white mt-0.5">
+                    <p className="text-base sm:text-lg font-bold font-mono text-[#172B3A] dark:text-[#E5E7EB] mt-0.5">
                       Zero-Copy
                     </p>
                   </div>
-                  <div className="p-3 rounded-lg bg-[#131B2E] border border-white/[0.06]">
-                    <span className="text-[10px] font-mono text-slate-400">
+                  <div className="p-3 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151]">
+                    <span className="text-[10px] font-mono text-[#596775] dark:text-[#9CA3AF]">
                       Chart Types
                     </span>
-                    <p className="text-base sm:text-lg font-bold font-mono text-white mt-0.5">
+                    <p className="text-base sm:text-lg font-bold font-mono text-[#172B3A] dark:text-[#E5E7EB] mt-0.5">
                       8 Native
                     </p>
                   </div>
@@ -218,15 +216,15 @@ export default function HomePage() {
               subtitle="Granular row filters and cryptographic token policies enforce tenant boundaries without query bypass."
             >
               <div className="mt-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#090D16] border border-white/[0.06] text-[11px] font-mono">
-                  <span className="text-slate-300">tenant_id = auth.org</span>
-                  <span className="text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px]">
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151] text-[11px] font-mono">
+                  <span className="text-[#172B3A] dark:text-[#E5E7EB]">tenant_id = auth.org</span>
+                  <span className="text-[#147D78] dark:text-[#4F9D8E] font-semibold bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 rounded text-[10px]">
                     ENFORCED
                   </span>
                 </div>
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#090D16] border border-white/[0.06] text-[11px] font-mono">
-                  <span className="text-slate-300">region = user.region</span>
-                  <span className="text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px]">
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151] text-[11px] font-mono">
+                  <span className="text-[#172B3A] dark:text-[#E5E7EB]">region = user.region</span>
+                  <span className="text-[#147D78] dark:text-[#4F9D8E] font-semibold bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 rounded text-[10px]">
                     ISOLATED
                   </span>
                 </div>
@@ -241,19 +239,19 @@ export default function HomePage() {
               title="Live Multiplayer Analytics"
               subtitle="Multi-user live presence, cursor and widget focus locks, and conflict-safe optimistic concurrency control."
             >
-              <div className="mt-4 flex items-center justify-between pt-2 border-t border-white/[0.08]">
+              <div className="mt-4 flex items-center justify-between pt-2 border-t border-[#DADFD9] dark:border-[#374151]">
                 <div className="flex -space-x-1.5 overflow-hidden">
-                  <span className="h-6 w-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold border border-[#0F172A]">
+                  <span className="h-6 w-6 rounded-full bg-[#147D78] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-[#1F2937]">
                     AL
                   </span>
-                  <span className="h-6 w-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-bold border border-[#0F172A]">
+                  <span className="h-6 w-6 rounded-full bg-[#2E5B70] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-[#1F2937]">
                     BO
                   </span>
-                  <span className="h-6 w-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold border border-[#0F172A]">
+                  <span className="h-6 w-6 rounded-full bg-[#106963] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-[#1F2937]">
                     CH
                   </span>
                 </div>
-                <span className="text-[11px] font-mono text-indigo-400 font-medium bg-indigo-950/60 border border-indigo-500/30 px-2 py-0.5 rounded">
+                <span className="text-[11px] font-mono text-[#147D78] dark:text-[#4F9D8E] font-medium bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 rounded">
                   SSE Multiplexed
                 </span>
               </div>
@@ -268,12 +266,12 @@ export default function HomePage() {
               subtitle="Secure iframe embedding with origin policy restrictions, auto-expiring cryptographic tokens, and zero credential leakage."
             >
               <div className="mt-3 flex items-center gap-3">
-                <code className="text-xs font-mono bg-[#090D16] px-3 py-2 rounded-lg border border-white/[0.06] text-indigo-300 flex-1 truncate">
+                <code className="text-xs font-mono bg-[#F4F1EA] dark:bg-[#111827] px-3 py-2 rounded-lg border border-[#DADFD9] dark:border-[#374151] text-[#172B3A] dark:text-[#E5E7EB] flex-1 truncate">
                   &lt;iframe src=&quot;https://ricozviz.app/embed/tok_48char&quot; ... /&gt;
                 </code>
                 <Link
                   href="/docs"
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 text-xs rounded-lg font-semibold whitespace-nowrap transition"
+                  className="bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] text-white px-3.5 py-1.5 text-xs rounded-lg font-medium whitespace-nowrap transition"
                 >
                   View Embed Specs
                 </Link>
@@ -288,9 +286,9 @@ export default function HomePage() {
               title="Alerts & Scheduled Reports"
               subtitle="Metric anomaly detection and cron-driven delivery across email, webhooks, and workspace notifications."
             >
-              <div className="mt-3 flex items-center justify-between text-xs font-mono text-slate-400">
+              <div className="mt-3 flex items-center justify-between text-xs font-mono text-[#596775] dark:text-[#9CA3AF]">
                 <span>Anomaly Threshold: &gt; 95%</span>
-                <span className="text-amber-400 font-semibold bg-amber-950/60 border border-amber-500/30 px-2 py-0.5 rounded text-[10px]">
+                <span className="text-[#D9A441] font-semibold bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 rounded text-[10px]">
                   CRON ACTIVE
                 </span>
               </div>
@@ -304,18 +302,17 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         id="workflow"
-        className="py-20 bg-[#090D16] border-t border-white/[0.08] relative"
+        className="py-20 bg-[#F4F1EA] dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
       >
-        <HaikeiBackground variant="tech-grid" className="opacity-40" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-indigo-400">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
               End-to-End Pipeline
             </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
               From raw data to actionable insight
             </h2>
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF]">
               An architectural pipeline transforming raw tabular data into
               governed decision assets.
             </p>
@@ -330,17 +327,17 @@ export default function HomePage() {
       {/* ============================================================ */}
       <section
         id="topology"
-        className="py-20 bg-[#0B1120] border-t border-white/[0.08] text-white relative overflow-hidden"
+        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] text-[#172B3A] dark:text-[#E5E7EB] relative overflow-hidden transition-colors duration-200"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-indigo-400">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
               Connected Infrastructure
             </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold text-[#172B3A] dark:text-[#E5E7EB] tracking-tight">
               Trace every metric to its source.
             </h2>
-            <p className="mt-3 text-sm text-slate-400 max-w-xl mx-auto leading-relaxed">
+            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
               From relational connection pools and CSV streams through schema
               discovery and parameterized query execution into live executive canvases.
             </p>
@@ -353,12 +350,12 @@ export default function HomePage() {
       {/* ============================================================ */}
       {/* 6. CALL TO ACTION                                           */}
       {/* ============================================================ */}
-      <section className="py-20 bg-[#0A0F1D] border-t border-white/[0.08] text-white relative">
+      <section className="py-20 bg-[#F4F1EA] dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] text-[#172B3A] dark:text-[#E5E7EB] relative transition-colors duration-200">
         <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center z-10">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+          <h2 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
             Bring your enterprise data into focus.
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-slate-400 max-w-xl mx-auto leading-relaxed">
+          <p className="mt-3 text-sm sm:text-base text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
             Connect data sources, build responsive charts, collaborate in real
             time, and share governed analytics with confidence.
           </p>
@@ -366,13 +363,13 @@ export default function HomePage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/register"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 text-xs rounded-lg shadow-xs transition"
+              className="bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] text-white font-medium px-5 py-2.5 text-xs rounded-lg shadow-xs transition"
             >
               Get Started Free
             </Link>
             <Link
               href="/login"
-              className="border border-white/10 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-semibold px-5 py-2.5 text-xs rounded-lg transition"
+              className="border border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#1F2937] hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] font-medium px-5 py-2.5 text-xs rounded-lg transition shadow-xs"
             >
               Sign In to Workspace
             </Link>

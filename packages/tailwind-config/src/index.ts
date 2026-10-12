@@ -19,7 +19,7 @@ export const commonClasses = {
 
   // Form controls
   label: 'block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5',
-  input: 'w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 hover:border-slate-400',
+  input: 'w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 bg-white transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#147D78]/20 focus:border-[#147D78] hover:border-slate-400',
   inputError: 'border-red-300 focus:ring-red-500 focus:border-red-500',
   errorAlert: 'p-3 rounded-lg bg-red-50 text-red-700 text-xs border border-red-200',
   successAlert: 'p-3 rounded-lg bg-emerald-50 text-emerald-800 text-xs border border-emerald-200',
@@ -28,10 +28,10 @@ export const commonClasses = {
   button: {
     base: 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
     variants: {
-      primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm focus-visible:ring-indigo-500',
-      secondary: 'bg-slate-900 hover:bg-slate-800 text-slate-50 shadow-sm focus-visible:ring-slate-500',
-      outline: 'border border-slate-300 bg-transparent hover:bg-slate-100 text-slate-700 focus-visible:ring-slate-400',
-      danger: 'bg-red-600 hover:bg-red-700 text-white shadow-sm focus-visible:ring-red-500',
+      primary: 'bg-[#147D78] hover:bg-[#106963] text-white shadow-xs focus-visible:ring-[#147D78]',
+      secondary: 'bg-slate-900 hover:bg-slate-800 text-slate-50 shadow-xs focus-visible:ring-slate-500',
+      outline: 'border border-[#DADFD9] bg-transparent hover:bg-[#F4F1EA] text-[#172B3A] focus-visible:ring-[#147D78]',
+      danger: 'bg-red-600 hover:bg-red-700 text-white shadow-xs focus-visible:ring-red-500',
       ghost: 'bg-transparent hover:bg-slate-100 text-slate-700'
     },
     sizes: {
@@ -48,22 +48,22 @@ export const commonClasses = {
       neutral: 'bg-slate-100 text-slate-700 border-slate-200',
       success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
       warning: 'bg-amber-50 text-amber-700 border-amber-200',
-      info: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      info: 'bg-[#147D78]/10 text-[#147D78] border-[#147D78]/20',
       danger: 'bg-red-50 text-red-700 border-red-200'
     }
   }
 } as const;
 
 export const brandColors = {
-  50: '#eef2ff',
-  100: '#e0e7ff',
-  200: '#c7d2fe',
-  300: '#a5b4fc',
-  400: '#818cf8',
-  500: '#6366f1',
-  600: '#4f46e5',
-  700: '#4338ca',
-  800: '#3730a3',
-  900: '#312e81',
-  950: '#1e1b4b'
+  50: '#f0fdf9',
+  100: '#ccfbef',
+  200: '#99f6e0',
+  300: '#5eead4',
+  400: '#2dd4bf',
+  500: '#147D78',
+  600: '#106963',
+  700: '#0d544f',
+  800: '#0b423e',
+  900: '#0a3734',
+  950: '#041f1d'
 } as const;

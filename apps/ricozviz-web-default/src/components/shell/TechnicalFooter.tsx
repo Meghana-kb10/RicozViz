@@ -19,7 +19,7 @@ import { BrandLogo } from "@/components/shell/BrandLogo";
  */
 export function TechnicalFooter() {
   return (
-    <footer className="relative bg-[#421d24] text-white overflow-hidden selection:bg-[#714cb6] selection:text-white">
+    <footer className="relative bg-[#172B3A] dark:bg-[#0B0F19] text-white overflow-hidden selection:bg-[#147D78] selection:text-white border-t border-[#DADFD9]/20 dark:border-[#374151] font-sans transition-colors duration-200">
       <div className="mx-auto max-w-[1200px] px-6 sm:px-8 lg:px-12 py-16">
         {/* Main Editorial Layout: Brand Left + 4 Columns Right */}
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-12 lg:gap-16">

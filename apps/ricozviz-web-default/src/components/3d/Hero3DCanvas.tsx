@@ -10,21 +10,14 @@ interface Dot {
   vx: number;
   vy: number;
   radius: number;
-  colorType: "indigo" | "emerald" | "cyan" | "slate";
+  colorType: "teal" | "gold" | "slate" | "stone";
 }
 
 /**
  * HeroBackgroundCanvas
  *
- * Replaces heavy distorted 3D geometric wireframes clipping behind the hero dashboard
- * with an ambient radial gradient mesh and a high-performance interactive dot-matrix grid.
- *
- * Features:
- * - Fluid interactive dot-matrix with mouse proximity illumination and soft spring physics.
- * - Ambient harmonic wave pulsation even when idle.
- * - Layered ambient radial gradient flares (neon-indigo, cyan, emerald) providing rich depth.
- * - 0% CPU/GPU overhead when scrolled out of view (via IntersectionObserver).
- * - Full respect for prefers-reduced-motion and high-DPI (Retina) screens.
+ * Restrained, high-performance dot-matrix grid with subtle mouse interaction
+ * aligned with the Editorial Enterprise aesthetic.
  */
 export function Hero3DCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,8 +40,8 @@ export function Hero3DCanvas() {
     let dpr = 1;
     let dots: Dot[] = [];
     const DOT_SPACING = 30;
-    const BASE_RADIUS = 1.25;
-    const HOVER_RADIUS = 150;
+    const BASE_RADIUS = 1.1;
+    const HOVER_RADIUS = 140;
 
     let mouseX = -9999;
     let mouseY = -9999;
@@ -77,11 +70,11 @@ export function Hero3DCanvas() {
           const bx = c * DOT_SPACING;
           const by = r * DOT_SPACING;
 
-          let colorType: Dot["colorType"] = "slate";
+          let colorType: Dot["colorType"] = "stone";
           const seed = (c * 17 + r * 23) % 100;
-          if (seed < 14) colorType = "indigo";
-          else if (seed < 20) colorType = "emerald";
-          else if (seed < 25) colorType = "cyan";
+          if (seed < 12) colorType = "teal";
+          else if (seed < 16) colorType = "gold";
+          else if (seed < 30) colorType = "slate";
 
           dots.push({
             baseX: bx,
@@ -144,8 +137,8 @@ export function Hero3DCanvas() {
         let ambientPulse = 0;
         if (!prefersReducedMotion) {
           waveOffset =
-            Math.sin(elapsed * 1.4 + (dot.baseX + dot.baseY) * 0.006) * 1.5;
-          ambientPulse = Math.cos(elapsed * 1.8 + dot.baseX * 0.008) * 0.08;
+            Math.sin(elapsed * 1.2 + (dot.baseX + dot.baseY) * 0.005) * 1.2;
+          ambientPulse = Math.cos(elapsed * 1.5 + dot.baseX * 0.007) * 0.06;
         }
 
         const targetY = dot.baseY + waveOffset;
@@ -164,8 +157,8 @@ export function Hero3DCanvas() {
           hoverFactor = hoverFactor * hoverFactor; // smooth ease
 
           if (!prefersReducedMotion && dist > 1) {
-            const pushX = (dx / dist) * hoverFactor * -14;
-            const pushY = (dy / dist) * hoverFactor * -14;
+            const pushX = (dx / dist) * hoverFactor * -10;
+            const pushY = (dy / dist) * hoverFactor * -10;
             dot.vx += (targetX + pushX - dot.x) * 0.15;
             dot.vy += (targetY + pushY - dot.y) * 0.15;
           }
@@ -185,28 +178,33 @@ export function Hero3DCanvas() {
         }
 
         // Draw dot
-        const currentRadius = BASE_RADIUS + hoverFactor * 2.2;
-        let fillStyle = "rgba(148, 163, 184, 0.14)";
+        const currentRadius = BASE_RADIUS + hoverFactor * 1.8;
+        const isDark = document.documentElement.classList.contains("dark");
+        let fillStyle = isDark ? "rgba(156, 163, 175, 0.12)" : "rgba(89, 103, 117, 0.15)";
+
+        const tealRgb = isDark ? "79, 157, 142" : "20, 125, 120";
 
         if (hoverFactor > 0.05) {
-          const alpha = Math.min(1, 0.35 + hoverFactor * 0.65);
-          if (dot.colorType === "emerald") {
-            fillStyle = `rgba(52, 211, 153, ${alpha})`;
-          } else if (dot.colorType === "cyan") {
-            fillStyle = `rgba(6, 182, 212, ${alpha})`;
+          const alpha = Math.min(0.9, 0.3 + hoverFactor * 0.6);
+          if (dot.colorType === "gold") {
+            fillStyle = `rgba(217, 164, 65, ${alpha})`;
           } else {
-            fillStyle = `rgba(129, 140, 248, ${alpha})`;
+            fillStyle = `rgba(${tealRgb}, ${alpha})`;
           }
         } else {
-          const baseAlpha = Math.max(0.08, 0.15 + ambientPulse);
-          if (dot.colorType === "indigo") {
-            fillStyle = `rgba(99, 102, 241, ${baseAlpha * 1.6})`;
-          } else if (dot.colorType === "emerald") {
-            fillStyle = `rgba(16, 185, 129, ${baseAlpha * 1.4})`;
-          } else if (dot.colorType === "cyan") {
-            fillStyle = `rgba(6, 182, 212, ${baseAlpha * 1.4})`;
+          const baseAlpha = Math.max(0.06, 0.12 + ambientPulse);
+          if (dot.colorType === "teal") {
+            fillStyle = `rgba(${tealRgb}, ${baseAlpha * 1.5})`;
+          } else if (dot.colorType === "gold") {
+            fillStyle = `rgba(217, 164, 65, ${baseAlpha * 1.4})`;
+          } else if (dot.colorType === "slate") {
+            fillStyle = isDark
+              ? `rgba(156, 163, 175, ${baseAlpha * 1.2})`
+              : `rgba(89, 103, 117, ${baseAlpha * 1.2})`;
           } else {
-            fillStyle = `rgba(148, 163, 184, ${baseAlpha})`;
+            fillStyle = isDark
+              ? `rgba(55, 65, 81, ${baseAlpha * 1.8})`
+              : `rgba(218, 223, 217, ${baseAlpha * 1.8})`;
           }
         }
 
@@ -215,11 +213,11 @@ export function Hero3DCanvas() {
         ctx.fillStyle = fillStyle;
         ctx.fill();
 
-        // Extra glow halo around strongly hovered dots
-        if (hoverFactor > 0.45) {
+        // Subtle highlight ring on strongly hovered dots
+        if (hoverFactor > 0.5) {
           ctx.beginPath();
-          ctx.arc(dot.x, dot.y, currentRadius * 2.4, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(99, 102, 241, ${hoverFactor * 0.22})`;
+          ctx.arc(dot.x, dot.y, currentRadius * 2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${tealRgb}, ${hoverFactor * 0.12})`;
           ctx.fill();
         }
       }
@@ -253,18 +251,6 @@ export function Hero3DCanvas() {
       className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden"
       aria-hidden="true"
     >
-      {/* Ambient Radial Gradient Mesh Backlight */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-        {/* Top-center indigo-violet ambient flare */}
-        <div className="absolute top-[6%] left-1/2 -translate-x-1/2 w-[760px] h-[500px] rounded-full bg-gradient-to-b from-indigo-500/22 via-purple-600/12 to-transparent blur-[110px] opacity-85" />
-
-        {/* Left emerald accent flare */}
-        <div className="absolute top-[26%] left-[8%] w-[440px] h-[400px] rounded-full bg-gradient-to-tr from-emerald-500/16 via-teal-500/10 to-transparent blur-[95px] opacity-75" />
-
-        {/* Right cyan-indigo accent flare */}
-        <div className="absolute top-[30%] right-[10%] w-[480px] h-[420px] rounded-full bg-gradient-to-tl from-indigo-500/20 via-cyan-500/14 to-transparent blur-[100px] opacity-80" />
-      </div>
-
       {/* Interactive Dot-Matrix Grid Canvas */}
       <canvas
         ref={canvasRef}

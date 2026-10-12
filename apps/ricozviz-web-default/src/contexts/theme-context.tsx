@@ -105,6 +105,21 @@ export function ThemeProvider({
     } catch {
       // Storage unavailable or disabled
     }
+
+    const resolved: ResolvedTheme =
+      newTheme === "system" ? getSystemTheme() : newTheme;
+    setResolvedTheme(resolved);
+
+    if (typeof document !== "undefined") {
+      const root = document.documentElement;
+      if (resolved === "dark") {
+        root.classList.add("dark");
+        root.style.colorScheme = "dark";
+      } else {
+        root.classList.remove("dark");
+        root.style.colorScheme = "light";
+      }
+    }
   }, []);
 
   const toggleTheme = useCallback(() => {

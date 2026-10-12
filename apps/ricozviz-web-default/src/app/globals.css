@@ -1,90 +1,133 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ==========================================================================
-   RicozViz Godly & Realtime Colors Design System
-   Calibrated via 60-30-10 rule, WCAG AAA contrast, and tactile micro-physics.
+   RicozViz Distinctive Enterprise Design System
+   Editorial Enterprise (Marketing/Light) & Precision Dark Analytics Workspace
    ========================================================================== */
 
+@theme {
+  --font-heading: var(--font-heading, "Manrope", sans-serif);
+  --font-sans: var(--font-sans, "Inter", sans-serif);
+  --font-mono: var(--font-mono, "IBM Plex Mono", monospace);
+
+  --color-editorial-bg: #F4F1EA;
+  --color-editorial-card: #FFFFFF;
+  --color-editorial-text: #172B3A;
+  --color-editorial-muted: #596775;
+  --color-editorial-accent: #147D78;
+  --color-editorial-accent-hover: #106963;
+  --color-editorial-highlight: #D9A441;
+  --color-editorial-border: #DADFD9;
+
+  --color-workspace-bg: #111827;
+  --color-workspace-card: #1F2937;
+  --color-workspace-text: #E5E7EB;
+  --color-workspace-muted: #9CA3AF;
+  --color-workspace-accent: #4F9D8E;
+  --color-workspace-border: #374151;
+
+  /* Harmonize default utility classes across the workspace to the Editorial Enterprise accent */
+  --color-indigo-50: #f0fdfa;
+  --color-indigo-100: #ccfbf1;
+  --color-indigo-200: #99f6e4;
+  --color-indigo-300: #5eead4;
+  --color-indigo-400: #2dd4bf;
+  --color-indigo-500: #147D78;
+  --color-indigo-600: #147D78;
+  --color-indigo-700: #106963;
+  --color-indigo-800: #0f524d;
+  --color-indigo-900: #134e4a;
+  --color-indigo-950: #042f2e;
+
+  --color-purple-400: #2dd4bf;
+  --color-purple-500: #147D78;
+  --color-purple-600: #147D78;
+  --color-purple-700: #106963;
+  --color-purple-900: #134e4a;
+  --color-purple-950: #042f2e;
+}
+
 :root {
-  /* ---- Realtime Colors 60-30-10 Palette (Light Mode) ---- */
-  --background: 240 20% 99%;         /* 60% Canvas: Crisp off-white */
-  --foreground: 240 10% 9%;          /* Deep readable charcoal #0f172a */
-  
-  --surface: 0 0% 100%;              /* 30% Elevated card surface */
-  --surface-border: 240 6% 90%;      /* Hairline border stroke */
-  --surface-subtle: 240 5% 96%;      /* Soft card header / tag fill */
+  /* ---- Editorial Enterprise Palette (Light Marketing & Default Theme) ---- */
+  --background: 42 31% 94%;           /* #F4F1EA - Main background */
+  --foreground: 206 43% 16%;          /* #172B3A - Primary text */
 
-  --primary: 243 75% 59%;            /* 10% Primary Action (Indigo) */
-  --primary-foreground: 0 0% 100%;   /* Crisp white text on primary */
-  --primary-glow: 243 75% 59% / 0.18;
+  --surface: 0 0% 100%;               /* #FFFFFF - Surface / card background */
+  --surface-border: 110 9% 86%;       /* #DADFD9 - Hairline borders */
+  --surface-subtle: 40 16% 91%;       /* #EBE7DF - Soft panel / tag fill */
 
-  --secondary: 240 5% 94%;          /* Secondary button / badge */
-  --secondary-foreground: 240 6% 15%;
+  --primary: 177 72% 28%;             /* #147D78 - Primary accent */
+  --primary-hover: 176 74% 24%;       /* #106963 - Accent hover */
+  --primary-foreground: 0 0% 100%;    /* Crisp readable white */
+  --primary-glow: 177 72% 28% / 0.12;
 
-  --accent: 262 83% 58%;             /* Vibrant accent violet */
+  --secondary: 40 16% 91%;            /* #EBE7DF */
+  --secondary-foreground: 206 43% 16%;/* #172B3A */
+
+  --accent: 177 72% 28%;              /* #147D78 */
+  --accent-hover: 176 74% 24%;        /* #106963 */
   --accent-foreground: 0 0% 100%;
 
-  --muted: 240 5% 94%;
-  --muted-foreground: 240 4% 45%;
+  --highlight: 39 68% 55%;            /* #D9A441 - Subtle highlight */
 
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 9%;
-  --card-border: 240 6% 90%;
+  --muted: 40 16% 91%;
+  --muted-foreground: 210 14% 40%;    /* #596775 - Secondary text */
 
-  --success: 142 76% 36%;
-  --warning: 38 92% 50%;
-  --danger: 0 84% 60%;
-  --info: 199 89% 48%;
+  --card: 0 0% 100%;                  /* #FFFFFF */
+  --card-foreground: 206 43% 16%;     /* #172B3A */
+  --card-border: 110 9% 86%;          /* #DADFD9 */
 
-  /* ---- Superhuman Golden Hour Editorial Tokens ---- */
-  --color-midnight-wine: #421d24;
-  --color-royal-violet: #714cb6;
-  --color-lilac-mist: #d4c7ff;
-  --color-deep-lagoon: #0c4243;
-  --color-warm-parchment: #f2f0eb;
-  --color-soft-mist: #e3e3e2;
-  --color-ink-charcoal: #292827;
-  --color-stone-gray: #666666;
-  --color-paper-white: #ffffff;
+  --success: 160 84% 39%;             /* #10B981 */
+  --warning: 39 68% 55%;              /* #D9A441 */
+  --danger: 350 89% 60%;              /* #EF4444 */
+  --info: 199 89% 48%;                /* #38BDF8 */
 
-  /* ---- Tactile Radii & Shadows ---- */
+  /* ---- Restrained Radii & Subtle Shadows ---- */
   --radius-xs: 0.25rem;
   --radius-sm: 0.375rem;
-  --radius: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.25rem;
-  --radius-2xl: 1.75rem;
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
 
-  --shadow-tactile: 0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.05);
-  --shadow-float: 0 10px 25px -4px rgba(0, 0, 0, 0.06), 0 4px 10px -3px rgba(0, 0, 0, 0.03);
-  --shadow-glow: 0 0 25px -3px var(--primary-glow);
+  --shadow-tactile: 0 1px 2px 0 rgba(23, 43, 58, 0.04), 0 1px 3px 0 rgba(23, 43, 58, 0.03);
+  --shadow-float: 0 4px 12px -2px rgba(23, 43, 58, 0.08);
 }
 
 .dark {
-  /* ---- Realtime Colors 60-30-10 Palette (Dark Mode) ---- */
-  --background: 240 10% 4%;          /* 60% Canvas: Deep OLED zinc #09090b */
-  --foreground: 0 0% 98%;            /* High-contrast pure reading text */
+  /* ---- Precision Dark Analytics Workspace Palette ---- */
+  --background: 221 39% 11%;          /* #111827 - Background */
+  --foreground: 220 14% 91%;          /* #E5E7EB - Primary text */
 
-  --surface: 240 6% 8%;              /* 30% Surface: Elevated zinc #141417 */
-  --surface-border: 240 5% 16%;      /* 1px subtle hairline border */
-  --surface-subtle: 240 5% 12%;      /* Secondary panel fill */
+  --surface: 215 28% 17%;             /* #1F2937 - Card surfaces */
+  --surface-border: 217 19% 27%;      /* #374151 - Borders */
+  --surface-subtle: 217 25% 21%;      /* #283548 - Secondary panel fill */
 
-  --primary: 243 75% 64%;            /* Lightness-boosted primary for dark canvas */
+  --primary: 168 33% 46%;             /* #4F9D8E - Accent */
+  --primary-hover: 168 35% 40%;       /* #43887B */
   --primary-foreground: 0 0% 100%;
-  --primary-glow: 243 75% 64% / 0.25;
+  --primary-glow: 168 33% 46% / 0.15;
 
-  --secondary: 240 5% 14%;
-  --secondary-foreground: 0 0% 95%;
+  --secondary: 215 28% 17%;
+  --secondary-foreground: 220 14% 91%;
 
-  --accent: 262 83% 66%;
+  --accent: 168 33% 46%;              /* #4F9D8E */
+  --accent-hover: 168 35% 40%;
   --accent-foreground: 0 0% 100%;
 
-  --muted: 240 5% 12%;
-  --muted-foreground: 240 5% 65%;
+  --highlight: 39 68% 55%;            /* #D9A441 */
 
-  --card: 240 6% 8%;
-  --card-foreground: 0 0% 98%;
-  --card-border: 240 5% 16%;
+  --muted: 215 28% 17%;
+  --muted-foreground: 218 11% 65%;    /* #9CA3AF - Secondary text */
+
+  --card: 215 28% 17%;                /* #1F2937 */
+  --card-foreground: 220 14% 91%;     /* #E5E7EB */
+  --card-border: 217 19% 27%;         /* #374151 */
+
+  --shadow-tactile: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 4px 14px -2px rgba(0, 0, 0, 0.4);
 }
 
 /* ==========================================================================
@@ -97,7 +140,7 @@
 }
 
 html {
-  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  font-family: var(--font-sans, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
@@ -112,25 +155,32 @@ body {
   min-height: 100vh;
 }
 
-/* Code & Numerical Monospace */
-code, kbd, samp, pre, .font-mono {
-  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+/* Headings: Manrope with purposeful, disciplined weighting */
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: var(--font-heading, "Manrope", sans-serif);
   letter-spacing: -0.02em;
 }
 
+/* Technical Metrics, Query Timings & Code: IBM Plex Mono strictly */
+code, kbd, samp, pre, .font-mono {
+  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+  letter-spacing: -0.015em;
+}
+
 /* ==========================================================================
-   Tactile Micro-Interactions & Button Physics (Godly & Impeccable)
+   Tactile Micro-Interactions & Button Physics (Disciplined & Restrained)
    ========================================================================== */
 .btn-tactile {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-family: var(--font-sans, "Inter", sans-serif);
+  font-weight: 500;
   font-size: 0.8125rem;
   line-height: 1.25rem;
   border-radius: var(--radius);
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.15s ease-out;
   user-select: none;
   cursor: pointer;
   position: relative;
@@ -141,19 +191,30 @@ code, kbd, samp, pre, .font-mono {
 }
 
 .btn-tactile:active {
-  transform: translateY(0.5px) scale(0.985);
+  transform: translateY(0.5px);
 }
 
 .btn-primary {
-  background-color: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.08), 0 0 16px -2px var(--primary-glow);
-  border: 1px solid hsl(var(--primary) / 0.8);
+  background-color: #147D78;
+  color: #FFFFFF;
+  border: 1px solid #106963;
+  box-shadow: 0 1px 2px 0 rgba(20, 125, 120, 0.15);
 }
 
 .btn-primary:hover {
-  background-color: hsl(var(--primary) / 0.92);
-  box-shadow: 0 3px 8px 0 rgba(0, 0, 0, 0.12), 0 0 22px -1px var(--primary-glow);
+  background-color: #106963;
+  border-color: #0d544f;
+}
+
+.dark .btn-primary {
+  background-color: #4F9D8E;
+  color: #FFFFFF;
+  border: 1px solid #43887B;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dark .btn-primary:hover {
+  background-color: #43887B;
 }
 
 .btn-secondary {
@@ -165,7 +226,7 @@ code, kbd, samp, pre, .font-mono {
 
 .btn-secondary:hover {
   background-color: hsl(var(--surface-subtle));
-  border-color: hsl(var(--surface-border) / 1.5);
+  border-color: hsl(var(--surface-border));
 }
 
 .btn-ghost {
@@ -179,73 +240,71 @@ code, kbd, samp, pre, .font-mono {
 }
 
 /* ==========================================================================
-   Godly Bento Grid & Card Architecture
+   Architectural Cards & Bento Grid
    ========================================================================== */
 .bento-card {
   position: relative;
   background-color: hsl(var(--surface));
   border: 1px solid hsl(var(--surface-border));
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  transition: border-color 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   box-shadow: var(--shadow-tactile);
 }
 
 .bento-card:hover {
-  border-color: hsl(var(--primary) / 0.35);
+  border-color: hsl(var(--primary) / 0.5);
   box-shadow: var(--shadow-float);
 }
 
+/* Precision Dark Workspace Bento Card */
+.bento-card-technical {
+  background-color: #1F2937;
+  border: 1px solid #374151;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bento-card-technical:hover {
+  border-color: #4F9D8E;
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.35);
+}
+
 /* ==========================================================================
-   Haikei Mathematical Background Patterns
+   Architectural Hairline Grid Patterns
    ========================================================================== */
 .haikei-dots {
-  background-image: radial-gradient(hsl(var(--foreground) / 0.08) 1.2px, transparent 1.2px);
+  background-image: radial-gradient(hsl(var(--foreground) / 0.08) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
 .haikei-grid {
   background-image: 
-    linear-gradient(to right, hsl(var(--foreground) / 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--foreground) / 0.04) 1px, transparent 1px);
+    linear-gradient(to right, hsl(var(--surface-border) / 0.7) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--surface-border) / 0.7) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
-/* Precision Dark Technical Grid (Neon-Indigo & Emerald Accents) */
 .haikei-tech-grid {
   background-image: 
-    linear-gradient(to right, rgba(99, 102, 241, 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(99, 102, 241, 0.07) 1px, transparent 1px);
+    linear-gradient(to right, rgba(20, 125, 120, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 125, 120, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.dark .haikei-tech-grid {
+  background-image: 
+    linear-gradient(to right, rgba(79, 157, 142, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(79, 157, 142, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 .haikei-emerald-grid {
   background-image: 
-    linear-gradient(to right, rgba(16, 185, 129, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(20, 125, 120, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 125, 120, 0.05) 1px, transparent 1px);
   background-size: 36px 36px;
-}
-
-/* Dark Technical Bento Card Override */
-.bento-card-technical {
-  background-color: #0F172A;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
-}
-
-.bento-card-technical:hover {
-  border-color: rgba(99, 102, 241, 0.45);
-  box-shadow: 0 10px 30px -4px rgba(99, 102, 241, 0.15);
-}
-
-/* Ambient Radial Glow */
-.ambient-glow {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(80px);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.45;
 }
 
 /* ==========================================================================
@@ -256,12 +315,16 @@ code, kbd, samp, pre, .font-mono {
   top: 0;
   left: 0;
   right: 0;
-  height: 2.5px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4, #10b981);
+  height: 2px;
+  background-color: #147D78;
   transform-origin: 0%;
   z-index: 9999;
   pointer-events: none;
   transition: transform 0.08s ease-out;
+}
+
+.dark #scroll-progress-bar {
+  background-color: #4F9D8E;
 }
 
 /* ==========================================================================
@@ -275,9 +338,9 @@ code, kbd, samp, pre, .font-mono {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--foreground) / 0.15);
+  background: hsl(var(--foreground) / 0.18);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--foreground) / 0.28);
+  background: hsl(var(--foreground) / 0.32);
 }

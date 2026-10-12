@@ -14,14 +14,14 @@ import type { ChartConfig } from "../../lib/api";
 import { formatNumber, formatCurrency, formatPercent } from "../../lib/formatting";
 
 const PALETTE = [
-  "#4f46e5", // Indigo
-  "#06b6d4", // Cyan
-  "#10b981", // Emerald
-  "#f59e0b", // Amber
-  "#ec4899", // Pink
-  "#8b5cf6", // Purple
-  "#3b82f6", // Blue
-  "#14b8a6", // Teal
+  "#147D78", // Editorial Accent
+  "#D9A441", // Subtle Highlight Ochre
+  "#2E5B70", // Deep Slate Cyan
+  "#10B981", // Emerald
+  "#E11D48", // Rose Alert
+  "#596775", // Secondary Text Slate
+  "#0F625D", // Deep Forest Teal
+  "#F59E0B", // Amber Warning
 ];
 
 export interface PieChartRendererProps {
