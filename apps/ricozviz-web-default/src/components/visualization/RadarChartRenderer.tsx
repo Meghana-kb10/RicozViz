@@ -27,15 +27,25 @@ const PALETTE = [
 export interface RadarChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   height?: number | string;
 }
 
 export function RadarChartRenderer({
   data,
   config,
+  palette,
   height = "100%",
 }: RadarChartRendererProps) {
   const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const showLegend = options.showLegend !== false;
   const xKey = data.xKey || "category";
   const measureKeys = data.measureKeys.length > 0 ? data.measureKeys : ["value"];
@@ -70,7 +80,7 @@ export function RadarChartRenderer({
           />
           {showLegend && <Legend wrapperStyle={{ fontSize: "12px" }} />}
           {measureKeys.map((key, idx) => {
-            const color = PALETTE[idx % PALETTE.length];
+            const color = activePalette[idx % activePalette.length];
             return (
               <Radar
                 key={key}

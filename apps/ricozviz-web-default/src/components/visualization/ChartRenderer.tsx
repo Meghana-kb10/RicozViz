@@ -20,6 +20,7 @@ export interface ChartRendererProps {
   chartType: ChartType;
   config: ChartConfig;
   queryResult: DatasetQueryResult | null;
+  palette?: string[];
   isLoading?: boolean;
   error?: string | null;
   height?: number | string;
@@ -41,6 +42,7 @@ export function ChartRenderer({
   chartType,
   config,
   queryResult,
+  palette,
   isLoading = false,
   error = null,
   height = 320,
@@ -49,6 +51,16 @@ export function ChartRenderer({
   onClearFilter,
   drillDown,
 }: ChartRendererProps) {
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray((config.options as Record<string, unknown> | undefined)?.palette) &&
+          ((config.options as Record<string, unknown>).palette as string[]).length > 0
+        ? ((config.options as Record<string, unknown>).palette as string[])
+        : Array.isArray((config.options as Record<string, unknown> | undefined)?.colorPalette) &&
+            ((config.options as Record<string, unknown>).colorPalette as string[]).length > 0
+          ? ((config.options as Record<string, unknown>).colorPalette as string[])
+          : undefined;
   const mounted = useSyncExternalStore(
     subscribe,
     () => true,
@@ -148,6 +160,7 @@ export function ChartRenderer({
           <BarChartRenderer
             data={mapped}
             config={config}
+            palette={activePalette}
             height="100%"
             onDataPointClick={onDataPointClick}
             selectedFilterValue={selectedFilterValue}
@@ -158,6 +171,7 @@ export function ChartRenderer({
           <LineChartRenderer
             data={mapped}
             config={config}
+            palette={activePalette}
             height="100%"
             onDataPointClick={onDataPointClick}
             selectedFilterValue={selectedFilterValue}
@@ -168,6 +182,7 @@ export function ChartRenderer({
           <AreaChartRenderer
             data={mapped}
             config={config}
+            palette={activePalette}
             height="100%"
             onDataPointClick={onDataPointClick}
             selectedFilterValue={selectedFilterValue}
@@ -178,6 +193,7 @@ export function ChartRenderer({
           <PieChartRenderer
             data={mapped}
             config={config}
+            palette={activePalette}
             isDonut={false}
             height="100%"
             onDataPointClick={onDataPointClick}
@@ -189,6 +205,7 @@ export function ChartRenderer({
           <PieChartRenderer
             data={mapped}
             config={config}
+            palette={activePalette}
             isDonut={true}
             height="100%"
             onDataPointClick={onDataPointClick}
@@ -196,7 +213,7 @@ export function ChartRenderer({
           />
         );
       case "SCATTER":
-        return <ScatterChartRenderer data={mapped} config={config} height="100%" />;
+        return <ScatterChartRenderer data={mapped} config={config} palette={activePalette} height="100%" />;
       case "TABLE":
         return (
           <TableRenderer
@@ -210,9 +227,9 @@ export function ChartRenderer({
       case "KPI":
         return <KpiRenderer data={mapped} config={config} height="100%" />;
       case "RADAR":
-        return <RadarChartRenderer data={mapped} config={config} height="100%" />;
+        return <RadarChartRenderer data={mapped} config={config} palette={activePalette} height="100%" />;
       case "FUNNEL":
-        return <FunnelChartRenderer data={mapped} config={config} height="100%" />;
+        return <FunnelChartRenderer data={mapped} config={config} palette={activePalette} height="100%" />;
       case "HEATMAP":
         return <HeatmapRenderer data={mapped} config={config} height="100%" />;
       case "MAP":

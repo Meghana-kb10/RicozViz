@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/auth-context";
 import { useWorkspace } from "../../contexts/workspace-context";
+import { useTheme } from "../../contexts/theme-context";
 import {
   LayoutDashboard,
   BarChart3,
@@ -22,6 +23,8 @@ import {
   FileDown,
   Sparkles,
   Command,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 
@@ -42,6 +45,7 @@ export function AppShell({
 }: AppShellProps) {
   const { auth, logout } = useAuth();
   const { currentWorkspace } = useWorkspace();
+  const { theme, resolvedTheme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -147,6 +151,21 @@ export function AppShell({
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>DuckDB v1.1 Active</span>
             </div>
+
+            {/* Theme Mode Toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode (Current: ${theme})`}
+              aria-label={`Toggle theme (Current: ${theme})`}
+              className="btn-tactile btn-ghost p-1.5 rounded-lg text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--surface-subtle))] transition"
+            >
+              {resolvedTheme === "dark" ? (
+                <Sun className="h-4 w-4 text-amber-400 transition-transform hover:rotate-45" />
+              ) : (
+                <Moon className="h-4 w-4 text-indigo-600 transition-transform hover:-rotate-12" />
+              )}
+            </button>
 
             {/* User Profile */}
             {auth?.user && (

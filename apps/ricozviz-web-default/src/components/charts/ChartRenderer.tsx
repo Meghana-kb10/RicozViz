@@ -95,6 +95,7 @@ export interface ChartRendererProps {
   chartType: ChartType;
   config: ChartConfig;
   queryResult: DatasetQueryResult | null;
+  palette?: string[];
   isLoading?: boolean;
   error?: string | null;
   height?: number | string;
@@ -140,6 +141,7 @@ export function ChartRenderer({
   chartType,
   config,
   queryResult,
+  palette,
   isLoading = false,
   error = null,
   height = 260,
@@ -204,9 +206,11 @@ export function ChartRenderer({
 
   // Resolve palette
   const activePalette =
-    config.customColors && config.customColors.length > 0
-      ? config.customColors
-      : COLOR_PALETTES[config.colorPalette || "default"] || COLOR_PALETTES.default;
+    palette && palette.length > 0
+      ? palette
+      : config.customColors && config.customColors.length > 0
+        ? config.customColors
+        : COLOR_PALETTES[config.colorPalette || "default"] || COLOR_PALETTES.default;
 
   // Customization options
   const showLegend = config.legend?.show !== false && measureKeys.length > 1;

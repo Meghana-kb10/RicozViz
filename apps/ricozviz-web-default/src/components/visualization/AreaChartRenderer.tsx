@@ -29,6 +29,7 @@ const PALETTE = [
 export interface AreaChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   height?: number | string;
   onDataPointClick?: (field: string, value: unknown) => void;
   selectedFilterValue?: unknown;
@@ -37,10 +38,19 @@ export interface AreaChartRendererProps {
 export function AreaChartRenderer({
   data,
   config,
+  palette,
   height = "100%",
   onDataPointClick,
 }: AreaChartRendererProps) {
   const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const showLegend = options.showLegend !== false && data.measureKeys.length > 1;
   const showGrid = options.showGrid !== false;
   const showXAxis = options.showXAxis !== false;
@@ -71,7 +81,7 @@ export function AreaChartRenderer({
         >
           <defs>
             {measureKeys.map((key, idx) => {
-              const color = PALETTE[idx % PALETTE.length];
+              const color = activePalette[idx % activePalette.length];
               return (
                 <linearGradient key={`grad-${key}`} id={`area-grad-${idx}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={color} stopOpacity={0.4} />
@@ -118,7 +128,7 @@ export function AreaChartRenderer({
               key={key}
               type="monotone"
               dataKey={key}
-              stroke={PALETTE[idx % PALETTE.length]}
+              stroke={activePalette[idx % activePalette.length]}
               fill={`url(#area-grad-${idx})`}
               strokeWidth={2}
               activeDot={{ r: 6, stroke: "#1e1b4b", strokeWidth: 2, className: "cursor-pointer" }}

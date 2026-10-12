@@ -29,6 +29,7 @@ const PALETTE = [
 export interface LineChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   height?: number | string;
   onDataPointClick?: (field: string, value: unknown) => void;
   selectedFilterValue?: unknown;
@@ -37,10 +38,19 @@ export interface LineChartRendererProps {
 export function LineChartRenderer({
   data,
   config,
+  palette,
   height = "100%",
   onDataPointClick,
 }: LineChartRendererProps) {
   const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const showLegend = options.showLegend !== false && data.measureKeys.length > 1;
   const showGrid = options.showGrid !== false;
   const showXAxis = options.showXAxis !== false;
@@ -107,9 +117,9 @@ export function LineChartRenderer({
               key={key}
               type="monotone"
               dataKey={key}
-              stroke={PALETTE[idx % PALETTE.length]}
+              stroke={activePalette[idx % activePalette.length]}
               strokeWidth={2}
-              dot={{ r: 3, fill: PALETTE[idx % PALETTE.length] }}
+              dot={{ r: 3, fill: activePalette[idx % activePalette.length] }}
               activeDot={{ r: 6, stroke: "#1e1b4b", strokeWidth: 2, className: "cursor-pointer" }}
             />
           ))}

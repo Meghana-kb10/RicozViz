@@ -30,6 +30,7 @@ const PALETTE = [
 export interface BarChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   height?: number | string;
   onDataPointClick?: (field: string, value: unknown) => void;
   selectedFilterValue?: unknown;
@@ -38,11 +39,20 @@ export interface BarChartRendererProps {
 export function BarChartRenderer({
   data,
   config,
+  palette,
   height = "100%",
   onDataPointClick,
   selectedFilterValue,
 }: BarChartRendererProps) {
   const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const showLegend = options.showLegend !== false && data.measureKeys.length > 1;
   const showGrid = options.showGrid !== false;
   const showXAxis = options.showXAxis !== false;
@@ -114,7 +124,7 @@ export function BarChartRenderer({
             <Bar
               key={key}
               dataKey={key}
-              fill={PALETTE[idx % PALETTE.length]}
+              fill={activePalette[idx % activePalette.length]}
               radius={[4, 4, 0, 0]}
               maxBarSize={50}
               className="cursor-pointer"
@@ -127,7 +137,7 @@ export function BarChartRenderer({
                 return (
                   <Cell
                     key={`cell-${rIdx}`}
-                    fill={PALETTE[idx % PALETTE.length]}
+                    fill={activePalette[idx % activePalette.length]}
                     opacity={isSelected ? 1 : 0.35}
                     onClick={() => handleBarClick(row)}
                   />

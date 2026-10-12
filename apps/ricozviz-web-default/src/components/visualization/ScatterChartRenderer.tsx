@@ -17,15 +17,22 @@ import { formatNumber, formatCurrency, formatPercent } from "../../lib/formattin
 export interface ScatterChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   height?: number | string;
 }
 
 export function ScatterChartRenderer({
   data,
   config,
+  palette,
   height = "100%",
 }: ScatterChartRendererProps) {
   const options = config.options || {};
+  const activeColor =
+    (palette && palette[0]) ||
+    (Array.isArray(options.palette) && options.palette[0]) ||
+    (Array.isArray(options.colorPalette) && options.colorPalette[0]) ||
+    "#4f46e5";
   const showGrid = options.showGrid !== false;
   const showXAxis = options.showXAxis !== false;
   const showYAxis = options.showYAxis !== false;
@@ -80,7 +87,7 @@ export function ScatterChartRenderer({
           <Scatter
             name={`${xKey} vs ${yKey}`}
             data={data.rows}
-            fill="#4f46e5"
+            fill={activeColor}
           />
         </ScatterChart>
       </ResponsiveContainer>
