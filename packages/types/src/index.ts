@@ -83,7 +83,9 @@ export {
   EXPORT_FORMAT,
   EXPORT_STATUS,
   EXPORT_RESOURCE_TYPE,
-  AUDIT_STATUS
+  AUDIT_STATUS,
+  SECURITY_BADGE_CATEGORY,
+  SECURITY_BADGE_STATUS
 } from './ricozviz/index';
 
 export type {
@@ -257,6 +259,11 @@ export type {
   InsightsParams,
   InsightsResponse,
   DashboardSummaryResponse,
-  DashboardSummaryParams
+  DashboardSummaryParams,
+  SecurityBadgeCategory,
+  SecurityBadgeStatus,
+  SecurityBadge,
+  GovernancePosture,
+  VerifyBadgeResult
 } from './ricozviz/index';
 

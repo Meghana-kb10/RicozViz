@@ -41,6 +41,11 @@ export {
   AUDIT_STATUS
 } from './enums';
 
+export {
+  SECURITY_BADGE_CATEGORY,
+  SECURITY_BADGE_STATUS
+} from './governance';
+
 export type {
   UserStatus,
   OrganizationStatus,
@@ -229,3 +234,11 @@ export type {
   DashboardSummaryResponse,
   DashboardSummaryParams
 } from './ai';
+
+export type {
+  SecurityBadgeCategory,
+  SecurityBadgeStatus,
+  SecurityBadge,
+  GovernancePosture,
+  VerifyBadgeResult
+} from './governance';

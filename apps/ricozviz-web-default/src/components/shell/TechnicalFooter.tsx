@@ -160,10 +160,19 @@ export function TechnicalFooter() {
                 </li>
                 <li>
                   <Link
-                    href="/whitepaper"
+                    href="/#governance"
+                    className="text-white/70 hover:text-white transition duration-200 inline-flex items-center gap-1 group"
+                  >
+                    <span>Trust &amp; Compliance</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 text-white/50 group-hover:text-white transition duration-200 shrink-0" />
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/#governance"
                     className="text-white/70 hover:text-white transition duration-200 block"
                   >
-                    Trust
+                    Security Badges (SOC 2, ISO)
                   </Link>
                 </li>
                 <li>

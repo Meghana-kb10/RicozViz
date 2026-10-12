@@ -19,6 +19,7 @@ import { HeroDashboardPreview } from "@/components/dashboard/HeroDashboardPrevie
 import { QueryIdeWindow } from "@/components/shell/QueryIdeWindow";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { ConnectorGridLogoCloud } from "@/components/shell/ConnectorGridLogoCloud";
+import { SecurityGovernanceBadges } from "@/components/shell/SecurityGovernanceBadges";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
@@ -55,6 +56,9 @@ export default function HomePage() {
               </a>
               <a href="#connectors" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Connectors
+              </a>
+              <a href="#governance" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
+                Security & Trust
               </a>
               <a href="#workflow" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Pipeline
@@ -299,11 +303,35 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================ */}
-      {/* 5. DATA WORKFLOW PIPELINE                                   */}
+      {/* 5. ENTERPRISE SECURITY & GOVERNANCE BADGES                   */}
+      {/* ============================================================ */}
+      <section
+        id="governance"
+        className="py-20 bg-[#F4F1EA] dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
+              Enterprise Trust & Governance
+            </span>
+            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
+              Cryptographically verified security and compliance
+            </h2>
+            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
+              Audited SOC 2 Type II controls, HIPAA ready data boundaries, ISO 27001 certification, and hardware-grade cryptographic row-level security.
+            </p>
+          </div>
+
+          <SecurityGovernanceBadges />
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 6. DATA WORKFLOW PIPELINE                                   */}
       {/* ============================================================ */}
       <section
         id="workflow"
-        className="py-20 bg-[#F4F1EA] dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
+        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-14">

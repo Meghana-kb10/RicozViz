@@ -197,6 +197,14 @@ export {
   apiGetDashboardSummary
 } from '@repo/api';
 
+// ---- Governance & Security Badges -------------------------------------------------------------
+export {
+  apiGetGovernanceBadges,
+  apiGetGovernanceBadge,
+  apiVerifyGovernanceBadge,
+  apiGetGovernancePosture
+} from '@repo/api';
+
 // ---- Domain types --------------------------------------------------------------------------------
 // Re-exported so pages can keep importing types from the same module as the functions.
 export type {
@@ -322,7 +330,13 @@ export type {
   AnalystQueryResponse,
   NlToChartResponse,
   AutoInsight,
-  DashboardSummaryResponse
+  DashboardSummaryResponse,
+  // Governance
+  SecurityBadgeCategory,
+  SecurityBadgeStatus,
+  SecurityBadge,
+  GovernancePosture,
+  VerifyBadgeResult
 } from '@repo/types';
 
 /**
