@@ -36,6 +36,17 @@
   --danger: 0 84% 60%;
   --info: 199 89% 48%;
 
+  /* ---- Superhuman Golden Hour Editorial Tokens ---- */
+  --color-midnight-wine: #421d24;
+  --color-royal-violet: #714cb6;
+  --color-lilac-mist: #d4c7ff;
+  --color-deep-lagoon: #0c4243;
+  --color-warm-parchment: #f2f0eb;
+  --color-soft-mist: #e3e3e2;
+  --color-ink-charcoal: #292827;
+  --color-stone-gray: #666666;
+  --color-paper-white: #ffffff;
+
   /* ---- Tactile Radii & Shadows ---- */
   --radius-xs: 0.25rem;
   --radius-sm: 0.375rem;
