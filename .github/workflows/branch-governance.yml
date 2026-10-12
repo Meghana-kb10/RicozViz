@@ -1,0 +1,48 @@
+name: Branch Governance
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Rule 1: main only accepts merges from develop
+      - name: Verify Base and Head for main
+        if: github.base_ref == 'main'
+        run: |
+          if [ "${{ github.head_ref }}" != "develop" ]; then
+            echo "::error::Direct PRs to 'main' must originate strictly from 'develop'. Found: ${{ github.head_ref }}"
+            exit 1
+          fi
+          echo "✅ Source branch is develop."
+
+      # Rule 2: develop only accepts merges from feature/* branches
+      - name: Verify Base and Head for develop
+        if: github.base_ref == 'develop'
+        run: |
+          if [[ ! "${{ github.head_ref }}" =~ ^feature/ ]]; then
+            echo "::error::PRs targeting 'develop' must originate from a 'feature/*' branch. Found: ${{ github.head_ref }}"
+            exit 1
+          fi
+          echo "✅ Source branch matches feature/* pattern."
+
+      # Rule 3: Enforce Changeset on feature/* -> develop PRs
+      - name: Verify Changeset Exists
+        if: github.base_ref == 'develop'
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          CHANGESET_FILES=$(git diff --name-only --diff-filter=AM origin/${{ github.base_ref }}...HEAD -- '.changeset/*.md' | grep -v 'README.md' || true)
+
+          if [ -z "$CHANGESET_FILES" ]; then
+            echo "::error::Missing changeset! Pull requests from feature branches into develop require a changeset."
+            echo "Run 'pnpm changeset' locally, commit the generated file in .changeset/, and push."
+            exit 1
+          fi
+          echo "✅ Changeset verified: $CHANGESET_FILES"

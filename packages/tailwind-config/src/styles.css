@@ -1,0 +1,136 @@
+@import "./theme.css";
+
+/* ==============================================================================
+   Centralized Common Utility & Component Classes (@repo/tailwind-config)
+   ============================================================================== */
+
+@layer components {
+  /* Layout container */
+  .repo-container {
+    max-width: 64rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  /* Card surface */
+  .repo-card {
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    padding: 1.5rem;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .repo-card:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  /* Form Input */
+  .repo-input {
+    width: 100%;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    transition: all 150ms ease-in-out;
+  }
+
+  .repo-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px #c7d2fe;
+  }
+
+  /* Button variants */
+  .repo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 150ms ease-in-out;
+  }
+
+  .repo-btn:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px #6366f1;
+  }
+
+  .repo-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .repo-btn-primary {
+    background-color: #4f46e5;
+    color: #ffffff;
+  }
+
+  .repo-btn-primary:hover:not(:disabled) {
+    background-color: #4338ca;
+  }
+
+  .repo-btn-secondary {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  .repo-btn-secondary:hover:not(:disabled) {
+    background-color: #1e293b;
+  }
+
+  .repo-btn-outline {
+    background-color: transparent;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+  }
+
+  .repo-btn-outline:hover:not(:disabled) {
+    background-color: #f1f5f9;
+  }
+
+  /* Badges */
+  .repo-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  .repo-badge-neutral {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+  }
+
+  .repo-badge-success {
+    background-color: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+  }
+
+  .repo-badge-warning {
+    background-color: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+  }
+
+  .repo-badge-info {
+    background-color: #eef2ff;
+    color: #4338ca;
+    border-color: #c7d2fe;
+  }
+}

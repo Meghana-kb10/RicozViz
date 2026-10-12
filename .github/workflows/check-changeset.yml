@@ -1,0 +1,35 @@
+name: Check Changeset
+
+on:
+  pull_request:
+    branches:
+      - develop
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  validate-changeset:
+    if: startsWith(github.head_ref, 'feature/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for Changeset
+        id: check
+        run: |
+          # Fetch the target base branch for diffing
+          git fetch origin ${{ github.base_ref }}
+
+          # Find newly added or modified changeset markdown files
+          CHANGESET_FILES=$(git diff --name-only --diff-filter=AM origin/${{ github.base_ref }}...HEAD -- '.changeset/*.md' | grep -v 'README.md' || true)
+
+          if [ -z "$CHANGESET_FILES" ]; then
+            echo "::error::No changeset detected! Pull requests from feature branches into develop require a changeset."
+            echo "Run 'pnpm changeset' locally, commit the generated file in .changeset/, and push."
+            exit 1
+          fi
+
+          echo "✅ Changeset found:"
+          echo "$CHANGESET_FILES"

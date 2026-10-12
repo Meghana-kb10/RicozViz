@@ -1,0 +1,60 @@
+
+name: Issue Instructions Bot
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  add-instructions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Post instructions on the issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+
+            const instructions = [
+              "## Instructions for Contributors",
+              "",
+              "Please follow these steps before completing this issue:",
+              "",
+              "1. **Create new branch for the issue (name: issue_id-issue_title_in_kebab_case)**",
+              "   Review the description and acceptance criteria.",
+              "",
+              "1. **Understand the task**",
+              "   Review the description and acceptance criteria.",
+              "",
+              "2. **Implement the solution**",
+              "   Follow existing project architecture and coding standards.(Check project README.md)",
+              "",
+              "3. **Verify your changes**",
+              "   Run tests, linting, and relevant checks. Build the code locally.",
+              "",
+              "4. **Submit a pull request**",
+              "   Link this issue, describe the changes (fixes #*)",
+              "",
+              "### Requirements",
+              "- Keep changes focused on this issue.",
+              "- Handle errors safely and avoid exposing sensitive information.",
+              "- Do not claim tests or builds passed unless they actually pass.",
+              "",
+              "### Completion checklist",
+              "- [ ] Implementation completed",
+              "- [ ] Build and type checks passing",
+              "- [ ] Acceptance criteria verified",
+              "- [ ] Last commit message desc contains closes/fixes #*",
+              "- [ ] Pull request linked to this issue (pointing to develop + issue linked)"
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: instructions
+            });
