@@ -253,5 +253,7 @@ export {
   apiVerifyGovernanceBadge,
   apiGetGovernancePosture,
   apiGetRlsPolicies,
-  apiSimulateRls
+  apiSimulateRls,
+  apiGetCisoAccreditations,
+  apiGetCisoTrustPack
 } from './ricozviz/governance.js';

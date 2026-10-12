@@ -147,3 +147,37 @@ export async function simulateRlsHandler(
   }
 }
 
+export async function getCisoAccreditationsHandler(
+  _request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  try {
+    const accreditations = await governanceService.getCisoTrustOverview();
+    return sendSuccess(reply, accreditations);
+  } catch (error) {
+    logger.error('Failed to fetch CISO accreditations', error);
+    return reply.status(500).send({
+      success: false,
+      error: 'An internal error occurred while fetching enterprise security accreditations'
+    });
+  }
+}
+
+export async function getCisoAttestationPackHandler(
+  request: FastifyRequest<{ Querystring: { tenantId?: string } }>,
+  reply: FastifyReply
+): Promise<void> {
+  try {
+    const tenantId = request.query?.tenantId || 'org_enterprise_primary';
+    const dossier = await governanceService.getCisoAttestationDossier(tenantId);
+    return sendSuccess(reply, dossier);
+  } catch (error) {
+    logger.error('Failed to generate CISO attestation dossier', error);
+    return reply.status(500).send({
+      success: false,
+      error: 'An internal error occurred while generating CISO attestation dossier'
+    });
+  }
+}
+
+

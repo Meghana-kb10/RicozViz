@@ -274,7 +274,10 @@ export type {
   RlsSimulatedRecord,
   RlsSimulationRequest,
   RlsSimulationResult,
-  RlsPoliciesCatalogResponse
+  RlsPoliciesCatalogResponse,
+  CisoAccreditationItem,
+  CisoTrustOverview,
+  CisoAttestationDossier
 } from './ricozviz/index';
 
 

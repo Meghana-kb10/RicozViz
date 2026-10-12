@@ -12,7 +12,9 @@ import type {
   VerifyBadgeResult,
   RlsPoliciesCatalogResponse,
   RlsSimulationRequest,
-  RlsSimulationResult
+  RlsSimulationResult,
+  CisoTrustOverview,
+  CisoAttestationDossier
 } from '@repo/types';
 
 export async function apiGetGovernanceBadges(params?: { category?: string }): Promise<SecurityBadge[]> {
@@ -44,4 +46,14 @@ export async function apiSimulateRls(params: RlsSimulationRequest): Promise<RlsS
     body: JSON.stringify(params)
   });
 }
+
+export async function apiGetCisoAccreditations(): Promise<CisoTrustOverview> {
+  return apiFetch<CisoTrustOverview>('/api/v1/governance/ciso-accreditations');
+}
+
+export async function apiGetCisoTrustPack(tenantId?: string): Promise<CisoAttestationDossier> {
+  const qs = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : '';
+  return apiFetch<CisoAttestationDossier>(`/api/v1/governance/ciso-pack${qs}`);
+}
+
 

@@ -149,3 +149,43 @@ export interface RlsPoliciesCatalogResponse {
   defaultUserRegion: string;
 }
 
+// ---- Enterprise Security Accreditations & CISO Trust Pack ------------------
+
+export interface CisoAccreditationItem {
+  id: string;
+  title: string;
+  badgeLabel: string;
+  category: 'COMPLIANCE' | 'INFRASTRUCTURE' | 'IDENTITY' | 'ENCRYPTION';
+  authority: string;
+  standard: string;
+  status: 'VERIFIED' | 'READY' | 'ENFORCED';
+  evidenceDigest: string;
+  cisoSummary: string;
+  keyGuarantees: string[];
+  auditReportId: string;
+  iconName: string;
+}
+
+export interface CisoTrustOverview {
+  soc2Certified: boolean;
+  hipaaReady: boolean;
+  zeroEgressEnforced: boolean;
+  scimSamlEnabled: boolean;
+  totalAccreditations: number;
+  complianceScore: number;
+  lastAttestationDate: string;
+  auditorFirms: string[];
+  accreditations: CisoAccreditationItem[];
+}
+
+export interface CisoAttestationDossier {
+  tenantId: string;
+  generatedAt: string;
+  cryptographicSignature: string;
+  complianceManifestHash: string;
+  zeroEgressMode: 'ENFORCED_VPC_AIRGAP';
+  ssoFederationStatus: 'SAML_2_0_SCIM_V2_ACTIVE';
+  trustOverview: CisoTrustOverview;
+}
+
+

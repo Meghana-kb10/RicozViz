@@ -204,7 +204,9 @@ export {
   apiVerifyGovernanceBadge,
   apiGetGovernancePosture,
   apiGetRlsPolicies,
-  apiSimulateRls
+  apiSimulateRls,
+  apiGetCisoAccreditations,
+  apiGetCisoTrustPack
 } from '@repo/api';
 
 // ---- Domain types --------------------------------------------------------------------------------
@@ -346,7 +348,10 @@ export type {
   RlsSimulatedRecord,
   RlsSimulationRequest,
   RlsSimulationResult,
-  RlsPoliciesCatalogResponse
+  RlsPoliciesCatalogResponse,
+  CisoAccreditationItem,
+  CisoTrustOverview,
+  CisoAttestationDossier
 } from '@repo/types';
 
 /**

@@ -15,7 +15,7 @@ async function runTests() {
 
   // 1. All badges retrieved
   const allBadges = await governanceService.getSecurityBadges();
-  assert.equal(allBadges.length, 8, 'Expected 8 enterprise security badges');
+  assert.equal(allBadges.length, 10, 'Expected 10 enterprise security badges');
   assert.ok(allBadges.some((b) => b.id === 'soc2-type-2'), 'Should include SOC 2 Type II');
   assert.ok(allBadges.some((b) => b.id === 'hipaa-compliant'), 'Should include HIPAA Ready');
   assert.ok(allBadges.some((b) => b.id === 'iso-27001'), 'Should include ISO 27001');
@@ -24,7 +24,9 @@ async function runTests() {
   assert.ok(allBadges.some((b) => b.id === 'immutable-audit'), 'Should include Immutable Audit');
   assert.ok(allBadges.some((b) => b.id === 'zero-credential-exposure'), 'Should include Zero Credential Exposure');
   assert.ok(allBadges.some((b) => b.id === 'sandboxed-embed'), 'Should include Sandboxed Embed');
-  console.log('✓ All 8 enterprise security badges verified');
+  assert.ok(allBadges.some((b) => b.id === 'zero-egress'), 'Should include Zero-Egress');
+  assert.ok(allBadges.some((b) => b.id === 'scim-saml-sso'), 'Should include SCIM & SAML SSO');
+  console.log('✓ All 10 enterprise security badges verified');
 
   // 2. Category filtering
   const complianceBadges = await governanceService.getSecurityBadges('COMPLIANCE');
@@ -32,7 +34,7 @@ async function runTests() {
   assert.ok(complianceBadges.every((b) => b.category === 'COMPLIANCE'), 'All returned badges must be COMPLIANCE');
 
   const accessBadges = await governanceService.getSecurityBadges('ACCESS_CONTROL');
-  assert.ok(accessBadges.length >= 2, 'Should filter access control badges');
+  assert.ok(accessBadges.length >= 3, 'Should filter access control badges');
   assert.ok(accessBadges.every((b) => b.category === 'ACCESS_CONTROL'), 'All returned badges must be ACCESS_CONTROL');
   console.log('✓ Category filtering works as expected');
 
@@ -67,10 +69,28 @@ async function runTests() {
   assert.equal(posture.tlsVersion, 'TLSv1.3');
   assert.equal(posture.atRestCipher, 'AES-256-GCM');
   assert.equal(posture.zeroLeakageGuarantee, true);
-  assert.equal(posture.badges.length, 8);
+  assert.equal(posture.badges.length, 10);
   console.log('✓ Enterprise governance posture score & controls evaluated');
 
-  // 6. Error & payload sanitization verification
+  // 6. CISO Trust Credentials & Accreditations Overview
+  const cisoOverview = await governanceService.getCisoTrustOverview();
+  assert.equal(cisoOverview.soc2Certified, true);
+  assert.equal(cisoOverview.hipaaReady, true);
+  assert.equal(cisoOverview.zeroEgressEnforced, true);
+  assert.equal(cisoOverview.scimSamlEnabled, true);
+  assert.equal(cisoOverview.accreditations.length, 4);
+  assert.equal(cisoOverview.complianceScore, 100);
+  console.log('✓ CISO trust credentials & accreditations verified');
+
+  // 7. Cryptographic CISO Attestation Dossier
+  const dossier = await governanceService.getCisoAttestationDossier('org_acme_corp');
+  assert.equal(dossier.zeroEgressMode, 'ENFORCED_VPC_AIRGAP');
+  assert.equal(dossier.ssoFederationStatus, 'SAML_2_0_SCIM_V2_ACTIVE');
+  assert.ok(dossier.cryptographicSignature.startsWith('0x'));
+  assert.equal(dossier.complianceManifestHash.length, 64);
+  console.log('✓ Cryptographic CISO attestation dossier verified');
+
+  // 8. Error & payload sanitization verification
   const payloadWithSecrets = {
     badge: soc2Badge,
     leakAttempt: {

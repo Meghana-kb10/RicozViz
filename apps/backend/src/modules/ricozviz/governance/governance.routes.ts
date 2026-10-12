@@ -11,7 +11,9 @@ import {
   verifyBadgeHandler,
   getPostureHandler,
   getRlsPoliciesHandler,
-  simulateRlsHandler
+  simulateRlsHandler,
+  getCisoAccreditationsHandler,
+  getCisoAttestationPackHandler
 } from './governance.controller.js';
 
 export async function governanceRoutes(app: FastifyInstance): Promise<void> {
@@ -26,4 +28,8 @@ export async function governanceRoutes(app: FastifyInstance): Promise<void> {
   // Cryptographic RLS & RBAC policy simulation
   app.get('/rls/policies', getRlsPoliciesHandler);
   app.post('/rls/simulate', simulateRlsHandler);
+
+  // Enterprise Security Accreditations & CISO Trust Pack
+  app.get('/ciso-accreditations', getCisoAccreditationsHandler);
+  app.get('/ciso-pack', getCisoAttestationPackHandler);
 }
