@@ -122,7 +122,11 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const headers = new Headers(options.headers);
 
-  if (!headers.has('Content-Type') && options.method !== 'GET' && !(options.body instanceof FormData)) {
+  if (
+    options.body !== undefined &&
+    !(options.body instanceof FormData) &&
+    !headers.has('Content-Type')
+  ) {
     headers.set('Content-Type', 'application/json');
   }
 

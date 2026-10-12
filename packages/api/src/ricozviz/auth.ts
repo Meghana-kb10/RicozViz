@@ -44,7 +44,7 @@ export async function apiMe(): Promise<RicozVizMeResponse> {
 export async function apiRefresh(): Promise<RicozVizRefreshResponse> {
   return apiFetch<RicozVizRefreshResponse>(
     "/api/v1/auth/refresh",
-    { method: "POST" },
+    { method: "POST", body: "{}" },
     true // Skip auth header — refresh uses the cookie
   );
 }

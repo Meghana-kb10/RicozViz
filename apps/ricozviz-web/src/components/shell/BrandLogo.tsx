@@ -20,6 +20,7 @@ export function BrandLogo({
       width={size}
       height={size}
       priority={priority}
+      unoptimized
       className={`rounded-lg object-contain shrink-0 shadow-2xs select-none transition-transform duration-200 ${className}`}
       style={{ width: `${size}px`, height: `${size}px` }}
     />

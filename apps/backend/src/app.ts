@@ -26,6 +26,19 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Required for the HttpOnly refresh-token cookie
   await app.register(cookie);
 
+  // Allow empty JSON bodies on POST requests (e.g. /api/v1/auth/refresh without payload)
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (!body || (typeof body === 'string' && body.trim().length === 0)) {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(body as string));
+    } catch (err) {
+      done(err as Error, undefined);
+    }
+  });
+
   // Multipart uploads (dataset CSV/XLSX import)
   registerMultipart(app);
 

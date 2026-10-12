@@ -107,7 +107,7 @@ export default function StatusPage() {
 
             <div className="flex items-center justify-between py-2">
               <span className="text-sm text-slate-400">Last Verified</span>
-              <span className="text-xs font-mono text-slate-400">{status.timestamp}</span>
+              <span suppressHydrationWarning className="text-xs font-mono text-slate-400">{status.timestamp}</span>
             </div>
           </div>
         </div>
