@@ -175,35 +175,8 @@ export default function HomePage() {
               title="Self-Service Visualization Studio & DuckDB Engine"
               subtitle="Parameterized SQL-injection safe analytics with sub-12ms in-memory aggregation across relational and tabular datasets."
             >
-              <div className="mt-4 space-y-4">
+              <div className="mt-4">
                 <QueryIdeWindow />
-
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="p-3 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151]">
-                    <span className="text-[10px] font-mono text-[#596775] dark:text-[#9CA3AF]">
-                      Throughput
-                    </span>
-                    <p className="text-base sm:text-lg font-bold font-mono text-[#172B3A] dark:text-[#E5E7EB] mt-0.5">
-                      100k+ rps
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151]">
-                    <span className="text-[10px] font-mono text-[#596775] dark:text-[#9CA3AF]">
-                      Memory Footprint
-                    </span>
-                    <p className="text-base sm:text-lg font-bold font-mono text-[#172B3A] dark:text-[#E5E7EB] mt-0.5">
-                      Zero-Copy
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151]">
-                    <span className="text-[10px] font-mono text-[#596775] dark:text-[#9CA3AF]">
-                      Chart Types
-                    </span>
-                    <p className="text-base sm:text-lg font-bold font-mono text-[#172B3A] dark:text-[#E5E7EB] mt-0.5">
-                      8 Native
-                    </p>
-                  </div>
-                </div>
               </div>
             </BentoCard>
 

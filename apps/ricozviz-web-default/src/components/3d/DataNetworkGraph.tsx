@@ -64,7 +64,7 @@ const NODES: NodeData[] = [
     name: "Safe Query Engine",
     layer: "query",
     description: "Parameterized Aggregations",
-    metric: "< 12ms P95 Latency",
+    metric: "Sub-15ms In-Memory WASM (< 12ms P95)",
     icon: Cpu,
   },
 

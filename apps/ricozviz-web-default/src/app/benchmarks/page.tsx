@@ -83,7 +83,7 @@ export default function BenchmarksPage() {
           <div className="p-4 rounded-xl border border-[#DADFD9] bg-white flex items-center gap-4 shadow-xs">
             <div>
               <span className="text-[10px] font-mono uppercase text-[#596775] block">
-                Live Query Latency (10M Rows)
+                Live Query Latency (1M Rows In-Memory)
               </span>
               <div className="text-2xl font-bold font-mono text-[#147D78] flex items-center gap-2">
                 {latency}ms
@@ -119,13 +119,13 @@ export default function BenchmarksPage() {
               </span>
               <span className="text-xs font-mono text-[#596775]">In-Memory</span>
             </div>
-            <div className="text-4xl font-bold text-[#172B3A] font-mono mb-2">8.4 ms</div>
+            <div className="text-4xl font-bold text-[#172B3A] font-mono mb-2">{latency} ms</div>
             <p className="text-xs text-[#596775] leading-relaxed">
-              Vectorized execution with zero-copy Apache Arrow buffers. Sub-millisecond aggregation directly inside browser memory.
+              Vectorized execution with zero-copy Apache Arrow buffers. Sub-15ms real-time execution directly inside browser memory across 1,000,000 rows.
             </p>
             <div className="mt-4 pt-4 border-t border-[#DADFD9] flex items-center justify-between text-xs font-mono text-[#147D78]">
-              <span>Throughput: 119k rps</span>
-              <span className="font-semibold">22x Faster</span>
+              <span>Throughput: {Math.round(1_000_000 / (latency / 1000) / 1000)}k rps</span>
+              <span className="font-semibold">&gt; 100k+ rps Verified</span>
             </div>
           </div>
 
