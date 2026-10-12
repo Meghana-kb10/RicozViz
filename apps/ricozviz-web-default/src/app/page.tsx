@@ -20,6 +20,7 @@ import { QueryIdeWindow } from "@/components/shell/QueryIdeWindow";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { ConnectorGridLogoCloud } from "@/components/shell/ConnectorGridLogoCloud";
 import { SecurityGovernanceBadges } from "@/components/shell/SecurityGovernanceBadges";
+import { DedicatedRlsGovernanceBlock } from "@/components/shell/DedicatedRlsGovernanceBlock";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
@@ -188,27 +189,16 @@ export default function HomePage() {
               </div>
             </BentoCard>
 
-            {/* Bento Card 2: 1x1 Row-Level Security */}
+            {/* Bento Card 2: 1x1 Dedicated Cryptographic Row-Level Security & RBAC */}
             <BentoCard
               span="1x1"
               variant="technical"
               badge="Security & Governance"
               title="Row-Level Security (RLS) & RBAC"
-              subtitle="Granular row filters and cryptographic token policies enforce tenant boundaries without query bypass."
+              subtitle="Granular row filters and cryptographic token policies dynamically isolate tenants and mask columns without database rebuilds."
             >
-              <div className="mt-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151] text-[11px] font-mono">
-                  <span className="text-[#172B3A] dark:text-[#E5E7EB]">tenant_id = auth.org</span>
-                  <span className="text-[#147D78] dark:text-[#4F9D8E] font-semibold bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 rounded text-[10px]">
-                    ENFORCED
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151] text-[11px] font-mono">
-                  <span className="text-[#172B3A] dark:text-[#E5E7EB]">region = user.region</span>
-                  <span className="text-[#147D78] dark:text-[#4F9D8E] font-semibold bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 rounded text-[10px]">
-                    ISOLATED
-                  </span>
-                </div>
+              <div className="mt-3 flex-1 flex flex-col justify-between">
+                <DedicatedRlsGovernanceBlock compact />
               </div>
             </BentoCard>
 

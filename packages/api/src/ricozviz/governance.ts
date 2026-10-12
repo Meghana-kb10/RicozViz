@@ -9,7 +9,10 @@ import { apiFetch } from './client.js';
 import type {
   SecurityBadge,
   GovernancePosture,
-  VerifyBadgeResult
+  VerifyBadgeResult,
+  RlsPoliciesCatalogResponse,
+  RlsSimulationRequest,
+  RlsSimulationResult
 } from '@repo/types';
 
 export async function apiGetGovernanceBadges(params?: { category?: string }): Promise<SecurityBadge[]> {
@@ -30,3 +33,15 @@ export async function apiVerifyGovernanceBadge(badgeId: string): Promise<VerifyB
 export async function apiGetGovernancePosture(): Promise<GovernancePosture> {
   return apiFetch<GovernancePosture>('/api/v1/governance/posture');
 }
+
+export async function apiGetRlsPolicies(): Promise<RlsPoliciesCatalogResponse> {
+  return apiFetch<RlsPoliciesCatalogResponse>('/api/v1/governance/rls/policies');
+}
+
+export async function apiSimulateRls(params: RlsSimulationRequest): Promise<RlsSimulationResult> {
+  return apiFetch<RlsSimulationResult>('/api/v1/governance/rls/simulate', {
+    method: 'POST',
+    body: JSON.stringify(params)
+  });
+}
+

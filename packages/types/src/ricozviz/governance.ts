@@ -60,3 +60,92 @@ export interface VerifyBadgeResult {
   verifiedAt: string;
   details?: Record<string, unknown>;
 }
+
+// ---- Cryptographic RLS & RBAC Policy Simulation -----------------------------
+
+export const RLS_SIMULATION_ROLE = {
+  ORGANIZATION_ADMIN: 'ORGANIZATION_ADMIN',
+  REGIONAL_SALES_LEAD: 'REGIONAL_SALES_LEAD',
+  FINANCIAL_AUDITOR: 'FINANCIAL_AUDITOR',
+  RESTRICTED_CONTRACTOR: 'RESTRICTED_CONTRACTOR'
+} as const;
+export type RlsSimulationRole =
+  (typeof RLS_SIMULATION_ROLE)[keyof typeof RLS_SIMULATION_ROLE];
+
+export const RLS_POLICY_CATEGORY = {
+  TENANT_ISOLATION: 'TENANT_ISOLATION',
+  REGIONAL_PARTITION: 'REGIONAL_PARTITION',
+  COLUMN_MASKING: 'COLUMN_MASKING',
+  METRIC_REDACTION: 'METRIC_REDACTION',
+  ROW_SIGNING: 'ROW_SIGNING'
+} as const;
+export type RlsPolicyCategory =
+  (typeof RLS_POLICY_CATEGORY)[keyof typeof RLS_POLICY_CATEGORY];
+
+export interface RlsPolicyDefinition {
+  id: string;
+  name: string;
+  description: string;
+  category: RlsPolicyCategory;
+  predicateSql: string;
+  targetColumns: string[];
+  maskingMethod: 'NONE' | 'PARTIAL_MASK' | 'FULL_REDACT' | 'ROW_EXCLUDE' | 'HMAC_NONCE';
+  enabledByDefault: boolean;
+}
+
+export interface RlsRoleDefinition {
+  id: RlsSimulationRole;
+  label: string;
+  description: string;
+  defaultAllowedTenantId: string;
+  defaultAllowedRegions: string[];
+  recommendedPolicyIds: string[];
+}
+
+export interface RlsSimulatedRecord {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  representative: string;
+  email: string;
+  region: string;
+  grossRevenue: string;
+  paymentToken: string;
+  maskedColumns: string[];
+  isRowFiltered: boolean;
+  rowStatus: 'ACCESSIBLE' | 'PARTIALLY_MASKED' | 'CONFIDENTIAL_DROPPED';
+  cryptographicSignature: string;
+}
+
+export interface RlsSimulationRequest {
+  role: RlsSimulationRole | string;
+  activePolicyIds: string[];
+  tenantId?: string;
+  userRegion?: string;
+}
+
+export interface RlsSimulationResult {
+  role: string;
+  tenantId: string;
+  userRegion: string;
+  activePolicies: string[];
+  totalSourceRows: number;
+  visibleRowsCount: number;
+  filteredOutRowsCount: number;
+  maskedColumnsCount: number;
+  databaseRebuildsRequired: number;
+  executionLatencyMs: number;
+  appliedSqlAst: string;
+  cryptographicSignature: string;
+  simulatedAt: string;
+  records: RlsSimulatedRecord[];
+}
+
+export interface RlsPoliciesCatalogResponse {
+  roles: RlsRoleDefinition[];
+  policies: RlsPolicyDefinition[];
+  defaultRole: RlsSimulationRole;
+  defaultTenantId: string;
+  defaultUserRegion: string;
+}
+

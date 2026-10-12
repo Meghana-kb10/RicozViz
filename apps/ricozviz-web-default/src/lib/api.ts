@@ -202,7 +202,9 @@ export {
   apiGetGovernanceBadges,
   apiGetGovernanceBadge,
   apiVerifyGovernanceBadge,
-  apiGetGovernancePosture
+  apiGetGovernancePosture,
+  apiGetRlsPolicies,
+  apiSimulateRls
 } from '@repo/api';
 
 // ---- Domain types --------------------------------------------------------------------------------
@@ -336,7 +338,15 @@ export type {
   SecurityBadgeStatus,
   SecurityBadge,
   GovernancePosture,
-  VerifyBadgeResult
+  VerifyBadgeResult,
+  RlsSimulationRole,
+  RlsPolicyCategory,
+  RlsPolicyDefinition,
+  RlsRoleDefinition,
+  RlsSimulatedRecord,
+  RlsSimulationRequest,
+  RlsSimulationResult,
+  RlsPoliciesCatalogResponse
 } from '@repo/types';
 
 /**

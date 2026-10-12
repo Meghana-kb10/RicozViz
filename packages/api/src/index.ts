@@ -251,5 +251,7 @@ export {
   apiGetGovernanceBadges,
   apiGetGovernanceBadge,
   apiVerifyGovernanceBadge,
-  apiGetGovernancePosture
+  apiGetGovernancePosture,
+  apiGetRlsPolicies,
+  apiSimulateRls
 } from './ricozviz/governance.js';

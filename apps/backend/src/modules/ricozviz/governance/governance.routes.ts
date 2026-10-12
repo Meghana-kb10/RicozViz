@@ -9,7 +9,9 @@ import {
   getBadgesHandler,
   getBadgeByIdHandler,
   verifyBadgeHandler,
-  getPostureHandler
+  getPostureHandler,
+  getRlsPoliciesHandler,
+  simulateRlsHandler
 } from './governance.controller.js';
 
 export async function governanceRoutes(app: FastifyInstance): Promise<void> {
@@ -20,4 +22,8 @@ export async function governanceRoutes(app: FastifyInstance): Promise<void> {
   app.get('/badges/:id', getBadgeByIdHandler);
   app.get('/badges/:id/verify', verifyBadgeHandler);
   app.post('/badges/:id/verify', verifyBadgeHandler);
+
+  // Cryptographic RLS & RBAC policy simulation
+  app.get('/rls/policies', getRlsPoliciesHandler);
+  app.post('/rls/simulate', simulateRlsHandler);
 }

@@ -43,7 +43,9 @@ export {
 
 export {
   SECURITY_BADGE_CATEGORY,
-  SECURITY_BADGE_STATUS
+  SECURITY_BADGE_STATUS,
+  RLS_SIMULATION_ROLE,
+  RLS_POLICY_CATEGORY
 } from './governance';
 
 export type {
@@ -240,5 +242,13 @@ export type {
   SecurityBadgeStatus,
   SecurityBadge,
   GovernancePosture,
-  VerifyBadgeResult
+  VerifyBadgeResult,
+  RlsSimulationRole,
+  RlsPolicyCategory,
+  RlsPolicyDefinition,
+  RlsRoleDefinition,
+  RlsSimulatedRecord,
+  RlsSimulationRequest,
+  RlsSimulationResult,
+  RlsPoliciesCatalogResponse
 } from './governance';

@@ -7,6 +7,7 @@
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { governanceService } from './governance.service.js';
+import { getRlsPoliciesCatalog, simulateRlsEvaluation } from './rls-simulator.js';
 import { AppError } from '../../../utils/errors.js';
 import { logger } from '../../../utils/logger.js';
 import { sendSuccess } from '../../../utils/response.js';
@@ -109,3 +110,40 @@ export async function getPostureHandler(
     });
   }
 }
+
+export async function getRlsPoliciesHandler(
+  _request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  try {
+    const catalog = getRlsPoliciesCatalog();
+    return sendSuccess(reply, catalog);
+  } catch (error) {
+    logger.error('Failed to load RLS policies catalog', error);
+    return reply.status(500).send({
+      success: false,
+      error: 'An internal error occurred while fetching RLS policies catalog'
+    });
+  }
+}
+
+export async function simulateRlsHandler(
+  request: FastifyRequest<{ Body: import('@repo/types').RlsSimulationRequest }>,
+  reply: FastifyReply
+): Promise<void> {
+  try {
+    const body = request.body ?? {
+      role: 'REGIONAL_SALES_LEAD',
+      activePolicyIds: ['TENANT_ISOLATION', 'REGIONAL_PARTITION', 'PII_MASKING', 'ROW_SIGNING']
+    };
+    const result = simulateRlsEvaluation(body);
+    return sendSuccess(reply, result);
+  } catch (error) {
+    logger.error('Failed to simulate RLS evaluation', error);
+    return reply.status(500).send({
+      success: false,
+      error: 'An internal error occurred while running cryptographic RLS simulation'
+    });
+  }
+}
+
