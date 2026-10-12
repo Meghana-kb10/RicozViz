@@ -4,6 +4,7 @@
 >
 > **Boilerplate Usage**: `apps/next` and `apps/vite` are reference boilerplates. When an agent is instructed to create a new application (e.g. `customer`, `partner`, `admin`), it should copy either `apps/next` or `apps/vite`, update the package name and port, and preserve the identical nested directory structure.
 
+
 ---
 
 ## 1. Core Operating Principles for Agents
