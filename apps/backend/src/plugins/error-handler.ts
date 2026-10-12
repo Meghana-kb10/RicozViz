@@ -162,7 +162,7 @@ export function registerErrorHandler(app: FastifyInstance): void {
         reply,
         500,
         'INTERNAL_ERROR',
-        config.nodeEnv === 'production'
+        config.nodeEnv === 'production' || config.env === 'production'
           ? 'An unexpected error occurred. Please try again later.'
           : errMessage
       );

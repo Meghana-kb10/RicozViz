@@ -26,14 +26,25 @@ const PALETTE = [
 export interface FunnelChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   height?: number | string;
 }
 
 export function FunnelChartRenderer({
   data,
-  config: _config,
+  config,
+  palette,
   height = "100%",
 }: FunnelChartRendererProps) {
+  const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const xKey = data.xKey || "category";
   const valKey = data.measureKeys[0] || (data.columns[1]?.name ?? "value");
 
@@ -76,7 +87,7 @@ export function FunnelChartRenderer({
               style={{ fontSize: "11px", fontWeight: 600 }}
             />
             {funnelData.map((_, idx) => (
-              <Cell key={`cell-${idx}`} fill={PALETTE[idx % PALETTE.length]} />
+              <Cell key={`cell-${idx}`} fill={activePalette[idx % activePalette.length]} />
             ))}
           </Funnel>
         </FunnelChart>

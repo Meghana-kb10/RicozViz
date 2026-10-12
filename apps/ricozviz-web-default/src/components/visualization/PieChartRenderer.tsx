@@ -27,6 +27,7 @@ const PALETTE = [
 export interface PieChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   isDonut?: boolean;
   height?: number | string;
   onDataPointClick?: (field: string, value: unknown) => void;
@@ -36,12 +37,21 @@ export interface PieChartRendererProps {
 export function PieChartRenderer({
   data,
   config,
+  palette,
   isDonut = false,
   height = "100%",
   onDataPointClick,
   selectedFilterValue,
 }: PieChartRendererProps) {
   const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const showLegend = options.showLegend !== false;
   const numberFormat = (options.numberFormat as string) || "auto";
 
@@ -103,7 +113,7 @@ export function PieChartRenderer({
               return (
                 <Cell
                   key={`slice-${index}`}
-                  fill={PALETTE[index % PALETTE.length]}
+                  fill={activePalette[index % activePalette.length]}
                   opacity={isSelected ? 1 : 0.35}
                   stroke={isSelected && selectedFilterValue !== undefined ? "#1e1b4b" : "none"}
                   strokeWidth={isSelected && selectedFilterValue !== undefined ? 2 : 0}
