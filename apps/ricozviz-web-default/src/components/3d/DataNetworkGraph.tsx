@@ -147,17 +147,18 @@ export function DataNetworkGraph() {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Moving energy pulse
+        // Moving energy pulse with neon-indigo and emerald accents
         if (!prefersReducedMotion) {
           const pulseT = (t * 0.6 + i * 0.2) % 1;
           const px = x1 + (x2 - x1) * pulseT;
           const py = yMid + Math.sin(pulseT * Math.PI) * 12;
 
+          const pulseColor = i % 2 === 0 ? "#10b981" : "#818cf8";
           ctx.beginPath();
           ctx.arc(px, py, 3, 0, Math.PI * 2);
-          ctx.fillStyle = "#38bdf8";
-          ctx.shadowColor = "#38bdf8";
-          ctx.shadowBlur = 8;
+          ctx.fillStyle = pulseColor;
+          ctx.shadowColor = pulseColor;
+          ctx.shadowBlur = 10;
           ctx.fill();
           ctx.shadowBlur = 0;
         }
@@ -180,7 +181,7 @@ export function DataNetworkGraph() {
   const ActiveIcon = activeNodeData.icon;
 
   return (
-    <div className="relative rounded-2xl border border-gray-200/90 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-10 shadow-2xl overflow-hidden">
+    <div className="relative rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#0F172A] via-[#111A2E] to-[#090D16] text-white p-6 sm:p-10 shadow-2xl overflow-hidden">
       {/* Background canvas for glowing particle paths */}
       <canvas
         ref={canvasRef}

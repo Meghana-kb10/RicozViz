@@ -77,7 +77,7 @@ export function IsometricPipeline() {
   return (
     <div className="relative">
       {/* Horizontal Connected Conduit on Desktop */}
-      <div className="hidden lg:block absolute top-[52px] left-[6%] right-[6%] h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 opacity-25 -z-0" />
+      <div className="hidden lg:block absolute top-[52px] left-[6%] right-[6%] h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 opacity-40 shadow-[0_0_12px_rgba(99,102,241,0.5)] -z-0" />
 
       {/* 6 Isometric Stage Platforms */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 relative z-10">
@@ -91,8 +91,8 @@ export function IsometricPipeline() {
               onClick={() => setSelectedStage(idx)}
               className={`rounded-2xl p-4 transition-all duration-300 cursor-pointer border flex flex-col justify-between ${
                 isSelected
-                  ? "bg-white border-indigo-500 shadow-xl shadow-indigo-100 ring-2 ring-indigo-500/20 translate-y-[-4px]"
-                  : "bg-white/90 border-gray-200/90 hover:border-indigo-300 hover:shadow-md"
+                  ? "bg-[#131B2E] border-indigo-500 shadow-xl shadow-indigo-500/15 ring-1 ring-indigo-500/30 -translate-y-1"
+                  : "bg-[#0F172A]/90 border-white/[0.08] hover:border-indigo-500/40 hover:bg-[#131B2E] hover:shadow-lg hover:shadow-indigo-950/40"
               }`}
             >
               <div>
@@ -101,31 +101,31 @@ export function IsometricPipeline() {
                   <div
                     className={`flex h-11 w-11 items-center justify-center rounded-xl transition shadow-xs ${
                       isSelected
-                        ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-200"
-                        : "bg-indigo-50 text-indigo-600"
+                        ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/30"
+                        : "bg-slate-800/80 text-indigo-400 border border-white/5"
                     }`}
                   >
                     <Icon className="h-5 w-5" />
                   </div>
-                  <span className="font-mono text-xs font-bold text-gray-400">
+                  <span className="font-mono text-xs font-bold text-slate-500">
                     {stage.step}
                   </span>
                 </div>
 
                 {/* Stage Info */}
-                <h4 className="text-sm font-bold text-gray-900 leading-tight">
+                <h4 className="text-sm font-bold text-white leading-tight">
                   {stage.name}
                 </h4>
-                <p className="text-[11px] text-gray-500 mt-1 font-medium leading-snug">
+                <p className="text-[11px] text-slate-400 mt-1 font-medium leading-snug">
                   {stage.tagline}
                 </p>
               </div>
 
               {/* Stage Bullet Details */}
-              <div className="mt-4 pt-3 border-t border-gray-100 space-y-1.5">
+              <div className="mt-4 pt-3 border-t border-white/[0.06] space-y-1.5">
                 {stage.details.map((item, dIdx) => (
-                  <div key={dIdx} className="flex items-center gap-1.5 text-[10px] text-gray-600">
-                    <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+                  <div key={dIdx} className="flex items-center gap-1.5 text-[10px] text-slate-300">
+                    <Check className="h-3 w-3 text-emerald-400 shrink-0" />
                     <span className="truncate">{item}</span>
                   </div>
                 ))}
