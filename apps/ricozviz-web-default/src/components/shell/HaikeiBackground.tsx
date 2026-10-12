@@ -1,7 +1,7 @@
 "use client";
 
 interface HaikeiBackgroundProps {
-  variant?: "dots" | "grid" | "waves" | "blobs";
+  variant?: "dots" | "grid" | "waves" | "blobs" | "tech-grid" | "emerald-grid";
   className?: string;
 }
 
@@ -39,6 +39,24 @@ export function HaikeiBackground({
           />
         </svg>
       </div>
+    );
+  }
+
+  if (variant === "tech-grid") {
+    return (
+      <div
+        className={`absolute inset-0 -z-10 haikei-tech-grid pointer-events-none select-none ${className}`}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  if (variant === "emerald-grid") {
+    return (
+      <div
+        className={`absolute inset-0 -z-10 haikei-emerald-grid pointer-events-none select-none ${className}`}
+        aria-hidden="true"
+      />
     );
   }
 
