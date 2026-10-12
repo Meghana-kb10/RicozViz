@@ -77,7 +77,7 @@ export function IsometricPipeline() {
   return (
     <div className="relative">
       {/* Horizontal Connected Conduit on Desktop */}
-      <div className="hidden lg:block absolute top-[52px] left-[6%] right-[6%] h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 opacity-40 shadow-[0_0_12px_rgba(99,102,241,0.5)] -z-0" />
+      <div className="hidden lg:block absolute top-[52px] left-[6%] right-[6%] h-px bg-white/10 -z-0" />
 
       {/* 6 Isometric Stage Platforms */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 relative z-10">
