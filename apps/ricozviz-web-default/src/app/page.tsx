@@ -16,6 +16,7 @@ import { HaikeiBackground } from "@/components/shell/HaikeiBackground";
 import { BrandLogo } from "@/components/shell/BrandLogo";
 import { TechnicalFooter } from "@/components/shell/TechnicalFooter";
 import { HeroDashboardPreview } from "@/components/dashboard/HeroDashboardPreview";
+import { QueryIdeWindow } from "@/components/shell/QueryIdeWindow";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
@@ -176,15 +177,9 @@ export default function HomePage() {
               title="Self-Service Visualization Studio & DuckDB Engine"
               subtitle="Parameterized SQL-injection safe analytics with sub-12ms in-memory aggregation across relational and tabular datasets."
             >
-              <div className="mt-4 rounded-xl border border-white/[0.06] bg-[#090D16] p-4">
-                <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5 mb-3 text-xs">
-                  <span className="font-mono text-indigo-300 font-semibold truncate mr-2">
-                    SELECT date_trunc(&apos;month&apos;, timestamp), sum(val)
-                  </span>
-                  <span className="font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] shrink-0">
-                    6.2ms execution
-                  </span>
-                </div>
+              <div className="mt-4 space-y-4">
+                <QueryIdeWindow />
+
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="p-3 rounded-lg bg-[#131B2E] border border-white/[0.06]">
                     <span className="text-[10px] font-mono text-slate-400">
