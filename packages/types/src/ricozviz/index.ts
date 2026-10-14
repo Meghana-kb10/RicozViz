@@ -197,7 +197,9 @@ export type {
   DashboardChartSnapshot,
   DashboardVersionRecord,
   VersionComparisonResult,
-  EmbeddedChartDataResult
+  EmbeddedChartDataResult,
+  MultiplayerCursorIndicator,
+  MultiplayerCanvasEvent
 } from './dashboard';
 
 export type {

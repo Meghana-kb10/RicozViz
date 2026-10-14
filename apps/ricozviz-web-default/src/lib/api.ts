@@ -286,6 +286,8 @@ export type {
   DashboardCollaboratorsResponse,
   CollaboratorPresence,
   CollaborationStateResult,
+  MultiplayerCursorIndicator,
+  MultiplayerCanvasEvent,
   EmbedConfig,
   EmbedStatusResult,
   DashboardScheduleData,

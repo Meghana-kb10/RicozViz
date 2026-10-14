@@ -22,6 +22,7 @@ import { ConnectorGridLogoCloud } from "@/components/shell/ConnectorGridLogoClou
 import { SecurityGovernanceBadges } from "@/components/shell/SecurityGovernanceBadges";
 import { DedicatedRlsGovernanceBlock } from "@/components/shell/DedicatedRlsGovernanceBlock";
 import { MultiTenantAuditTrailMockup } from "@/components/shell/MultiTenantAuditTrailMockup";
+import { CollaborativeMultiplayerCanvas } from "@/components/shell/CollaborativeMultiplayerCanvas";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
@@ -214,21 +215,8 @@ export default function HomePage() {
               title="Live Multiplayer Analytics"
               subtitle="Multi-user live presence, cursor and widget focus locks, and conflict-safe optimistic concurrency control."
             >
-              <div className="mt-4 flex items-center justify-between pt-2 border-t border-[#DADFD9] dark:border-[#374151]">
-                <div className="flex -space-x-1.5 overflow-hidden">
-                  <span className="h-6 w-6 rounded-full bg-[#147D78] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-[#1F2937]">
-                    AL
-                  </span>
-                  <span className="h-6 w-6 rounded-full bg-[#2E5B70] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-[#1F2937]">
-                    BO
-                  </span>
-                  <span className="h-6 w-6 rounded-full bg-[#106963] text-white flex items-center justify-center text-[10px] font-bold border border-white dark:border-[#1F2937]">
-                    CH
-                  </span>
-                </div>
-                <span className="text-[11px] font-mono text-[#147D78] dark:text-[#4F9D8E] font-medium bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 rounded">
-                  SSE Multiplexed
-                </span>
+              <div className="mt-3 flex-1 flex flex-col justify-between">
+                <CollaborativeMultiplayerCanvas compact />
               </div>
             </BentoCard>
 

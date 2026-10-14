@@ -234,6 +234,8 @@ export type {
   DashboardVersionRecord,
   VersionComparisonResult,
   EmbeddedChartDataResult,
+  MultiplayerCursorIndicator,
+  MultiplayerCanvasEvent,
   MetricData,
   CreateMetricPayload,
   CalculatedMetricResult,
