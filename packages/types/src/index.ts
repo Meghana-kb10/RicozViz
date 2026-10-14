@@ -277,7 +277,15 @@ export type {
   RlsPoliciesCatalogResponse,
   CisoAccreditationItem,
   CisoTrustOverview,
-  CisoAttestationDossier
+  CisoAttestationDossier,
+  ImmutableQueryLog,
+  UserSessionPresence,
+  CryptographicTokenRevocation,
+  LedgerIntegritySummary,
+  AuditTrailPreviewData,
+  RevokeTokenPayload,
+  RevokeTokenResult
 } from './ricozviz/index';
+
 
 

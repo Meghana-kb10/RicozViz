@@ -187,7 +187,13 @@ export {
 } from '@repo/api';
 
 // ---- Audit logs ------------------------------------------------------------------------------
-export { apiQueryAuditLogs, apiGetAuditLogStats } from '@repo/api';
+export {
+  apiQueryAuditLogs,
+  apiGetAuditLogStats,
+  apiGetAuditTrailPreview,
+  apiRevokeToken,
+  apiVerifyLedgerChain
+} from '@repo/api';
 
 // ---- AI analytics -----------------------------------------------------------------------------
 export {
@@ -351,7 +357,14 @@ export type {
   RlsPoliciesCatalogResponse,
   CisoAccreditationItem,
   CisoTrustOverview,
-  CisoAttestationDossier
+  CisoAttestationDossier,
+  ImmutableQueryLog,
+  UserSessionPresence,
+  CryptographicTokenRevocation,
+  LedgerIntegritySummary,
+  AuditTrailPreviewData,
+  RevokeTokenPayload,
+  RevokeTokenResult
 } from '@repo/types';
 
 /**
