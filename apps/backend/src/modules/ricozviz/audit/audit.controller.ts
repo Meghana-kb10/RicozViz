@@ -8,6 +8,8 @@ import {
   getAuditLogStats,
   type QueryAuditLogsServiceParams
 } from './audit.service.js';
+import { auditPreviewService } from './audit-preview.service.js';
+import type { RevokeTokenPayload } from '@repo/types';
 
 interface AuditLogQuery {
   workspaceId?: string;
@@ -72,6 +74,25 @@ export class AuditController {
     }
 
     sendSuccess(reply, found);
+  }
+
+  /** GET /api/v1/audit-logs/preview */
+  async preview(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const previewData = await auditPreviewService.getAuditTrailPreview();
+    sendSuccess(reply, previewData);
+  }
+
+  /** POST /api/v1/audit-logs/revoke-token */
+  async revokeToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const body = (request.body ?? {}) as RevokeTokenPayload;
+    const result = await auditPreviewService.revokeToken(body);
+    sendSuccess(reply, result, 200);
+  }
+
+  /** GET /api/v1/audit-logs/verify-chain */
+  async verifyChain(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const result = await auditPreviewService.verifyChainIntegrity();
+    sendSuccess(reply, result);
   }
 }
 

@@ -7,7 +7,14 @@
  */
 
 import { apiFetch } from './client.js';
-import type { AuditLogStatsResponse, QueryAuditLogsParams, QueryAuditLogsResponse } from '@repo/types';
+import type {
+  AuditLogStatsResponse,
+  QueryAuditLogsParams,
+  QueryAuditLogsResponse,
+  AuditTrailPreviewData,
+  RevokeTokenPayload,
+  RevokeTokenResult
+} from '@repo/types';
 
 export async function apiQueryAuditLogs(
   params?: QueryAuditLogsParams
@@ -33,3 +40,19 @@ export async function apiGetAuditLogStats(workspaceId?: string): Promise<AuditLo
   const qs = q.toString();
   return apiFetch<AuditLogStatsResponse>(`/api/v1/audit-logs/stats${qs ? `?${qs}` : ""}`);
 }
+
+export async function apiGetAuditTrailPreview(): Promise<AuditTrailPreviewData> {
+  return apiFetch<AuditTrailPreviewData>('/api/v1/audit-logs/preview');
+}
+
+export async function apiRevokeToken(payload: RevokeTokenPayload): Promise<RevokeTokenResult> {
+  return apiFetch<RevokeTokenResult>('/api/v1/audit-logs/revoke-token', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
+export async function apiVerifyLedgerChain(): Promise<{ valid: boolean; totalBlocksVerified: number; errors: string[] }> {
+  return apiFetch<{ valid: boolean; totalBlocksVerified: number; errors: string[] }>('/api/v1/audit-logs/verify-chain');
+}

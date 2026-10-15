@@ -21,6 +21,7 @@ import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { ConnectorGridLogoCloud } from "@/components/shell/ConnectorGridLogoCloud";
 import { SecurityGovernanceBadges } from "@/components/shell/SecurityGovernanceBadges";
 import { DedicatedRlsGovernanceBlock } from "@/components/shell/DedicatedRlsGovernanceBlock";
+import { MultiTenantAuditTrailMockup } from "@/components/shell/MultiTenantAuditTrailMockup";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
@@ -60,6 +61,9 @@ export default function HomePage() {
               </a>
               <a href="#governance" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Security & Trust
+              </a>
+              <a href="#audit-trail" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
+                Audit Trail
               </a>
               <a href="#workflow" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
                 Pipeline
@@ -313,6 +317,30 @@ export default function HomePage() {
           </div>
 
           <SecurityGovernanceBadges />
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 5.5 MULTI-TENANT AUDIT TRAIL & CRYPTOGRAPHIC LEDGER         */}
+      {/* ============================================================ */}
+      <section
+        id="audit-trail"
+        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
+              Zero-Trust Observability
+            </span>
+            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
+              Multi-tenant audit trail & cryptographic kill-switch
+            </h2>
+            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
+              Explore hardware-grade immutable query logs chained via RFC 6962 SHA-256 blocks, real-time distributed user session presence, and instant zero-reuse token revocation.
+            </p>
+          </div>
+
+          <MultiTenantAuditTrailMockup />
         </div>
       </section>
 

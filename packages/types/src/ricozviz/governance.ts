@@ -188,4 +188,103 @@ export interface CisoAttestationDossier {
   trustOverview: CisoTrustOverview;
 }
 
+// ---- Multi-Tenant Audit Trail Preview & Cryptographic Ledger ----------------
+
+export interface ImmutableQueryLog {
+  id: string;
+  blockHeight: number;
+  tenantId: string;
+  tenantName: string;
+  workspaceId: string;
+  workspaceName: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  userAvatar?: string;
+  queryText: string;
+  queryEngine: 'DUCKDB_WASM' | 'SNOWFLAKE_PUSHDOWN' | 'POSTGRES_CDC' | 'CLICKHOUSE_OLAP';
+  durationMs: number;
+  rowsAffected: number;
+  status: 'SUCCESS_VERIFIED' | 'GUARDRAIL_BLOCKED' | 'ANOMALOUS_FLAGGED';
+  prevBlockHash: string;
+  blockHash: string;
+  cryptographicProof: string;
+  timestamp: string;
+}
+
+export interface UserSessionPresence {
+  sessionId: string;
+  tenantId: string;
+  tenantName: string;
+  workspaceId: string;
+  workspaceName: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  avatar: string;
+  ipAddress: string;
+  region: string;
+  deviceInfo: string;
+  activeResource: string;
+  connectionStatus: 'ACTIVE' | 'IDLE' | 'QUERYING' | 'REVOKED';
+  lastHeartbeatAt: string;
+  tokenFingerprint: string;
+  ephemeralTokenExpiresAt: string;
+}
+
+export interface CryptographicTokenRevocation {
+  tokenId: string;
+  tokenType: 'EPHEMERAL_QUERY_BEARER' | 'EXPORT_STREAM_NONCE' | 'SESSION_OAUTH_TOKEN';
+  tenantId: string;
+  tenantName: string;
+  userId: string;
+  userName: string;
+  issuedAt: string;
+  expiresAt: string;
+  status: 'ACTIVE' | 'REVOKED';
+  revokedAt?: string;
+  revokedBy?: string;
+  revocationReason?: string;
+  revocationReceiptSignature?: string;
+  zeroReuseGuaranteed: boolean;
+}
+
+export interface LedgerIntegritySummary {
+  chainHeight: number;
+  tamperEvident: boolean;
+  genesisHash: string;
+  latestBlockHash: string;
+  wormChainingAlgorithm: string;
+  totalQueriesAudited: number;
+  activeTenantsCount: number;
+  activeSessionsCount: number;
+  revokedTokensCount: number;
+  zeroLeakageEnforced: boolean;
+}
+
+export interface AuditTrailPreviewData {
+  immutableLogs: ImmutableQueryLog[];
+  activeSessions: UserSessionPresence[];
+  revokedTokens: CryptographicTokenRevocation[];
+  ledgerIntegrity: LedgerIntegritySummary;
+}
+
+export interface RevokeTokenPayload {
+  tokenId: string;
+  reason: string;
+  revokedBy?: string;
+}
+
+export interface RevokeTokenResult {
+  success: boolean;
+  tokenId: string;
+  revocationReceiptSignature: string;
+  revokedAt: string;
+  reason: string;
+  invalidatedSessionId?: string;
+  message: string;
+}
+
+
 

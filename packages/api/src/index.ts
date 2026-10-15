@@ -238,7 +238,13 @@ export {
   apiInstantiateDashboardFromTemplate
 } from './ricozviz/template.js';
 
-export { apiQueryAuditLogs, apiGetAuditLogStats } from './ricozviz/audit.js';
+export {
+  apiQueryAuditLogs,
+  apiGetAuditLogStats,
+  apiGetAuditTrailPreview,
+  apiRevokeToken,
+  apiVerifyLedgerChain
+} from './ricozviz/audit.js';
 
 export {
   apiAskDataAnalyst,
