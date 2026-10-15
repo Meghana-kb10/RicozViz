@@ -83,7 +83,11 @@ export {
   EXPORT_FORMAT,
   EXPORT_STATUS,
   EXPORT_RESOURCE_TYPE,
-  AUDIT_STATUS
+  AUDIT_STATUS,
+  SECURITY_BADGE_CATEGORY,
+  SECURITY_BADGE_STATUS,
+  RLS_SIMULATION_ROLE,
+  RLS_POLICY_CATEGORY
 } from './ricozviz/index';
 
 export type {
@@ -257,6 +261,23 @@ export type {
   InsightsParams,
   InsightsResponse,
   DashboardSummaryResponse,
-  DashboardSummaryParams
+  DashboardSummaryParams,
+  SecurityBadgeCategory,
+  SecurityBadgeStatus,
+  SecurityBadge,
+  GovernancePosture,
+  VerifyBadgeResult,
+  RlsSimulationRole,
+  RlsPolicyCategory,
+  RlsPolicyDefinition,
+  RlsRoleDefinition,
+  RlsSimulatedRecord,
+  RlsSimulationRequest,
+  RlsSimulationResult,
+  RlsPoliciesCatalogResponse,
+  CisoAccreditationItem,
+  CisoTrustOverview,
+  CisoAttestationDossier
 } from './ricozviz/index';
+
 

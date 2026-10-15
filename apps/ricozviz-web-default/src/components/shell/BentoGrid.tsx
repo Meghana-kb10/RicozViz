@@ -51,60 +51,28 @@ export function BentoCard({
   }[span];
 
   const cardBaseClass =
-    variant === "technical"
-      ? "bento-card-technical rounded-2xl group flex flex-col justify-between p-6 sm:p-7 relative overflow-hidden transition-all duration-300"
-      : "bento-card group flex flex-col justify-between p-6 sm:p-7 relative";
-
-  const glowBgClass = {
-    indigo: "bg-indigo-500/15",
-    emerald: "bg-emerald-500/15",
-    cyan: "bg-cyan-500/15",
-  }[glowColor];
+    "bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] hover:border-[#147D78]/50 dark:hover:border-[#4F9D8E]/50 rounded-xl group flex flex-col justify-between p-6 sm:p-7 relative overflow-hidden transition-all duration-200 shadow-xs dark:shadow-md";
 
   return (
     <div
-      className={`${cardBaseClass} ${spanClasses} ${
-        glow ? "ring-1 ring-indigo-500/30" : ""
-      } ${className}`}
+      className={`${cardBaseClass} ${spanClasses} ${className}`}
     >
-      {/* Optional ambient corner glow */}
-      {glow && (
-        <div
-          className={`absolute -top-12 -right-12 h-40 w-40 rounded-full ${glowBgClass} blur-2xl pointer-events-none`}
-          aria-hidden="true"
-        />
-      )}
-
       {/* Header if title or badge provided */}
       {(title || badge || subtitle) && (
         <div className="mb-4 flex items-start justify-between gap-3 relative z-10">
           <div>
             {badge && (
-              <span className={`inline-block text-[10px] font-mono font-bold uppercase tracking-widest mb-1 ${
-                variant === "technical"
-                  ? glowColor === "emerald"
-                    ? "text-emerald-400"
-                    : "text-indigo-400"
-                  : "text-indigo-600 dark:text-indigo-400"
-              }`}>
+              <span className="inline-block text-[10px] font-mono font-semibold uppercase tracking-wider mb-1 px-2 py-0.5 rounded text-[#147D78] bg-[#147D78]/10 border border-[#147D78]/20 dark:text-[#4F9D8E] dark:bg-[#4F9D8E]/10 dark:border-[#4F9D8E]/20">
                 {badge}
               </span>
             )}
             {title && (
-              <h3 className={`text-base font-bold tracking-tight ${
-                variant === "technical"
-                  ? "text-white"
-                  : "text-[hsl(var(--foreground))]"
-              }`}>
+              <h3 className="text-base font-semibold tracking-tight font-heading text-[#172B3A] dark:text-[#E5E7EB]">
                 {title}
               </h3>
             )}
             {subtitle && (
-              <p className={`mt-1 text-xs leading-relaxed ${
-                variant === "technical"
-                  ? "text-slate-400"
-                  : "text-[hsl(var(--muted-foreground))]"
-              }`}>
+              <p className="mt-1 text-xs leading-relaxed text-[#596775] dark:text-[#9CA3AF]">
                 {subtitle}
               </p>
             )}

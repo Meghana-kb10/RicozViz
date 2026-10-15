@@ -78,7 +78,7 @@ export function HeatmapRenderer({
         </span>
         <div className="flex items-center gap-1.5">
           <span>Min: {formatNumber(minVal)}</span>
-          <div className="w-20 h-2 rounded bg-gradient-to-r from-indigo-100 to-indigo-700" />
+          <div className="w-20 h-2 rounded bg-gradient-to-r from-[#ccfbef] to-[#147D78]" />
           <span>Max: {formatNumber(maxVal)}</span>
         </div>
       </div>
@@ -125,7 +125,7 @@ export function HeatmapRenderer({
                       onMouseLeave={() => setHoveredCell(null)}
                       style={{
                         backgroundColor: hasVal
-                          ? `rgba(79, 70, 229, ${bgOpacity})`
+                          ? `rgba(20, 125, 120, ${bgOpacity})`
                           : "#f9fafb",
                         color: hasVal ? textColor : "#9ca3af",
                       }}
@@ -147,7 +147,7 @@ export function HeatmapRenderer({
           <span>
             <strong>{hoveredCell.x}</strong> &times; <strong>{hoveredCell.y}</strong>
           </span>
-          <span className="font-bold text-indigo-600">
+          <span className="font-bold text-[#147D78]">
             {hoveredCell.val !== null ? formatNumber(hoveredCell.val) : "No data"}
           </span>
         </div>

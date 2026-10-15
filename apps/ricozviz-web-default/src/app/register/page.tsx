@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { useAuth } from "../../contexts/auth-context";
 import { ApiError } from "../../lib/api";
 import { BrandLogo } from "@/components/shell/BrandLogo";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -75,20 +76,29 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-indigo-50 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-[#F4F1EA] dark:bg-[#111827] px-4 py-12 font-sans relative transition-colors duration-200">
+      {/* Top right theme toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-md">
         {/* ---- Logo ---- */}
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2.5">
-            <BrandLogo size={36} priority className="shadow-md" />
-            <span className="text-xl font-semibold text-gray-900">RicozViz</span>
+            <BrandLogo size={36} priority className="shadow-xs" />
+            <span className="text-xl font-heading font-bold text-[#172B3A] dark:text-[#E5E7EB]">
+              Ricoz<span className="text-[#147D78] dark:text-[#4F9D8E]">Viz</span>
+            </span>
           </Link>
         </div>
 
         {/* ---- Card ---- */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Create your account</h1>
-          <p className="text-sm text-gray-500 mb-6">
+        <div className="rounded-xl border border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#1F2937] p-8 shadow-xs">
+          <h1 className="text-2xl font-heading font-bold text-[#172B3A] dark:text-[#E5E7EB] mb-1">
+            Create your account
+          </h1>
+          <p className="text-sm text-[#596775] dark:text-[#9CA3AF] mb-6">
             Start building your analytics workspace
           </p>
 
@@ -96,7 +106,7 @@ export default function RegisterPage() {
           {error && (
             <div
               role="alert"
-              className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"
+              className="mb-4 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 px-4 py-3 text-sm text-red-700 dark:text-red-400"
             >
               {error}
             </div>
@@ -107,7 +117,7 @@ export default function RegisterPage() {
             <div className="mb-4">
               <label
                 htmlFor="register-name"
-                className="block text-sm font-medium text-gray-700 mb-1.5"
+                className="block text-sm font-medium text-[#172B3A] dark:text-[#E5E7EB] mb-1.5"
               >
                 Full name
               </label>
@@ -119,10 +129,10 @@ export default function RegisterPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jane Smith"
                 disabled={isLoading}
-                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 disabled:opacity-50 ${
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-[#172B3A] dark:text-[#E5E7EB] placeholder-[#596775]/60 dark:placeholder-[#9CA3AF]/60 outline-none transition focus:ring-2 focus:ring-[#147D78] dark:focus:ring-[#4F9D8E] focus:border-[#147D78] dark:focus:border-[#4F9D8E] disabled:opacity-50 ${
                   fieldErrors["name"]
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-300 bg-white"
+                    ? "border-red-400 bg-red-50 dark:bg-red-950/40"
+                    : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]"
                 }`}
               />
               <FieldError message={fieldErrors["name"]?.[0]} />
@@ -132,7 +142,7 @@ export default function RegisterPage() {
             <div className="mb-4">
               <label
                 htmlFor="register-org"
-                className="block text-sm font-medium text-gray-700 mb-1.5"
+                className="block text-sm font-medium text-[#172B3A] dark:text-[#E5E7EB] mb-1.5"
               >
                 Organization name
               </label>
@@ -143,10 +153,10 @@ export default function RegisterPage() {
                 onChange={(e) => setOrganizationName(e.target.value)}
                 placeholder="Acme Corp"
                 disabled={isLoading}
-                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 disabled:opacity-50 ${
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-[#172B3A] dark:text-[#E5E7EB] placeholder-[#596775]/60 dark:placeholder-[#9CA3AF]/60 outline-none transition focus:ring-2 focus:ring-[#147D78] dark:focus:ring-[#4F9D8E] focus:border-[#147D78] dark:focus:border-[#4F9D8E] disabled:opacity-50 ${
                   fieldErrors["organizationName"]
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-300 bg-white"
+                    ? "border-red-400 bg-red-50 dark:bg-red-950/40"
+                    : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]"
                 }`}
               />
               <FieldError message={fieldErrors["organizationName"]?.[0]} />
@@ -156,7 +166,7 @@ export default function RegisterPage() {
             <div className="mb-4">
               <label
                 htmlFor="register-email"
-                className="block text-sm font-medium text-gray-700 mb-1.5"
+                className="block text-sm font-medium text-[#172B3A] dark:text-[#E5E7EB] mb-1.5"
               >
                 Work email
               </label>
@@ -168,10 +178,10 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
                 disabled={isLoading}
-                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 disabled:opacity-50 ${
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-[#172B3A] dark:text-[#E5E7EB] placeholder-[#596775]/60 dark:placeholder-[#9CA3AF]/60 outline-none transition focus:ring-2 focus:ring-[#147D78] dark:focus:ring-[#4F9D8E] focus:border-[#147D78] dark:focus:border-[#4F9D8E] disabled:opacity-50 ${
                   fieldErrors["email"]
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-300 bg-white"
+                    ? "border-red-400 bg-red-50 dark:bg-red-950/40"
+                    : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]"
                 }`}
               />
               <FieldError message={fieldErrors["email"]?.[0]} />
@@ -181,7 +191,7 @@ export default function RegisterPage() {
             <div className="mb-6">
               <label
                 htmlFor="register-password"
-                className="block text-sm font-medium text-gray-700 mb-1.5"
+                className="block text-sm font-medium text-[#172B3A] dark:text-[#E5E7EB] mb-1.5"
               >
                 Password
               </label>
@@ -193,10 +203,10 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min. 8 characters"
                 disabled={isLoading}
-                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 disabled:opacity-50 ${
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-[#172B3A] dark:text-[#E5E7EB] placeholder-[#596775]/60 dark:placeholder-[#9CA3AF]/60 outline-none transition focus:ring-2 focus:ring-[#147D78] dark:focus:ring-[#4F9D8E] focus:border-[#147D78] dark:focus:border-[#4F9D8E] disabled:opacity-50 ${
                   fieldErrors["password"]
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-300 bg-white"
+                    ? "border-red-400 bg-red-50 dark:bg-red-950/40"
+                    : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]"
                 }`}
               />
               <FieldError message={fieldErrors["password"]?.[0]} />
@@ -207,7 +217,7 @@ export default function RegisterPage() {
               id="register-submit"
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full rounded-lg bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] px-4 py-2.5 text-sm font-medium text-white shadow-xs transition focus:outline-none focus:ring-2 focus:ring-[#147D78] dark:focus:ring-[#4F9D8E] focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -240,11 +250,11 @@ export default function RegisterPage() {
           </form>
 
           {/* ---- Login link ---- */}
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-6 text-center text-sm text-[#596775] dark:text-[#9CA3AF]">
             Already have an account?{" "}
             <Link
               href="/login"
-              className="font-medium text-indigo-600 hover:text-indigo-700"
+              className="font-medium text-[#147D78] hover:text-[#106963] dark:text-[#4F9D8E] dark:hover:text-[#43887B]"
             >
               Sign in
             </Link>

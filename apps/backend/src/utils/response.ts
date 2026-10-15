@@ -42,6 +42,35 @@ export function sanitizeErrorDetails(
 }
 
 /**
+ * Recursively sanitizes response payloads and metadata objects to prevent
+ * accidental leakage of passwords, tokens, database URIs, and credentials.
+ */
+const SENSITIVE_KEY_REGEX = /^(password|passwordhash|secret|token|apikey|api_key|access_token|refresh_token|credential|credentials|bearertoken|authorization)$/i;
+
+export function sanitizeResponsePayload<T>(payload: T): T {
+  if (!payload || typeof payload !== 'object') {
+    if (typeof payload === 'string') {
+      return sanitizeErrorMessage(payload) as unknown as T;
+    }
+    return payload;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload.map((item) => sanitizeResponsePayload(item)) as unknown as T;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+    if (SENSITIVE_KEY_REGEX.test(key)) {
+      result[key] = '[REDACTED]';
+    } else {
+      result[key] = sanitizeResponsePayload(value);
+    }
+  }
+  return result as T;
+}
+
+/**
  * Standardised success envelope: `{ success: true, data, meta? }`.
  * The web client's `apiFetch` unwraps `body.data`, so this shape is contractual.
  */

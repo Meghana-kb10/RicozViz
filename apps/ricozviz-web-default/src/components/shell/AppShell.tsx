@@ -102,8 +102,8 @@ export function AppShell({
             <Link href="/" className="flex items-center gap-2.5 group">
               <BrandLogo size={32} priority className="group-hover:scale-105" />
               <div className="flex flex-col leading-none">
-                <span className="text-sm font-bold tracking-tight text-[hsl(var(--foreground))]">
-                  Ricoz<span className="text-indigo-600 dark:text-indigo-400">Viz</span>
+                <span className="text-sm font-semibold tracking-tight text-[hsl(var(--foreground))] font-heading">
+                  Ricoz<span className="text-[#147D78] dark:text-[#4F9D8E]">Viz</span>
                 </span>
                 <span className="text-[9px] uppercase tracking-wider font-mono text-[hsl(var(--muted-foreground))]">
                   Intelligence OS
@@ -126,7 +126,7 @@ export function AppShell({
             <div
               className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-lg border transition-all duration-150 ${
                 searchFocused
-                  ? "border-indigo-500 ring-2 ring-indigo-500/10 bg-[hsl(var(--surface))]"
+                  ? "border-[#147D78] ring-2 ring-[#147D78]/15 dark:border-[#4F9D8E] dark:ring-[#4F9D8E]/20 bg-[hsl(var(--surface))]"
                   : "border-[hsl(var(--surface-border))] bg-[hsl(var(--surface-subtle))]/60 hover:bg-[hsl(var(--surface))]"
               }`}
             >
@@ -163,7 +163,7 @@ export function AppShell({
               {resolvedTheme === "dark" ? (
                 <Sun className="h-4 w-4 text-amber-400 transition-transform hover:rotate-45" />
               ) : (
-                <Moon className="h-4 w-4 text-indigo-600 transition-transform hover:-rotate-12" />
+                <Moon className="h-4 w-4 text-[#147D78] transition-transform hover:-rotate-12" />
               )}
             </button>
 
@@ -178,7 +178,7 @@ export function AppShell({
                 </div>
                 <div
                   title={`${auth.user.name} (${auth.role})`}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 text-white text-xs font-bold ring-2 ring-white dark:ring-zinc-900 shadow-xs"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-[#147D78] dark:bg-[#4F9D8E] text-white text-xs font-semibold ring-2 ring-white dark:ring-zinc-900 shadow-xs"
                 >
                   {userInitials}
                 </div>
@@ -200,7 +200,7 @@ export function AppShell({
       </header>
 
       {/* ============================================================ */}
-      {/* 2. BODY LAYOUT: Sleek Godly Sidebar + Main Content Bar */}
+      {/* 2. BODY LAYOUT: Sleek Sidebar + Main Content Bar */}
       {/* ============================================================ */}
       <div className="flex flex-1 relative">
         {/* ---- Sidebar Navigation ---- */}
@@ -228,21 +228,21 @@ export function AppShell({
                         key={item.href}
                         href={item.href}
                         title={isSidebarCollapsed ? item.label : undefined}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 relative ${
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-all duration-150 relative ${
                           isActive
-                            ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold"
-                            : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--surface-subtle))]"
+                            ? "bg-[#147D78]/10 dark:bg-[#4F9D8E]/15 text-[#147D78] dark:text-[#4F9D8E] font-semibold"
+                            : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--surface-subtle))] font-medium"
                         }`}
                       >
                         {isActive && (
-                          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-indigo-600" />
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-[#147D78] dark:bg-[#4F9D8E]" />
                         )}
-                        <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-600 dark:text-indigo-400" : ""}`} />
+                        <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#147D78] dark:text-[#4F9D8E]" : ""}`} />
                         {!isSidebarCollapsed && (
                           <div className="flex flex-1 items-center justify-between">
                             <span>{item.label}</span>
                             {item.badge && (
-                              <span className="text-[9px] font-mono font-bold uppercase tracking-wide px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+                              <span className="text-[9px] font-mono font-semibold uppercase tracking-wide px-1.5 py-0.2 rounded bg-[#147D78]/10 text-[#147D78] dark:bg-[#4F9D8E]/20 dark:text-[#4F9D8E]">
                                 {item.badge}
                               </span>
                             )}
@@ -302,7 +302,7 @@ export function AppShell({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   {title && (
-                    <h1 className="text-2xl font-extrabold tracking-tight text-[hsl(var(--foreground))]">
+                    <h1 className="text-2xl font-semibold tracking-tight text-[hsl(var(--foreground))] font-heading">
                       {title}
                     </h1>
                   )}

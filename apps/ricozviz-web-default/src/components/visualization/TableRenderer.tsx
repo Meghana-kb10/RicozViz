@@ -62,8 +62,8 @@ export function TableRenderer({
                 }}
                 className={`transition-colors cursor-pointer ${
                   isSelected
-                    ? "bg-indigo-50 font-semibold"
-                    : "hover:bg-indigo-50/30"
+                    ? "bg-[#147D78]/10 font-semibold"
+                    : "hover:bg-[#147D78]/5"
                 }`}
               >
                 {data.columns.map((col) => (

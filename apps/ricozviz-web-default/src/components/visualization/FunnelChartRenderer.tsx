@@ -14,13 +14,14 @@ import type { ChartConfig } from "../../lib/api";
 import { formatNumber } from "../../lib/formatting";
 
 const PALETTE = [
-  "#4f46e5", // Indigo
-  "#6366f1", // Lighter indigo
-  "#06b6d4", // Cyan
-  "#10b981", // Emerald
-  "#f59e0b", // Amber
-  "#ec4899", // Pink
-  "#8b5cf6", // Purple
+  "#147D78", // Editorial Accent
+  "#106963", // Darker Accent Hover
+  "#4F9D8E", // Workspace Sage Teal
+  "#D9A441", // Subtle Highlight Ochre
+  "#2E5B70", // Deep Slate Cyan
+  "#10B981", // Emerald
+  "#596775", // Secondary Text Slate
+  "#E11D48", // Rose Alert
 ];
 
 export interface FunnelChartRendererProps {

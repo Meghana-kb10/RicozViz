@@ -246,3 +246,14 @@ export {
   apiGetInsights,
   apiGetDashboardSummary
 } from './ricozviz/ai.js';
+
+export {
+  apiGetGovernanceBadges,
+  apiGetGovernanceBadge,
+  apiVerifyGovernanceBadge,
+  apiGetGovernancePosture,
+  apiGetRlsPolicies,
+  apiSimulateRls,
+  apiGetCisoAccreditations,
+  apiGetCisoTrustPack
+} from './ricozviz/governance.js';

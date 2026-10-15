@@ -12,6 +12,16 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import {
+  SnowflakeIcon,
+  ClickHouseIcon,
+  BigQueryIcon,
+  DatabricksIcon,
+  RedshiftIcon,
+  S3ParquetIcon,
+  PostgreSQLIcon,
+} from "../shell/ConnectorGridLogoCloud";
+
 interface NodeData {
   id: string;
   name: string;
@@ -22,14 +32,62 @@ interface NodeData {
 }
 
 const NODES: NodeData[] = [
-  // Layer 1: Sources
+  // Layer 1: Sources (Enterprise Warehouses & Relational Stores)
+  {
+    id: "src-snowflake",
+    name: "Snowflake",
+    layer: "sources",
+    description: "Cloud Data Warehouse",
+    metric: "Snowpipe & Flight SQL (< 12ms)",
+    icon: SnowflakeIcon,
+  },
+  {
+    id: "src-clickhouse",
+    name: "ClickHouse",
+    layer: "sources",
+    description: "Columnar OLAP Engine",
+    metric: "Native Columnar TCP (Sub-10ms)",
+    icon: ClickHouseIcon,
+  },
+  {
+    id: "src-bigquery",
+    name: "Google BigQuery",
+    layer: "sources",
+    description: "Serverless Petabyte Analytics",
+    metric: "Storage Read API (Arrow Stream)",
+    icon: BigQueryIcon,
+  },
+  {
+    id: "src-databricks",
+    name: "Databricks",
+    layer: "sources",
+    description: "Delta Lakehouse Engine",
+    metric: "Unity Catalog & Flight SQL",
+    icon: DatabricksIcon,
+  },
+  {
+    id: "src-redshift",
+    name: "Amazon Redshift",
+    layer: "sources",
+    description: "Managed Warehouse Cluster",
+    metric: "Redshift Data API / SSL",
+    icon: RedshiftIcon,
+  },
+  {
+    id: "src-s3",
+    name: "S3 Parquet",
+    layer: "sources",
+    description: "Columnar Object Storage",
+    metric: "Zero-Copy Parquet Stream",
+    icon: S3ParquetIcon,
+  },
   {
     id: "src-pg",
     name: "PostgreSQL",
     layer: "sources",
     description: "Production Relational Database",
     metric: "Connection Pool Encrypted",
-    icon: Database,
+    icon: PostgreSQLIcon,
   },
   {
     id: "src-csv",
@@ -38,14 +96,6 @@ const NODES: NodeData[] = [
     description: "Delimited Files & Exports",
     metric: "Auto Type Inference",
     icon: FileSpreadsheet,
-  },
-  {
-    id: "src-api",
-    name: "REST APIs",
-    layer: "sources",
-    description: "External JSON Endpoints",
-    metric: "Live Polling Adapter",
-    icon: Globe,
   },
 
   // Layer 2: Datasets
@@ -64,7 +114,7 @@ const NODES: NodeData[] = [
     name: "Safe Query Engine",
     layer: "query",
     description: "Parameterized Aggregations",
-    metric: "< 12ms P95 Latency",
+    metric: "Sub-15ms In-Memory WASM (< 12ms P95)",
     icon: Cpu,
   },
 
@@ -142,29 +192,30 @@ export function DataNetworkGraph() {
 
         ctx.beginPath();
         ctx.moveTo(x1, yMid);
-        ctx.bezierCurveTo((x1 + x2) / 2, yMid - 30, (x1 + x2) / 2, yMid + 30, x2, yMid);
-        ctx.strokeStyle = "rgba(99, 102, 241, 0.15)";
+        const isDark = document.documentElement.classList.contains("dark");
+
+        ctx.beginPath();
+        ctx.moveTo(x1, yMid);
+        ctx.bezierCurveTo((x1 + x2) / 2, yMid - 25, (x1 + x2) / 2, yMid + 25, x2, yMid);
+        ctx.strokeStyle = isDark ? "rgba(55, 65, 81, 0.9)" : "rgba(218, 223, 217, 0.8)";
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Moving energy pulse with neon-indigo and emerald accents
+        // Moving energy pulse with restrained teal accent
         if (!prefersReducedMotion) {
-          const pulseT = (t * 0.6 + i * 0.2) % 1;
+          const pulseT = (t * 0.5 + i * 0.2) % 1;
           const px = x1 + (x2 - x1) * pulseT;
-          const py = yMid + Math.sin(pulseT * Math.PI) * 12;
+          const py = yMid + Math.sin(pulseT * Math.PI) * 10;
 
-          const pulseColor = i % 2 === 0 ? "#10b981" : "#818cf8";
+          const pulseColor = i % 2 === 0 ? (isDark ? "#4F9D8E" : "#147D78") : "#D9A441";
           ctx.beginPath();
-          ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.arc(px, py, 2.5, 0, Math.PI * 2);
           ctx.fillStyle = pulseColor;
-          ctx.shadowColor = pulseColor;
-          ctx.shadowBlur = 10;
           ctx.fill();
-          ctx.shadowBlur = 0;
         }
       }
 
-      t += 0.015;
+      t += 0.012;
       animId = requestAnimationFrame(draw);
     }
 
@@ -181,45 +232,41 @@ export function DataNetworkGraph() {
   const ActiveIcon = activeNodeData.icon;
 
   return (
-    <div className="relative rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#0F172A] via-[#111A2E] to-[#090D16] text-white p-6 sm:p-10 shadow-2xl overflow-hidden">
-      {/* Background canvas for glowing particle paths */}
+    <div className="relative rounded-xl border border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#1F2937] text-[#172B3A] dark:text-[#E5E7EB] p-5 sm:p-8 shadow-xs dark:shadow-md overflow-hidden">
+      {/* Background canvas for connected conduits */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full pointer-events-none z-0"
+        className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-80"
         aria-hidden="true"
       />
 
-      <div className="relative z-10">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-900/60 pb-6 mb-8">
-          <div>
-            <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
-              Unified Data Topology
-            </span>
-            <h3 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Your data, connected.
-            </h3>
-            <p className="text-xs text-indigo-200/80 mt-1 max-w-xl">
-              From diverse storage endpoints through schema discovery, isolated query engine, to live decision dashboards.
-            </p>
-          </div>
-
-          {/* Active Node Telemetry Badge */}
-          <div className="rounded-xl border border-indigo-700/50 bg-indigo-900/50 backdrop-blur-md p-3.5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600/80 text-white shrink-0">
-              <ActiveIcon className="h-5 w-5 text-cyan-300" />
+      <div className="relative z-10 space-y-6">
+        {/* Active Node Telemetry Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA] dark:bg-[#111827] p-4">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] text-[#147D78] dark:text-[#4F9D8E] shrink-0 shadow-xs">
+              <ActiveIcon className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-white">{activeNodeData.name}</span>
-                <span className="rounded bg-cyan-500/20 px-1.5 py-0.2 text-[9px] font-mono text-cyan-300">
-                  ACTIVE
+                <span className="text-sm font-heading font-semibold text-[#172B3A] dark:text-[#E5E7EB]">
+                  {activeNodeData.name}
+                </span>
+                <span className="rounded bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 text-[10px] font-mono text-[#147D78] dark:text-[#4F9D8E] font-medium">
+                  {activeNodeData.layer.toUpperCase()}
                 </span>
               </div>
-              <p className="text-[10px] text-indigo-300 font-mono mt-0.5">
-                {activeNodeData.metric}
+              <p className="text-xs text-[#596775] dark:text-[#9CA3AF] mt-0.5">
+                {activeNodeData.description}
               </p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:self-center font-mono text-xs">
+            <span className="text-[#596775] dark:text-[#9CA3AF]">Metric:</span>
+            <span className="text-[#147D78] dark:text-[#4F9D8E] bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] px-2.5 py-1 rounded-md text-[11px] font-mono font-medium shadow-xs">
+              {activeNodeData.metric}
+            </span>
           </div>
         </div>
 
@@ -227,36 +274,38 @@ export function DataNetworkGraph() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {/* Stage 1: Connectors */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block px-1">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#596775] dark:text-[#9CA3AF] block px-1">
               01 · Sources
             </span>
-            {NODES.filter((n) => n.layer === "sources").map((node) => {
-              const Icon = node.icon;
-              const isSelected = activeNode === node.id;
-              return (
-                <button
-                  key={node.id}
-                  type="button"
-                  onClick={() => setActiveNode(node.id)}
-                  className={`w-full text-left rounded-xl p-3 border transition flex items-center gap-2.5 ${
-                    isSelected
-                      ? "border-cyan-400 bg-cyan-950/40 shadow-md shadow-cyan-900/20 ring-1 ring-cyan-400/50"
-                      : "border-indigo-900/50 bg-slate-900/40 hover:border-indigo-700 hover:bg-indigo-950/30"
-                  }`}
-                >
-                  <Icon className="h-4 w-4 text-cyan-400 shrink-0" />
-                  <div className="truncate">
-                    <p className="text-xs font-semibold text-white truncate">{node.name}</p>
-                    <p className="text-[9px] text-indigo-300/70 font-mono truncate">{node.description}</p>
-                  </div>
-                </button>
-              );
-            })}
+            <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+              {NODES.filter((n) => n.layer === "sources").map((node) => {
+                const Icon = node.icon;
+                const isSelected = activeNode === node.id;
+                return (
+                  <button
+                    key={node.id}
+                    type="button"
+                    onClick={() => setActiveNode(node.id)}
+                    className={`w-full text-left rounded-lg p-2.5 border transition flex items-center gap-2 cursor-pointer ${
+                      isSelected
+                        ? "border-[#147D78] dark:border-[#4F9D8E] bg-[#F4F1EA] dark:bg-[#111827] ring-1 ring-[#147D78]/25 dark:ring-[#4F9D8E]/30 shadow-xs"
+                        : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]/50 hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/50 hover:bg-[#F4F1EA]/40 dark:hover:bg-[#111827]"
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 shrink-0 ${isSelected ? "text-[#147D78] dark:text-[#4F9D8E]" : "text-[#596775] dark:text-[#9CA3AF]"}`} />
+                    <div className="truncate min-w-0">
+                      <p className="text-xs font-semibold text-[#172B3A] dark:text-[#E5E7EB] truncate">{node.name}</p>
+                      <p className="text-[9px] text-[#596775] dark:text-[#9CA3AF] font-mono truncate">{node.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Stage 2: Datasets */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block px-1">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#596775] dark:text-[#9CA3AF] block px-1">
               02 · Datasets
             </span>
             {NODES.filter((n) => n.layer === "datasets").map((node) => {
@@ -267,18 +316,18 @@ export function DataNetworkGraph() {
                   key={node.id}
                   type="button"
                   onClick={() => setActiveNode(node.id)}
-                  className={`w-full text-left rounded-xl p-4 border transition flex flex-col justify-between h-[132px] ${
+                  className={`w-full text-left rounded-lg p-3.5 border transition flex flex-col justify-between h-[132px] cursor-pointer ${
                     isSelected
-                      ? "border-cyan-400 bg-cyan-950/40 shadow-md ring-1 ring-cyan-400/50"
-                      : "border-indigo-900/50 bg-slate-900/40 hover:border-indigo-700"
+                      ? "border-[#147D78] dark:border-[#4F9D8E] bg-[#F4F1EA] dark:bg-[#111827] ring-1 ring-[#147D78]/25 dark:ring-[#4F9D8E]/30 shadow-xs"
+                      : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]/50 hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/50 hover:bg-[#F4F1EA]/40 dark:hover:bg-[#111827]"
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-indigo-400" />
+                  <Icon className={`h-5 w-5 ${isSelected ? "text-[#147D78] dark:text-[#4F9D8E]" : "text-[#596775] dark:text-[#9CA3AF]"}`} />
                   <div>
-                    <p className="text-xs font-bold text-white">{node.name}</p>
-                    <p className="text-[10px] text-indigo-300/80 mt-1 leading-snug">{node.description}</p>
+                    <p className="text-xs font-semibold text-[#172B3A] dark:text-[#E5E7EB]">{node.name}</p>
+                    <p className="text-[10px] text-[#596775] dark:text-[#9CA3AF] mt-1 leading-snug">{node.description}</p>
                   </div>
-                  <span className="text-[9px] font-mono text-cyan-400">{node.metric}</span>
+                  <span className="text-[9px] font-mono text-[#147D78] dark:text-[#4F9D8E]">{node.metric}</span>
                 </button>
               );
             })}
@@ -286,7 +335,7 @@ export function DataNetworkGraph() {
 
           {/* Stage 3: Query Engine */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block px-1">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#596775] dark:text-[#9CA3AF] block px-1">
               03 · Query Engine
             </span>
             {NODES.filter((n) => n.layer === "query").map((node) => {
@@ -297,18 +346,18 @@ export function DataNetworkGraph() {
                   key={node.id}
                   type="button"
                   onClick={() => setActiveNode(node.id)}
-                  className={`w-full text-left rounded-xl p-4 border transition flex flex-col justify-between h-[132px] ${
+                  className={`w-full text-left rounded-lg p-3.5 border transition flex flex-col justify-between h-[132px] cursor-pointer ${
                     isSelected
-                      ? "border-cyan-400 bg-cyan-950/40 shadow-md ring-1 ring-cyan-400/50"
-                      : "border-indigo-900/50 bg-slate-900/40 hover:border-indigo-700"
+                      ? "border-[#147D78] dark:border-[#4F9D8E] bg-[#F4F1EA] dark:bg-[#111827] ring-1 ring-[#147D78]/25 dark:ring-[#4F9D8E]/30 shadow-xs"
+                      : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]/50 hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/50 hover:bg-[#F4F1EA]/40 dark:hover:bg-[#111827]"
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-indigo-400" />
+                  <Icon className={`h-5 w-5 ${isSelected ? "text-[#147D78] dark:text-[#4F9D8E]" : "text-[#596775] dark:text-[#9CA3AF]"}`} />
                   <div>
-                    <p className="text-xs font-bold text-white">{node.name}</p>
-                    <p className="text-[10px] text-indigo-300/80 mt-1 leading-snug">{node.description}</p>
+                    <p className="text-xs font-semibold text-[#172B3A] dark:text-[#E5E7EB]">{node.name}</p>
+                    <p className="text-[10px] text-[#596775] dark:text-[#9CA3AF] mt-1 leading-snug">{node.description}</p>
                   </div>
-                  <span className="text-[9px] font-mono text-emerald-400">{node.metric}</span>
+                  <span className="text-[9px] font-mono text-[#147D78] dark:text-[#4F9D8E]">{node.metric}</span>
                 </button>
               );
             })}
@@ -316,7 +365,7 @@ export function DataNetworkGraph() {
 
           {/* Stage 4: Visualization Studio */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block px-1">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#596775] dark:text-[#9CA3AF] block px-1">
               04 · Visual Studio
             </span>
             {NODES.filter((n) => n.layer === "visualization").map((node) => {
@@ -327,18 +376,18 @@ export function DataNetworkGraph() {
                   key={node.id}
                   type="button"
                   onClick={() => setActiveNode(node.id)}
-                  className={`w-full text-left rounded-xl p-4 border transition flex flex-col justify-between h-[132px] ${
+                  className={`w-full text-left rounded-lg p-3.5 border transition flex flex-col justify-between h-[132px] cursor-pointer ${
                     isSelected
-                      ? "border-cyan-400 bg-cyan-950/40 shadow-md ring-1 ring-cyan-400/50"
-                      : "border-indigo-900/50 bg-slate-900/40 hover:border-indigo-700"
+                      ? "border-[#147D78] dark:border-[#4F9D8E] bg-[#F4F1EA] dark:bg-[#111827] ring-1 ring-[#147D78]/25 dark:ring-[#4F9D8E]/30 shadow-xs"
+                      : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]/50 hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/50 hover:bg-[#F4F1EA]/40 dark:hover:bg-[#111827]"
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-indigo-400" />
+                  <Icon className={`h-5 w-5 ${isSelected ? "text-[#147D78] dark:text-[#4F9D8E]" : "text-[#596775] dark:text-[#9CA3AF]"}`} />
                   <div>
-                    <p className="text-xs font-bold text-white">{node.name}</p>
-                    <p className="text-[10px] text-indigo-300/80 mt-1 leading-snug">{node.description}</p>
+                    <p className="text-xs font-semibold text-[#172B3A] dark:text-[#E5E7EB]">{node.name}</p>
+                    <p className="text-[10px] text-[#596775] dark:text-[#9CA3AF] mt-1 leading-snug">{node.description}</p>
                   </div>
-                  <span className="text-[9px] font-mono text-cyan-400">{node.metric}</span>
+                  <span className="text-[9px] font-mono text-[#147D78] dark:text-[#4F9D8E]">{node.metric}</span>
                 </button>
               );
             })}
@@ -346,7 +395,7 @@ export function DataNetworkGraph() {
 
           {/* Stage 5: Dashboards */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block px-1">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#596775] dark:text-[#9CA3AF] block px-1">
               05 · Dashboards
             </span>
             {NODES.filter((n) => n.layer === "dashboards").map((node) => {
@@ -357,18 +406,18 @@ export function DataNetworkGraph() {
                   key={node.id}
                   type="button"
                   onClick={() => setActiveNode(node.id)}
-                  className={`w-full text-left rounded-xl p-4 border transition flex flex-col justify-between h-[132px] ${
+                  className={`w-full text-left rounded-lg p-3.5 border transition flex flex-col justify-between h-[132px] cursor-pointer ${
                     isSelected
-                      ? "border-cyan-400 bg-cyan-950/40 shadow-md ring-1 ring-cyan-400/50"
-                      : "border-indigo-900/50 bg-slate-900/40 hover:border-indigo-700"
+                      ? "border-[#147D78] dark:border-[#4F9D8E] bg-[#F4F1EA] dark:bg-[#111827] ring-1 ring-[#147D78]/25 dark:ring-[#4F9D8E]/30 shadow-xs"
+                      : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]/50 hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/50 hover:bg-[#F4F1EA]/40 dark:hover:bg-[#111827]"
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-indigo-400" />
+                  <Icon className={`h-5 w-5 ${isSelected ? "text-[#147D78] dark:text-[#4F9D8E]" : "text-[#596775] dark:text-[#9CA3AF]"}`} />
                   <div>
-                    <p className="text-xs font-bold text-white">{node.name}</p>
-                    <p className="text-[10px] text-indigo-300/80 mt-1 leading-snug">{node.description}</p>
+                    <p className="text-xs font-semibold text-[#172B3A] dark:text-[#E5E7EB]">{node.name}</p>
+                    <p className="text-[10px] text-[#596775] dark:text-[#9CA3AF] mt-1 leading-snug">{node.description}</p>
                   </div>
-                  <span className="text-[9px] font-mono text-indigo-300">{node.metric}</span>
+                  <span className="text-[9px] font-mono text-[#147D78] dark:text-[#4F9D8E]">{node.metric}</span>
                 </button>
               );
             })}
@@ -376,7 +425,7 @@ export function DataNetworkGraph() {
 
           {/* Stage 6: Insights */}
           <div className="space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block px-1">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#596775] dark:text-[#9CA3AF] block px-1">
               06 · Decisions
             </span>
             {NODES.filter((n) => n.layer === "insights").map((node) => {
@@ -387,18 +436,18 @@ export function DataNetworkGraph() {
                   key={node.id}
                   type="button"
                   onClick={() => setActiveNode(node.id)}
-                  className={`w-full text-left rounded-xl p-4 border transition flex flex-col justify-between h-[132px] ${
+                  className={`w-full text-left rounded-lg p-3.5 border transition flex flex-col justify-between h-[132px] cursor-pointer ${
                     isSelected
-                      ? "border-cyan-400 bg-cyan-950/40 shadow-md ring-1 ring-cyan-400/50"
-                      : "border-indigo-900/50 bg-slate-900/40 hover:border-indigo-700"
+                      ? "border-[#147D78] dark:border-[#4F9D8E] bg-[#F4F1EA] dark:bg-[#111827] ring-1 ring-[#147D78]/25 dark:ring-[#4F9D8E]/30 shadow-xs"
+                      : "border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#111827]/50 hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/50 hover:bg-[#F4F1EA]/40 dark:hover:bg-[#111827]"
                   }`}
                 >
-                  <Icon className="h-5 w-5 text-emerald-400" />
+                  <Icon className={`h-5 w-5 ${isSelected ? "text-[#147D78] dark:text-[#4F9D8E]" : "text-[#596775] dark:text-[#9CA3AF]"}`} />
                   <div>
-                    <p className="text-xs font-bold text-white">{node.name}</p>
-                    <p className="text-[10px] text-indigo-300/80 mt-1 leading-snug">{node.description}</p>
+                    <p className="text-xs font-semibold text-[#172B3A] dark:text-[#E5E7EB]">{node.name}</p>
+                    <p className="text-[10px] text-[#596775] dark:text-[#9CA3AF] mt-1 leading-snug">{node.description}</p>
                   </div>
-                  <span className="text-[9px] font-mono text-emerald-400">{node.metric}</span>
+                  <span className="text-[9px] font-mono text-[#147D78] dark:text-[#4F9D8E]">{node.metric}</span>
                 </button>
               );
             })}

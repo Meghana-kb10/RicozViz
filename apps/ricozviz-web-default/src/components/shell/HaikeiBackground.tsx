@@ -24,18 +24,18 @@ export function HaikeiBackground({
         >
           <path
             d="M0,320 C320,400 420,240 720,280 C1020,320 1120,420 1440,360 L1440,600 L0,600 Z"
-            fill="#6366f1"
-            fillOpacity="0.25"
+            fill="#147D78"
+            fillOpacity="0.06"
           />
           <path
             d="M0,380 C360,280 500,440 840,360 C1180,280 1280,380 1440,340 L1440,600 L0,600 Z"
-            fill="#8b5cf6"
-            fillOpacity="0.45"
+            fill="#106963"
+            fillOpacity="0.08"
           />
           <path
             d="M0,450 C380,380 540,490 900,420 C1260,350 1340,440 1440,410 L1440,600 L0,600 Z"
-            fill="#6366f1"
-            fillOpacity="0.75"
+            fill="#147D78"
+            fillOpacity="0.12"
           />
         </svg>
       </div>

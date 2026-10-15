@@ -395,9 +395,9 @@ export type ColorPaletteName = "indigo" | "emerald" | "amber" | "rose" | "blue" 
 
 export const GEO_PALETTES: Record<ColorPaletteName, { ramp: string[]; accent: string; label: string }> = {
   indigo: {
-    ramp: ["#e0e7ff", "#c7d2fe", "#a5b4fc", "#818cf8", "#6366f1", "#4f46e5", "#3730a3"],
-    accent: "#4f46e5",
-    label: "Indigo Horizon",
+    ramp: ["#ccfbef", "#99f6e0", "#5eead4", "#2dd4bf", "#147D78", "#106963", "#0d544f"],
+    accent: "#147D78",
+    label: "Editorial Teal",
   },
   emerald: {
     ramp: ["#d1fae5", "#a7f3d0", "#6ee7b7", "#34d399", "#10b981", "#059669", "#065f46"],

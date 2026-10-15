@@ -197,6 +197,18 @@ export {
   apiGetDashboardSummary
 } from '@repo/api';
 
+// ---- Governance & Security Badges -------------------------------------------------------------
+export {
+  apiGetGovernanceBadges,
+  apiGetGovernanceBadge,
+  apiVerifyGovernanceBadge,
+  apiGetGovernancePosture,
+  apiGetRlsPolicies,
+  apiSimulateRls,
+  apiGetCisoAccreditations,
+  apiGetCisoTrustPack
+} from '@repo/api';
+
 // ---- Domain types --------------------------------------------------------------------------------
 // Re-exported so pages can keep importing types from the same module as the functions.
 export type {
@@ -322,7 +334,24 @@ export type {
   AnalystQueryResponse,
   NlToChartResponse,
   AutoInsight,
-  DashboardSummaryResponse
+  DashboardSummaryResponse,
+  // Governance
+  SecurityBadgeCategory,
+  SecurityBadgeStatus,
+  SecurityBadge,
+  GovernancePosture,
+  VerifyBadgeResult,
+  RlsSimulationRole,
+  RlsPolicyCategory,
+  RlsPolicyDefinition,
+  RlsRoleDefinition,
+  RlsSimulatedRecord,
+  RlsSimulationRequest,
+  RlsSimulationResult,
+  RlsPoliciesCatalogResponse,
+  CisoAccreditationItem,
+  CisoTrustOverview,
+  CisoAttestationDossier
 } from '@repo/types';
 
 /**

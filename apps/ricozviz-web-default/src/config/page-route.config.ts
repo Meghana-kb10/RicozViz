@@ -33,7 +33,11 @@ export const PAGE_ROUTES = {
   ALERTS: '/alerts',
   EXPORTS: '/exports',
   TEMPLATES: '/templates',
-  AUDIT: '/audit'
+  AUDIT: '/audit',
+  DOCS: '/docs',
+  OPENAPI: '/openapi',
+  BENCHMARKS: '/benchmarks',
+  WHITEPAPER: '/whitepaper'
 } as const;
 
 export type PageRoutes = typeof PAGE_ROUTES;
