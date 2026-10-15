@@ -402,6 +402,40 @@ export interface CollaborationStateResult {
   collaboratorCount: number;
 }
 
+export interface MultiplayerCursorIndicator {
+  id: string;
+  name: string;
+  role: string;
+  color: string;
+  avatarInitials: string;
+  xPercent: number;
+  yPercent: number;
+  targetWidgetId?: string;
+  targetLabel?: string;
+  actionText?: string;
+  isSelecting?: boolean;
+  selectionBox?: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  };
+  status: "idle" | "inspecting" | "selecting" | "commenting" | "filtering" | "editing" | "locked";
+  lastActive: string;
+}
+
+export interface MultiplayerCanvasEvent {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  type: "CURSOR_MOVE" | "POINT_INSPECT" | "WIDGET_LOCK" | "FILTER_APPLIED" | "COMMENT_PINNED" | "OPTIMISTIC_MERGE";
+  description: string;
+  latencyMs: number;
+}
+
+
 // ---- Embedded analytics ------------------------------------------------------
 
 export interface EmbedConfig {

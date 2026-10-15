@@ -18,7 +18,8 @@ import {
   Sparkles,
   Zap,
   Info,
-  Maximize2
+  Maximize2,
+  Users
 } from "lucide-react";
 import { AreaChartRenderer } from "@/components/visualization/AreaChartRenderer";
 import { BarChartRenderer } from "@/components/visualization/BarChartRenderer";
@@ -260,6 +261,35 @@ export function HeroDashboardPreview() {
   const [isLiveStream, setIsLiveStream] = useState(false);
   const [queryLatency, setQueryLatency] = useState(8.2);
   const [inspectedPoint, setInspectedPoint] = useState<PointInspection | null>(null);
+  const [isMultiplayerActive, setIsMultiplayerActive] = useState(true);
+  const [multiplayerStep, setMultiplayerStep] = useState(0);
+
+  const MULTIPLAYER_CHOREOGRAPHY = useMemo(() => [
+    {
+      sarah: { x: 38, y: 34, action: "Inspecting Q3 Peak ($1.42M)" },
+      david: { x: 76, y: 65, action: "0 B Egress • WASM Verified" },
+    },
+    {
+      sarah: { x: 62, y: 48, action: "Comparing EMEA Growth (+28.4%)" },
+      david: { x: 42, y: 28, action: "DuckDB Vector Join • 7.4ms" },
+    },
+    {
+      sarah: { x: 84, y: 26, action: "Pinning annotation on Enterprise renewal" },
+      david: { x: 68, y: 72, action: "In-memory cache valid (100%)" },
+    },
+    {
+      sarah: { x: 24, y: 52, action: "Cross-filtering breakdown" },
+      david: { x: 82, y: 38, action: "Checking columnar buffers" },
+    },
+  ], []);
+
+  useEffect(() => {
+    if (!isMultiplayerActive) return;
+    const interval = setInterval(() => {
+      setMultiplayerStep((prev) => (prev + 1) % MULTIPLAYER_CHOREOGRAPHY.length);
+    }, 3800);
+    return () => clearInterval(interval);
+  }, [isMultiplayerActive, MULTIPLAYER_CHOREOGRAPHY.length]);
 
   const activeRangeData = DATA_BY_RANGE[timeRange];
 
@@ -397,6 +427,37 @@ export function HeroDashboardPreview() {
             >
               <Radio className={`w-3 h-3 ${isLiveStream ? "text-emerald-400 animate-pulse" : "text-[#9CA3AF]"}`} />
               <span>{isLiveStream ? "Live Streaming" : "Simulate Stream"}</span>
+            </button>
+
+            {/* Multiplayer Live Collaborators Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsMultiplayerActive((prev) => !prev)}
+              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-semibold transition flex items-center gap-1.5 cursor-pointer border ${
+                isMultiplayerActive
+                  ? "bg-purple-950/70 text-purple-300 border-purple-500/50 shadow-xs"
+                  : "bg-[#111827] text-[#9CA3AF] border-[#374151] hover:text-[#E5E7EB]"
+              }`}
+              title="Toggle Live Collaborative Multiplayer Cursors (@Sarah, @David)"
+            >
+              <Users className={`w-3 h-3 ${isMultiplayerActive ? "text-purple-400" : "text-[#9CA3AF]"}`} />
+              <span>{isMultiplayerActive ? "Multiplayer (2)" : "Multiplayer Off"}</span>
+              {isMultiplayerActive && (
+                <div className="flex -space-x-1 ml-0.5">
+                  <span
+                    className="w-3.5 h-3.5 rounded-full bg-[#A855F7] text-[8px] text-white flex items-center justify-center font-bold ring-1 ring-[#111827]"
+                    title="@Sarah (Analyst) - Active"
+                  >
+                    S
+                  </span>
+                  <span
+                    className="w-3.5 h-3.5 rounded-full bg-[#10B981] text-[8px] text-white flex items-center justify-center font-bold ring-1 ring-[#111827]"
+                    title="@David (Data Eng) - Active"
+                  >
+                    D
+                  </span>
+                </div>
+              )}
             </button>
 
             {/* Timeframe Filter (7D, 30D, 90D, YTD) */}
@@ -644,6 +705,65 @@ export function HeroDashboardPreview() {
                     config={primaryConfig}
                     height="100%"
                   />
+                )}
+
+                {/* Live Animated Collaborative Multiplayer Cursors Layer */}
+                {isMultiplayerActive && (
+                  <>
+                    {/* @Sarah (Analyst) Cursor */}
+                    <div
+                      className="absolute pointer-events-none transition-all duration-700 ease-out z-20"
+                      style={{
+                        left: `${MULTIPLAYER_CHOREOGRAPHY[multiplayerStep].sarah.x}%`,
+                        top: `${MULTIPLAYER_CHOREOGRAPHY[multiplayerStep].sarah.y}%`,
+                      }}
+                    >
+                      <svg
+                        className="w-4 h-4 text-[#A855F7] drop-shadow-md"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        stroke="white"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M3 3l7 18 3.5-7.5L21 10z" />
+                      </svg>
+                      <div className="ml-3 -mt-1 inline-flex flex-col items-start">
+                        <span className="px-1.5 py-0.5 rounded text-[8.5px] font-sans font-bold text-white bg-[#A855F7] shadow-xs whitespace-nowrap">
+                          @Sarah (Analyst)
+                        </span>
+                        <span className="mt-0.5 px-1.5 py-0.5 rounded text-[8px] font-mono text-[#E5E7EB] bg-[#111827]/95 border border-[#A855F7]/40 shadow-xs whitespace-nowrap animate-fadeIn">
+                          {MULTIPLAYER_CHOREOGRAPHY[multiplayerStep].sarah.action}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* @David (Data Eng) Cursor */}
+                    <div
+                      className="absolute pointer-events-none transition-all duration-700 ease-out z-20"
+                      style={{
+                        left: `${MULTIPLAYER_CHOREOGRAPHY[multiplayerStep].david.x}%`,
+                        top: `${MULTIPLAYER_CHOREOGRAPHY[multiplayerStep].david.y}%`,
+                      }}
+                    >
+                      <svg
+                        className="w-4 h-4 text-[#10B981] drop-shadow-md"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        stroke="white"
+                        strokeWidth="1.5"
+                      >
+                        <path d="M3 3l7 18 3.5-7.5L21 10z" />
+                      </svg>
+                      <div className="ml-3 -mt-1 inline-flex flex-col items-start">
+                        <span className="px-1.5 py-0.5 rounded text-[8.5px] font-sans font-bold text-white bg-[#10B981] shadow-xs whitespace-nowrap">
+                          @David (Data Eng)
+                        </span>
+                        <span className="mt-0.5 px-1.5 py-0.5 rounded text-[8px] font-mono text-[#E5E7EB] bg-[#111827]/95 border border-[#10B981]/40 shadow-xs whitespace-nowrap animate-fadeIn">
+                          {MULTIPLAYER_CHOREOGRAPHY[multiplayerStep].david.action}
+                        </span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
