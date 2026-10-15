@@ -44,8 +44,8 @@
 
   .repo-input:focus {
     outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 2px #c7d2fe;
+    border-color: #147D78;
+    box-shadow: 0 0 0 2px rgba(20, 125, 120, 0.2);
   }
 
   /* Button variants */
@@ -62,7 +62,7 @@
   .repo-btn:focus-visible {
     outline: 2px solid transparent;
     outline-offset: 2px;
-    box-shadow: 0 0 0 2px #6366f1;
+    box-shadow: 0 0 0 2px #147D78;
   }
 
   .repo-btn:disabled {
@@ -71,12 +71,12 @@
   }
 
   .repo-btn-primary {
-    background-color: #4f46e5;
+    background-color: #147D78;
     color: #ffffff;
   }
 
   .repo-btn-primary:hover:not(:disabled) {
-    background-color: #4338ca;
+    background-color: #106963;
   }
 
   .repo-btn-secondary {

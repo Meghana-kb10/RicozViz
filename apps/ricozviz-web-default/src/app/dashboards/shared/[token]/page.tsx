@@ -607,6 +607,7 @@ export default function SharedDashboardPage({
                       chartType={chart.chartType}
                       config={chart.config}
                       queryResult={queryState?.data || null}
+                      palette={dashboardTheme.chartPalette}
                       isLoading={queryState?.loading || false}
                       error={queryState?.error || null}
                       height={chartHeight}

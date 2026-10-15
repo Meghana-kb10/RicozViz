@@ -26,8 +26,10 @@ import {
   type AuditLogStatsResponse,
 } from "../../lib/api";
 import { downloadCsv } from "../../lib/export-csv";
+import { MultiTenantAuditTrailMockup } from "../../components/shell/MultiTenantAuditTrailMockup";
 
 export default function AuditLogsPage() {
+  const [viewMode, setViewMode] = useState<"tabular" | "preview">("tabular");
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [stats, setStats] = useState<AuditLogStatsResponse | null>(null);
@@ -129,35 +131,72 @@ export default function AuditLogsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleExportCsv}
-              disabled={logs.length === 0}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 disabled:opacity-50"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </button>
-            <button
-              onClick={loadAuditData}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white font-medium rounded-lg text-xs transition-colors"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Mode Switcher */}
+            <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => setViewMode("tabular")}
+                className={`px-3 py-1.5 rounded-lg transition font-semibold cursor-pointer ${
+                  viewMode === "tabular"
+                    ? "bg-amber-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Tabular Events
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("preview")}
+                className={`px-3 py-1.5 rounded-lg transition font-semibold flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "preview"
+                    ? "bg-[#147D78] text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Multi-Tenant WORM Preview</span>
+              </button>
+            </div>
+
+            {viewMode === "tabular" && (
+              <>
+                <button
+                  onClick={handleExportCsv}
+                  disabled={logs.length === 0}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 disabled:opacity-50 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </button>
+                <button
+                  onClick={loadAuditData}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white font-medium rounded-lg text-xs transition-colors cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                  Refresh
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {error && (
-          <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center gap-3 text-sm">
-            <ShieldAlert className="w-5 h-5 flex-shrink-0" />
-            <span>{error}</span>
+        {viewMode === "preview" ? (
+          <div className="pt-2">
+            <MultiTenantAuditTrailMockup />
           </div>
-        )}
+        ) : (
+          <>
+            {error && (
+              <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center gap-3 text-sm">
+                <ShieldAlert className="w-5 h-5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
-        {/* Stats Row */}
-        {stats && (
+            {/* Stats Row */}
+            {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
               <span className="text-xs text-slate-400 font-medium">TOTAL AUDIT EVENTS</span>
@@ -461,7 +500,9 @@ export default function AuditLogsPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
-  );
+      </>
+    )}
+  </div>
+</div>
+);
 }

@@ -16,19 +16,20 @@ import type { ChartConfig } from "../../lib/api";
 import { formatNumber, formatCurrency, formatPercent } from "../../lib/formatting";
 
 const PALETTE = [
-  "#4f46e5", // Indigo
-  "#06b6d4", // Cyan
-  "#10b981", // Emerald
-  "#f59e0b", // Amber
-  "#ec4899", // Pink
-  "#8b5cf6", // Purple
-  "#3b82f6", // Blue
-  "#14b8a6", // Teal
+  "#147D78", // Editorial Accent
+  "#D9A441", // Subtle Highlight Ochre
+  "#2E5B70", // Deep Slate Cyan
+  "#10B981", // Emerald
+  "#E11D48", // Rose Alert
+  "#596775", // Secondary Text Slate
+  "#0F625D", // Deep Forest Teal
+  "#F59E0B", // Amber Warning
 ];
 
 export interface AreaChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   height?: number | string;
   onDataPointClick?: (field: string, value: unknown) => void;
   selectedFilterValue?: unknown;
@@ -37,10 +38,19 @@ export interface AreaChartRendererProps {
 export function AreaChartRenderer({
   data,
   config,
+  palette,
   height = "100%",
   onDataPointClick,
 }: AreaChartRendererProps) {
   const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const showLegend = options.showLegend !== false && data.measureKeys.length > 1;
   const showGrid = options.showGrid !== false;
   const showXAxis = options.showXAxis !== false;
@@ -52,7 +62,11 @@ export function AreaChartRenderer({
 
   const formatTick = (val: unknown) => {
     if (typeof val !== "number") return String(val ?? "");
-    if (numberFormat === "currency") return formatCurrency(val, undefined, 0);
+    if (numberFormat === "currency") {
+      if (Math.abs(val) >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
+      if (Math.abs(val) >= 1_000) return `$${(val / 1_000).toFixed(0)}K`;
+      return formatCurrency(val, undefined, 0);
+    }
     if (numberFormat === "percent") return formatPercent(val, 0);
     return formatNumber(val, undefined, true);
   };
@@ -62,7 +76,7 @@ export function AreaChartRenderer({
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data.rows}
-          margin={{ top: 12, right: 16, left: 0, bottom: 20 }}
+          margin={{ top: 12, right: 16, left: 16, bottom: 20 }}
           onClick={(state) => {
             if (state && state.activeLabel !== undefined && onDataPointClick) {
               onDataPointClick(xKey, state.activeLabel);
@@ -71,7 +85,7 @@ export function AreaChartRenderer({
         >
           <defs>
             {measureKeys.map((key, idx) => {
-              const color = PALETTE[idx % PALETTE.length];
+              const color = activePalette[idx % activePalette.length];
               return (
                 <linearGradient key={`grad-${key}`} id={`area-grad-${idx}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={color} stopOpacity={0.4} />
@@ -81,36 +95,42 @@ export function AreaChartRenderer({
             })}
           </defs>
           {showGrid && (
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.35} />
           )}
           {showXAxis && (
             <XAxis
               dataKey={xKey}
-              tick={{ fontSize: 11, fill: "#6b7280" }}
+              tick={{ fontSize: 11, fill: "#94a3b8" }}
               tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+              axisLine={{ stroke: "#334155" }}
             />
           )}
           {showYAxis && (
             <YAxis
-              tick={{ fontSize: 11, fill: "#6b7280" }}
+              width={56}
+              tick={{ fontSize: 11, fill: "#94a3b8" }}
               tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+              axisLine={{ stroke: "#334155" }}
               tickFormatter={formatTick}
             />
           )}
           <Tooltip
             formatter={(value, name) => [
-              formatTick(value),
+              typeof value === "number" && numberFormat === "currency"
+                ? formatCurrency(value, undefined, 0)
+                : formatTick(value),
               String(name),
             ]}
             contentStyle={{
-              backgroundColor: "#ffffff",
-              borderColor: "#e5e7eb",
+              backgroundColor: "#0F172A",
+              borderColor: "rgba(255, 255, 255, 0.12)",
               borderRadius: "0.5rem",
-              boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
               fontSize: "12px",
+              color: "#f8fafc",
             }}
+            itemStyle={{ color: "#e2e8f0" }}
+            labelStyle={{ color: "#94a3b8", fontWeight: 600, marginBottom: "4px" }}
           />
           {showLegend && <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />}
           {measureKeys.map((key, idx) => (
@@ -118,7 +138,7 @@ export function AreaChartRenderer({
               key={key}
               type="monotone"
               dataKey={key}
-              stroke={PALETTE[idx % PALETTE.length]}
+              stroke={activePalette[idx % activePalette.length]}
               fill={`url(#area-grad-${idx})`}
               strokeWidth={2}
               activeDot={{ r: 6, stroke: "#1e1b4b", strokeWidth: 2, className: "cursor-pointer" }}

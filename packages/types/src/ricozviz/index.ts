@@ -41,6 +41,13 @@ export {
   AUDIT_STATUS
 } from './enums';
 
+export {
+  SECURITY_BADGE_CATEGORY,
+  SECURITY_BADGE_STATUS,
+  RLS_SIMULATION_ROLE,
+  RLS_POLICY_CATEGORY
+} from './governance';
+
 export type {
   UserStatus,
   OrganizationStatus,
@@ -190,7 +197,9 @@ export type {
   DashboardChartSnapshot,
   DashboardVersionRecord,
   VersionComparisonResult,
-  EmbeddedChartDataResult
+  EmbeddedChartDataResult,
+  MultiplayerCursorIndicator,
+  MultiplayerCanvasEvent
 } from './dashboard';
 
 export type {
@@ -229,3 +238,29 @@ export type {
   DashboardSummaryResponse,
   DashboardSummaryParams
 } from './ai';
+
+export type {
+  SecurityBadgeCategory,
+  SecurityBadgeStatus,
+  SecurityBadge,
+  GovernancePosture,
+  VerifyBadgeResult,
+  RlsSimulationRole,
+  RlsPolicyCategory,
+  RlsPolicyDefinition,
+  RlsRoleDefinition,
+  RlsSimulatedRecord,
+  RlsSimulationRequest,
+  RlsSimulationResult,
+  RlsPoliciesCatalogResponse,
+  CisoAccreditationItem,
+  CisoTrustOverview,
+  CisoAttestationDossier,
+  ImmutableQueryLog,
+  UserSessionPresence,
+  CryptographicTokenRevocation,
+  LedgerIntegritySummary,
+  AuditTrailPreviewData,
+  RevokeTokenPayload,
+  RevokeTokenResult
+} from './governance';

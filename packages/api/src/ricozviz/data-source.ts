@@ -12,7 +12,7 @@
  */
 
 import { apiFetch, toQueryString } from './client.js';
-import type { ConnectionTestResult, DataSourceData } from '@repo/types';
+import type { ConnectionTestResult, DataSourceData, DataSourceConnectorType, DataSourceType } from '@repo/types';
 
 export async function apiListDataSources(params?: { workspaceId?: string }): Promise<DataSourceData[]> {
   // Byte-identical to the legacy `URLSearchParams` build for this single
@@ -29,7 +29,7 @@ export async function apiCreateDataSource(input: {
   workspaceId?: string | null;
   name: string;
   description?: string;
-  type: "POSTGRESQL" | "MYSQL" | "SQLITE" | "CSV" | "REST_API" | "XLSX" | "JSON";
+  type: DataSourceConnectorType | DataSourceType;
   connection: Record<string, unknown>;
 }): Promise<DataSourceData> {
   return apiFetch<DataSourceData>("/api/v1/data-sources", {

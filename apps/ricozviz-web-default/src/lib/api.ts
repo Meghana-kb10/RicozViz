@@ -187,7 +187,13 @@ export {
 } from '@repo/api';
 
 // ---- Audit logs ------------------------------------------------------------------------------
-export { apiQueryAuditLogs, apiGetAuditLogStats } from '@repo/api';
+export {
+  apiQueryAuditLogs,
+  apiGetAuditLogStats,
+  apiGetAuditTrailPreview,
+  apiRevokeToken,
+  apiVerifyLedgerChain
+} from '@repo/api';
 
 // ---- AI analytics -----------------------------------------------------------------------------
 export {
@@ -195,6 +201,18 @@ export {
   apiNlToChart,
   apiGetInsights,
   apiGetDashboardSummary
+} from '@repo/api';
+
+// ---- Governance & Security Badges -------------------------------------------------------------
+export {
+  apiGetGovernanceBadges,
+  apiGetGovernanceBadge,
+  apiVerifyGovernanceBadge,
+  apiGetGovernancePosture,
+  apiGetRlsPolicies,
+  apiSimulateRls,
+  apiGetCisoAccreditations,
+  apiGetCisoTrustPack
 } from '@repo/api';
 
 // ---- Domain types --------------------------------------------------------------------------------
@@ -268,6 +286,8 @@ export type {
   DashboardCollaboratorsResponse,
   CollaboratorPresence,
   CollaborationStateResult,
+  MultiplayerCursorIndicator,
+  MultiplayerCanvasEvent,
   EmbedConfig,
   EmbedStatusResult,
   DashboardScheduleData,
@@ -322,7 +342,31 @@ export type {
   AnalystQueryResponse,
   NlToChartResponse,
   AutoInsight,
-  DashboardSummaryResponse
+  DashboardSummaryResponse,
+  // Governance
+  SecurityBadgeCategory,
+  SecurityBadgeStatus,
+  SecurityBadge,
+  GovernancePosture,
+  VerifyBadgeResult,
+  RlsSimulationRole,
+  RlsPolicyCategory,
+  RlsPolicyDefinition,
+  RlsRoleDefinition,
+  RlsSimulatedRecord,
+  RlsSimulationRequest,
+  RlsSimulationResult,
+  RlsPoliciesCatalogResponse,
+  CisoAccreditationItem,
+  CisoTrustOverview,
+  CisoAttestationDossier,
+  ImmutableQueryLog,
+  UserSessionPresence,
+  CryptographicTokenRevocation,
+  LedgerIntegritySummary,
+  AuditTrailPreviewData,
+  RevokeTokenPayload,
+  RevokeTokenResult
 } from '@repo/types';
 
 /**

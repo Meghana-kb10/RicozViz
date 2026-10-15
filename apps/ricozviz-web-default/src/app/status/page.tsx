@@ -47,54 +47,54 @@ export default function StatusPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col p-8">
+    <div className="min-h-screen bg-[#F4F1EA] text-[#172B3A] flex flex-col p-8 font-sans selection:bg-[#147D78] selection:text-white">
       <header className="max-w-3xl mx-auto w-full mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <BrandLogo size={32} />
-          <span className="font-semibold text-lg">RicozViz System Status</span>
+          <span className="font-heading font-bold text-lg text-[#172B3A]">RicozViz System Status</span>
         </div>
         <Link
           href="/login"
-          className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded border border-slate-700 transition"
+          className="text-xs bg-white hover:bg-[#F4F1EA] text-[#172B3A] px-3 py-1.5 rounded-lg border border-[#DADFD9] transition font-medium shadow-xs"
         >
           Sign In
         </Link>
       </header>
 
       <main className="max-w-3xl mx-auto w-full space-y-6">
-        <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-6">
-          <h2 className="text-base font-semibold text-white mb-4">Environment & Service Overview</h2>
+        <div className="bg-white border border-[#DADFD9] rounded-xl p-6 shadow-xs">
+          <h2 className="text-base font-heading font-bold text-[#172B3A] mb-4">Environment & Service Overview</h2>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between py-2 border-b border-slate-700/60">
-              <span className="text-sm text-slate-400">Frontend Application</span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400">
-                <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+            <div className="flex items-center justify-between py-2 border-b border-[#DADFD9]">
+              <span className="text-sm text-[#596775]">Frontend Application</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#147D78]">
+                <span className="h-2 w-2 rounded-full bg-[#147D78]"></span>
                 Operational
               </span>
             </div>
 
-            <div className="flex items-center justify-between py-2 border-b border-slate-700/60">
+            <div className="flex items-center justify-between py-2 border-b border-[#DADFD9]">
               <div>
-                <span className="text-sm text-slate-400">Backend API (port 4000)</span>
-                <p className="text-xs text-slate-500">{status.apiMessage}</p>
+                <span className="text-sm text-[#596775]">Backend API (port 4000)</span>
+                <p className="text-xs text-[#596775]/70">{status.apiMessage}</p>
               </div>
               <span
                 className={`inline-flex items-center gap-1.5 text-xs font-medium ${
                   status.apiStatus === "online"
-                    ? "text-emerald-400"
+                    ? "text-[#147D78]"
                     : status.apiStatus === "checking"
-                    ? "text-amber-400"
-                    : "text-red-400"
+                    ? "text-[#D9A441]"
+                    : "text-red-600"
                 }`}
               >
                 <span
                   className={`h-2 w-2 rounded-full ${
                     status.apiStatus === "online"
-                      ? "bg-emerald-400"
+                      ? "bg-[#147D78]"
                       : status.apiStatus === "checking"
-                      ? "bg-amber-400 animate-pulse"
-                      : "bg-red-400"
+                      ? "bg-[#D9A441] animate-pulse"
+                      : "bg-red-500"
                   }`}
                 ></span>
                 {status.apiStatus === "online"
@@ -106,13 +106,13 @@ export default function StatusPage() {
             </div>
 
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm text-slate-400">Last Verified</span>
-              <span suppressHydrationWarning className="text-xs font-mono text-slate-400">{status.timestamp}</span>
+              <span className="text-sm text-[#596775]">Last Verified</span>
+              <span suppressHydrationWarning className="text-xs font-mono text-[#596775]">{status.timestamp}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-slate-800/40 border border-slate-700/60 rounded-xl p-4 text-xs text-slate-400">
+        <div className="bg-white border border-[#DADFD9] rounded-xl p-4 text-xs text-[#596775] shadow-xs">
           <p>
             Note: RicozViz uses JWT Authentication with 15-minute access tokens and 7-day HttpOnly refresh cookies.
             Protected workspace, dashboard, dataset, visualization, and settings routes require active authentication.

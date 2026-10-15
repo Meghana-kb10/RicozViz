@@ -16,26 +16,38 @@ import type { ChartConfig } from "../../lib/api";
 import { formatNumber } from "../../lib/formatting";
 
 const PALETTE = [
-  "#4f46e5", // Indigo
-  "#06b6d4", // Cyan
-  "#10b981", // Emerald
-  "#f59e0b", // Amber
-  "#ec4899", // Pink
-  "#8b5cf6", // Purple
+  "#147D78", // Editorial Accent
+  "#D9A441", // Subtle Highlight Ochre
+  "#2E5B70", // Deep Slate Cyan
+  "#10B981", // Emerald
+  "#E11D48", // Rose Alert
+  "#596775", // Secondary Text Slate
+  "#0F625D", // Deep Forest Teal
+  "#F59E0B", // Amber Warning
 ];
 
 export interface RadarChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   height?: number | string;
 }
 
 export function RadarChartRenderer({
   data,
   config,
+  palette,
   height = "100%",
 }: RadarChartRendererProps) {
   const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const showLegend = options.showLegend !== false;
   const xKey = data.xKey || "category";
   const measureKeys = data.measureKeys.length > 0 ? data.measureKeys : ["value"];
@@ -70,7 +82,7 @@ export function RadarChartRenderer({
           />
           {showLegend && <Legend wrapperStyle={{ fontSize: "12px" }} />}
           {measureKeys.map((key, idx) => {
-            const color = PALETTE[idx % PALETTE.length];
+            const color = activePalette[idx % activePalette.length];
             return (
               <Radar
                 key={key}

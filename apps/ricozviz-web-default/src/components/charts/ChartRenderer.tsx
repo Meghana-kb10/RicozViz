@@ -30,14 +30,30 @@ import { MapRenderer } from "../visualization/MapRenderer";
 
 export const COLOR_PALETTES: Record<string, string[]> = {
   default: [
-    "#4f46e5", // Indigo
-    "#06b6d4", // Cyan
-    "#10b981", // Emerald
-    "#f59e0b", // Amber
-    "#ec4899", // Pink
-    "#8b5cf6", // Purple
-    "#3b82f6", // Blue
-    "#14b8a6", // Teal
+    "#147D78", // Primary Editorial Accent (Teal)
+    "#D9A441", // Subtle Highlight (Ochre/Gold)
+    "#2E5B70", // Deep Slate Cyan
+    "#10B981", // Semantic Success
+    "#E11D48", // Semantic Danger / Alert
+    "#596775", // Secondary Text Slate
+    "#0F625D", // Darker Forest Teal
+    "#F59E0B", // Amber Warning
+  ],
+  editorial: [
+    "#147D78",
+    "#D9A441",
+    "#596775",
+    "#106963",
+    "#2E5B70",
+    "#94A3B8",
+  ],
+  workspace: [
+    "#4F9D8E", // Dark Workspace Accent
+    "#D9A441", // Warm Ochre
+    "#38BDF8", // Cyan
+    "#34D399", // Mint / Healthy
+    "#F87171", // Soft Rose
+    "#9CA3AF", // Slate Neutral
   ],
   emerald: [
     "#059669",
@@ -95,6 +111,7 @@ export interface ChartRendererProps {
   chartType: ChartType;
   config: ChartConfig;
   queryResult: DatasetQueryResult | null;
+  palette?: string[];
   isLoading?: boolean;
   error?: string | null;
   height?: number | string;
@@ -140,6 +157,7 @@ export function ChartRenderer({
   chartType,
   config,
   queryResult,
+  palette,
   isLoading = false,
   error = null,
   height = 260,
@@ -204,9 +222,11 @@ export function ChartRenderer({
 
   // Resolve palette
   const activePalette =
-    config.customColors && config.customColors.length > 0
-      ? config.customColors
-      : COLOR_PALETTES[config.colorPalette || "default"] || COLOR_PALETTES.default;
+    palette && palette.length > 0
+      ? palette
+      : config.customColors && config.customColors.length > 0
+        ? config.customColors
+        : COLOR_PALETTES[config.colorPalette || "default"] || COLOR_PALETTES.default;
 
   // Customization options
   const showLegend = config.legend?.show !== false && measureKeys.length > 1;

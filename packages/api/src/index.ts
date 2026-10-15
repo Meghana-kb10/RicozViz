@@ -238,7 +238,13 @@ export {
   apiInstantiateDashboardFromTemplate
 } from './ricozviz/template.js';
 
-export { apiQueryAuditLogs, apiGetAuditLogStats } from './ricozviz/audit.js';
+export {
+  apiQueryAuditLogs,
+  apiGetAuditLogStats,
+  apiGetAuditTrailPreview,
+  apiRevokeToken,
+  apiVerifyLedgerChain
+} from './ricozviz/audit.js';
 
 export {
   apiAskDataAnalyst,
@@ -246,3 +252,14 @@ export {
   apiGetInsights,
   apiGetDashboardSummary
 } from './ricozviz/ai.js';
+
+export {
+  apiGetGovernanceBadges,
+  apiGetGovernanceBadge,
+  apiVerifyGovernanceBadge,
+  apiGetGovernancePosture,
+  apiGetRlsPolicies,
+  apiSimulateRls,
+  apiGetCisoAccreditations,
+  apiGetCisoTrustPack
+} from './ricozviz/governance.js';

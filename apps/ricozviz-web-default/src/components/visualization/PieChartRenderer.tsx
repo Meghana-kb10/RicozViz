@@ -14,19 +14,20 @@ import type { ChartConfig } from "../../lib/api";
 import { formatNumber, formatCurrency, formatPercent } from "../../lib/formatting";
 
 const PALETTE = [
-  "#4f46e5", // Indigo
-  "#06b6d4", // Cyan
-  "#10b981", // Emerald
-  "#f59e0b", // Amber
-  "#ec4899", // Pink
-  "#8b5cf6", // Purple
-  "#3b82f6", // Blue
-  "#14b8a6", // Teal
+  "#147D78", // Editorial Accent
+  "#D9A441", // Subtle Highlight Ochre
+  "#2E5B70", // Deep Slate Cyan
+  "#10B981", // Emerald
+  "#E11D48", // Rose Alert
+  "#596775", // Secondary Text Slate
+  "#0F625D", // Deep Forest Teal
+  "#F59E0B", // Amber Warning
 ];
 
 export interface PieChartRendererProps {
   data: MappedChartData;
   config: ChartConfig;
+  palette?: string[];
   isDonut?: boolean;
   height?: number | string;
   onDataPointClick?: (field: string, value: unknown) => void;
@@ -36,12 +37,21 @@ export interface PieChartRendererProps {
 export function PieChartRenderer({
   data,
   config,
+  palette,
   isDonut = false,
   height = "100%",
   onDataPointClick,
   selectedFilterValue,
 }: PieChartRendererProps) {
   const options = config.options || {};
+  const activePalette =
+    palette && palette.length > 0
+      ? palette
+      : Array.isArray(options.palette) && options.palette.length > 0
+        ? (options.palette as string[])
+        : Array.isArray(options.colorPalette) && options.colorPalette.length > 0
+          ? (options.colorPalette as string[])
+          : PALETTE;
   const showLegend = options.showLegend !== false;
   const numberFormat = (options.numberFormat as string) || "auto";
 
@@ -103,7 +113,7 @@ export function PieChartRenderer({
               return (
                 <Cell
                   key={`slice-${index}`}
-                  fill={PALETTE[index % PALETTE.length]}
+                  fill={activePalette[index % activePalette.length]}
                   opacity={isSelected ? 1 : 0.35}
                   stroke={isSelected && selectedFilterValue !== undefined ? "#1e1b4b" : "none"}
                   strokeWidth={isSelected && selectedFilterValue !== undefined ? 2 : 0}

@@ -908,6 +908,7 @@ export default function DashboardDetailPage({
     try {
       const updated = await apiUpdateDashboard(dashboard.id, {
         layoutConfig: {
+          ...(dashboard.layoutConfig || {}),
           chartCount: charts.length,
           chartOrder: charts.map((c) => c.id),
           lastSavedAt: new Date().toISOString(),
@@ -1800,7 +1801,13 @@ export default function DashboardDetailPage({
         )}
 
         {/* Center Canvas */}
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50 flex flex-col print:p-0 print:bg-white print:overflow-visible">
+        <main
+          className={`flex-1 overflow-y-auto p-6 flex flex-col print:p-0 print:bg-white print:overflow-visible transition-colors ${getFontFamilyClass(dashboardTheme.fontFamily)}`}
+          style={{
+            backgroundColor: dashboardTheme.backgroundColor || undefined,
+            color: dashboardTheme.textColor || undefined,
+          }}
+        >
           {/* Printable Report Header (Visible only when printing) */}
           <div className="hidden print:block mb-6 border-b-2 border-gray-900 pb-4">
             <div className="flex items-start justify-between">
@@ -1819,7 +1826,16 @@ export default function DashboardDetailPage({
           </div>
 
           {/* Dashboard Meta Bar */}
-          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+          <div
+            className="border p-4 shadow-xs mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print transition-colors"
+            style={{
+              backgroundColor: dashboardTheme.cardBackground || undefined,
+              borderColor: dashboardTheme.borderColor || undefined,
+              borderRadius: getRadiusStyle(dashboardTheme.cardRadius),
+              boxShadow: getShadowStyle(dashboardTheme.cardShadow, dashboardTheme.mode === "dark"),
+              color: dashboardTheme.textColor || undefined,
+            }}
+          >
             <div>
               {isEditingDash ? (
                 <form onSubmit={handleSaveDashEdit} className="flex flex-wrap items-center gap-2">
@@ -2172,6 +2188,7 @@ export default function DashboardDetailPage({
                         chartType={chart.chartType}
                         config={chart.config}
                         queryResult={queryState?.data || null}
+                        palette={dashboardTheme.chartPalette}
                         isLoading={queryState?.loading || false}
                         error={queryState?.error || null}
                         height={chartHeight}

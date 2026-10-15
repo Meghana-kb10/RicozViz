@@ -34,15 +34,15 @@ export function KpiRenderer({ data, config, height = "100%" }: KpiRendererProps)
   return (
     <div
       style={{ height }}
-      className="w-full h-full flex flex-col items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50/40 via-white to-white p-6 border border-indigo-100/60 text-center shadow-xs"
+      className="w-full h-full flex flex-col items-center justify-center rounded-xl bg-[hsl(var(--surface))] p-6 border border-[hsl(var(--surface-border))] text-center shadow-xs"
     >
-      <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1.5 line-clamp-1">
+      <span className="text-xs font-semibold text-[hsl(var(--primary))] uppercase tracking-wider mb-1 line-clamp-1">
         {label}
       </span>
-      <div className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight font-mono my-2">
+      <div className="text-3xl sm:text-4xl font-semibold text-[hsl(var(--foreground))] tracking-tight font-mono my-2">
         {displayValue}
       </div>
-      <div className="mt-2 inline-flex items-center gap-2 text-[11px] text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100 font-medium">
+      <div className="mt-2 inline-flex items-center gap-2 text-[11px] text-[hsl(var(--muted-foreground))] bg-[hsl(var(--surface-subtle))] px-2.5 py-1 rounded-full border border-[hsl(var(--surface-border))] font-mono">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
         <span>{data.rows.length} source records computed</span>
       </div>

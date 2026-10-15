@@ -9,4 +9,5 @@ export {
   sanitizeMetadata,
   escapeRegExp
 } from './audit.service.js';
+export { auditPreviewService } from './audit-preview.service.js';
 export type { LogAuditParams, QueryAuditLogsServiceParams } from './audit.service.js';
