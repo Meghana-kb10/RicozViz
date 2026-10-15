@@ -10,7 +10,7 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "ricozinnovation/viz"
+      "repo": "ricozdev/viz"
     }
   ],
   "commit": false,
