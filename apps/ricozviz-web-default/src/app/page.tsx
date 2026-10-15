@@ -23,6 +23,7 @@ import { SecurityGovernanceBadges } from "@/components/shell/SecurityGovernanceB
 import { DedicatedRlsGovernanceBlock } from "@/components/shell/DedicatedRlsGovernanceBlock";
 import { MultiTenantAuditTrailMockup } from "@/components/shell/MultiTenantAuditTrailMockup";
 import { CollaborativeMultiplayerCanvas } from "@/components/shell/CollaborativeMultiplayerCanvas";
+import { TerminalQuickstartSnippet } from "@/components/shell/TerminalQuickstartSnippet";
 
 export const metadata: Metadata = {
   title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
@@ -134,6 +135,13 @@ export default function HomePage() {
                 <span>Launch Workspace</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
+              <a
+                href="#topology"
+                className="bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/40 hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] px-5 py-2.5 text-xs rounded-lg flex items-center gap-2 transition shadow-xs"
+              >
+                <Layers className="h-3.5 w-3.5 text-[#147D78] dark:text-[#4F9D8E]" />
+                <span>Explore Topology</span>
+              </a>
               <Link
                 href="/benchmarks"
                 className="bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/40 hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] px-5 py-2.5 text-xs rounded-lg flex items-center gap-2 transition shadow-xs"
@@ -141,6 +149,11 @@ export default function HomePage() {
                 <Database className="h-3.5 w-3.5 text-[#147D78] dark:text-[#4F9D8E]" />
                 <span>View DuckDB Benchmarks</span>
               </Link>
+            </div>
+
+            {/* Terminal-Style Quickstart / SDK Snippet */}
+            <div className="mt-5 max-w-xl mx-auto">
+              <TerminalQuickstartSnippet />
             </div>
 
             {/* Technical Sub-Caption */}
