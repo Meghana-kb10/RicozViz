@@ -4,7 +4,12 @@ import React, { useState } from "react";
 import HeroBentoSection from "@/components/landing/HeroBentoSection";
 import InteractiveWorkbench from "@/components/landing/InteractiveWorkbench";
 import CapabilityGrid from "@/components/landing/CapabilityGrid";
+import WorkflowPipelineSection from "@/components/landing/WorkflowPipelineSection";
+import InfrastructureTopologySection from "@/components/landing/InfrastructureTopologySection";
+import AuditLedgerSection from "@/components/landing/AuditLedgerSection";
+import SecurityGovernanceSection from "@/components/landing/SecurityGovernanceSection";
 import ParticleCtaSection from "@/components/landing/ParticleCtaSection";
+import ComprehensiveFooter from "@/components/landing/ComprehensiveFooter";
 
 const DATA_CONNECTORS = [
   "PostgreSQL",
@@ -139,9 +144,21 @@ export default function HomePage() {
         onSelectConnector={setSelectedConnector}
       />
 
-      {/* PIECE 3: Split SDK Inspector, 2x2 Governance Showcase, 4-Col Masonry Testimonials, and Instant Provisioner */}
+      {/* PIECE 3: Split SDK Inspector, Pipeline, Topology, Audit Ledger, Governance, 4-Col Masonry Testimonials, and Instant Provisioner */}
       <div id="piece-governance-social" className="flex flex-col gap-[88px] pb-[80px]">
         <CapabilityGrid />
+
+        {/* WORKFLOW PIPELINE SECTION */}
+        <WorkflowPipelineSection />
+
+        {/* INFRASTRUCTURE TOPOLOGY SECTION */}
+        <InfrastructureTopologySection />
+
+        {/* MULTI-TENANT AUDIT TRAIL & CRYPTOGRAPHIC KILL-SWITCH */}
+        <AuditLedgerSection />
+
+        {/* ENTERPRISE TRUST & GOVERNANCE */}
+        <SecurityGovernanceSection />
 
         {/* 4-COLUMN MASONRY CUSTOMER STORIES */}
         <section
@@ -381,35 +398,8 @@ export default function HomePage() {
       {/* DYNAMIC PARTICLE CTA SECTION */}
       <ParticleCtaSection onOpenAuthModal={() => setAuthModalOpen(true)} />
 
-      {/* FOOTER */}
-      <footer className="border-t border-[#2e2e2e] bg-[#121212] py-[48px]">
-        <div className="mx-auto flex max-w-[1200px] flex-col items-start justify-between gap-[24px] px-[24px] sm:flex-row sm:items-center">
-          <div className="flex items-center gap-[10px]">
-            <img className="size-6" src="images/logo.png" alt="" />
-            <span className="text-[14px] font-medium text-[#fafafa]">
-              ricozviz
-            </span>
-            <span className="text-[12px] text-[#898989]">
-              — In-Memory OLAP, Real-Time Streaming &amp; Zero-Trust Governance
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-[24px] text-[12px] text-[#898989]">
-            <a href="#products" className="hover:text-[#fafafa]">
-              DuckDB Wasm
-            </a>
-            <a href="#piece-workbench" className="hover:text-[#fafafa]">
-              Interactive Workbench
-            </a>
-            <a href="#piece-governance-social" className="hover:text-[#fafafa]">
-              RLS &amp; Audit Ledger
-            </a>
-            <a href="#provision" className="hover:text-[#fafafa]">
-              SAML 2.0 SSO
-            </a>
-          </div>
-        </div>
-      </footer>
+      {/* COMPREHENSIVE TECHNICAL FOOTER */}
+      <ComprehensiveFooter />
 
       {/* INTERACTIVE SAML 2.0 SSO MODAL */}
       {authModalOpen && (

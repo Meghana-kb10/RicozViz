@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Link from "next/link";
 
 interface HeroBentoProps {
   selectedConnector: string;
@@ -24,6 +25,22 @@ const CONNECTOR_NAMES = [
   "S3 Parquet",
   "Apache Kafka",
   "MySQL",
+];
+
+type NavItem =
+  | { id: string; label: string; hasMenu: true; href?: undefined }
+  | { id: string; label: string; hasMenu?: false; href: string };
+
+const NAV_ITEMS: NavItem[] = [
+  { id: "product", label: "Platform", hasMenu: true },
+  { id: "connectors", label: "Connectors", hasMenu: true },
+  { id: "security", label: "Security & Trust", hasMenu: true },
+  { id: "workbench", label: "Workbench", href: "#piece-workbench" },
+  { id: "workflow", label: "Pipeline", href: "#workflow" },
+  { id: "topology", label: "Topology", href: "#topology" },
+  { id: "audit-trail", label: "Audit Trail", href: "#audit-trail" },
+  { id: "docs", label: "Docs", href: "/docs" },
+  { id: "benchmarks", label: "Benchmarks", href: "/benchmarks" },
 ];
 
 export default function HeroBentoSection({
@@ -68,26 +85,16 @@ export default function HeroBentoSection({
       <header className="sticky top-0 z-40 h-[64px] w-full border-b border-[#2e2e2e] bg-[#121212]/95 backdrop-blur-xs">
         <div className="mx-auto flex h-full max-w-[1200px] items-center justify-between px-[24px]">
           <div className="flex items-center gap-[32px]">
-            <a href="#" className="flex items-center gap-[9px]">
-
-              <img className="size-6" src="images/logo.png" alt="" />
+            <Link href="/" className="flex items-center gap-[9px]">
+              <img className="size-6" src="images/logo.png" alt="RicozViz Logo" />
               <span className="text-[18px] font-medium tracking-[-0.02em] text-[#fafafa]">
                 ricozviz
               </span>
-            </a>
+            </Link>
 
-            <nav className="hidden items-center gap-[22px] lg:flex">
-              {(
-                [
-                  { id: "product", label: "Product", hasMenu: true },
-                  { id: "connectors", label: "Connectors", hasMenu: true },
-                  { id: "security", label: "Solutions", hasMenu: true },
-                  { id: "workbench", label: "Workbench", href: "#piece-workbench" },
-                  { id: "docs", label: "Docs", href: "#piece-governance-social" },
-                  { id: "pricing", label: "Enterprise", href: "#provision" },
-                ] as const
-              ).map((item) =>
-                "hasMenu" in item && item.hasMenu ? (
+            <nav className="hidden items-center gap-[20px] lg:flex">
+              {NAV_ITEMS.map((item) =>
+                item.hasMenu ? (
                   <button
                     key={item.id}
                     type="button"
@@ -96,12 +103,13 @@ export default function HeroBentoSection({
                         prev === item.id ? null : item.id
                       )
                     }
-                    className="inline-flex items-center gap-[4px] text-[14px] font-normal text-[#b4b4b4] transition-colors hover:text-[#fafafa] cursor-pointer"
+                    className="inline-flex items-center gap-[4px] text-[13px] font-normal text-[#b4b4b4] transition-colors hover:text-[#fafafa] cursor-pointer"
                   >
                     <span>{item.label}</span>
                     <svg
-                      className={`h-[12px] w-[12px] transition-transform ${activeNavMenu === item.id ? "rotate-180 text-[#fafafa]" : ""
-                        }`}
+                      className={`h-[12px] w-[12px] transition-transform ${
+                        activeNavMenu === item.id ? "rotate-180 text-[#fafafa]" : ""
+                      }`}
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -114,7 +122,7 @@ export default function HeroBentoSection({
                   <a
                     key={item.id}
                     href={item.href}
-                    className="text-[14px] font-normal text-[#b4b4b4] transition-colors hover:text-[#fafafa]"
+                    className="text-[13px] font-normal text-[#b4b4b4] transition-colors hover:text-[#fafafa]"
                   >
                     {item.label}
                   </a>
@@ -124,44 +132,19 @@ export default function HeroBentoSection({
           </div>
 
           <div className="flex items-center gap-[10px]">
-            <button
-              type="button"
-              onClick={() => {
-                setStarred((s) => !s);
-                setStarCount((c) =>
-                  Number((starred ? c - 0.1 : c + 0.1).toFixed(1))
-                );
-              }}
-              className="hidden items-center gap-[6px] rounded-full border border-transparent px-[10px] py-[5px] text-[12px] font-normal text-[#b4b4b4] transition-colors hover:border-[#2e2e2e] hover:bg-[#242424] hover:text-[#fafafa] sm:inline-flex cursor-pointer"
-            >
-              {/* <svg
-                className="h-[15px] w-[15px] text-[#b4b4b4]"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                />
-              </svg> */}
-              {/* <span>{starCount}K</span> */}
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenAuthModal}
+            <Link
+              href="/login"
               className="rounded-full border border-[#393939] bg-[#1c1c1c] px-[14px] py-[6px] text-[12px] font-medium text-[#fafafa] transition-colors hover:border-[#4d4d4d] hover:bg-[#242424] cursor-pointer"
             >
-              Sign in
-            </button>
+              Sign In
+            </Link>
 
-            <a
-              href="#provision"
+            <Link
+              href="/register"
               className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[14px] py-[6px] text-[12px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c]"
             >
               Launch Workspace
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -170,14 +153,17 @@ export default function HeroBentoSection({
             <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-[16px] px-[24px]">
               {activeNavMenu === "product" && (
                 <div className="flex flex-wrap gap-[24px] text-[13px] text-[#b4b4b4]">
-                  <a href="#products" onClick={() => setActiveNavMenu(null)} className="text-[#fafafa]">
+                  <a href="#products" onClick={() => setActiveNavMenu(null)} className="text-[#fafafa] hover:text-[#ff6b35]">
                     DuckDB Wasm OLAP
                   </a>
                   <a href="#piece-workbench" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
                     Multi-Canvas Dashboards
                   </a>
-                  <a href="#piece-workbench" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
-                    Real-Time Collaboration
+                  <a href="#workflow" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
+                    Data Pipeline &amp; Vectorizer
+                  </a>
+                  <a href="#topology" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
+                    Infrastructure Topology
                   </a>
                 </div>
               )}
@@ -192,10 +178,11 @@ export default function HeroBentoSection({
                         onSelectConnector(name);
                         setActiveNavMenu(null);
                       }}
-                      className={`rounded-full border px-[10px] py-[3px] text-[12px] cursor-pointer ${selectedConnector === name
-                        ? "border-[#fafafa] bg-[#242424] text-[#fafafa]"
-                        : "border-[#2e2e2e] text-[#b4b4b4] hover:text-[#fafafa]"
-                        }`}
+                      className={`rounded-full border px-[10px] py-[3px] text-[12px] cursor-pointer ${
+                        selectedConnector === name
+                          ? "border-[#fafafa] bg-[#242424] text-[#fafafa]"
+                          : "border-[#2e2e2e] text-[#b4b4b4] hover:text-[#fafafa]"
+                      }`}
                     >
                       {name}
                     </button>
@@ -203,12 +190,22 @@ export default function HeroBentoSection({
                 </div>
               )}
               {activeNavMenu === "security" && (
-                <div className="flex flex-wrap gap-[20px] text-[12px] text-[#b4b4b4]">
-                  <span>✓ Parameterized SQLi Prevention</span>
-                  <span>✓ Row-Level Security (RLS)</span>
-                  <span>✓ Role-Based Access Control (RBAC)</span>
-                  <span>✓ Dynamic PII Masking</span>
-                  <span>✓ SAML 2.0 SSO &amp; SCIM</span>
+                <div className="flex flex-wrap items-center gap-[20px] text-[12px] text-[#b4b4b4]">
+                  <a href="#governance" onClick={() => setActiveNavMenu(null)} className="text-[#fafafa] hover:text-[#ff6b35]">
+                    ✓ SOC 2 &amp; HIPAA Controls
+                  </a>
+                  <a href="#audit-trail" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
+                    ✓ SHA-256 Audit Ledger
+                  </a>
+                  <a href="#audit-trail" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
+                    ✓ Cryptographic Kill-Switch
+                  </a>
+                  <a href="#governance" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
+                    ✓ Row-Level Security (RLS)
+                  </a>
+                  <Link href="/whitepaper" onClick={() => setActiveNavMenu(null)} className="text-[#ff6b35] hover:underline">
+                    Security Whitepaper →
+                  </Link>
                 </div>
               )}
               <button
