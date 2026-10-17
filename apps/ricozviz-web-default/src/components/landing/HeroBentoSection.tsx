@@ -32,9 +32,9 @@ type NavItem =
   | { id: string; label: string; hasMenu?: false; href: string };
 
 const NAV_ITEMS: NavItem[] = [
-  { id: "product", label: "Platform", hasMenu: true },
-  { id: "connectors", label: "Connectors", hasMenu: true },
-  { id: "security", label: "Security & Trust", hasMenu: true },
+  // { id: "product", label: "Platform", hasMenu: true },
+  // { id: "connectors", label: "Connectors", hasMenu: true },
+  // { id: "security", label: "Security & Trust", hasMenu: true },
   { id: "workbench", label: "Workbench", href: "#piece-workbench" },
   { id: "workflow", label: "Pipeline", href: "#workflow" },
   { id: "topology", label: "Topology", href: "#topology" },
@@ -107,9 +107,8 @@ export default function HeroBentoSection({
                   >
                     <span>{item.label}</span>
                     <svg
-                      className={`h-[12px] w-[12px] transition-transform ${
-                        activeNavMenu === item.id ? "rotate-180 text-[#fafafa]" : ""
-                      }`}
+                      className={`h-[12px] w-[12px] transition-transform ${activeNavMenu === item.id ? "rotate-180 text-[#fafafa]" : ""
+                        }`}
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -178,11 +177,10 @@ export default function HeroBentoSection({
                         onSelectConnector(name);
                         setActiveNavMenu(null);
                       }}
-                      className={`rounded-full border px-[10px] py-[3px] text-[12px] cursor-pointer ${
-                        selectedConnector === name
-                          ? "border-[#fafafa] bg-[#242424] text-[#fafafa]"
-                          : "border-[#2e2e2e] text-[#b4b4b4] hover:text-[#fafafa]"
-                      }`}
+                      className={`rounded-full border px-[10px] py-[3px] text-[12px] cursor-pointer ${selectedConnector === name
+                        ? "border-[#fafafa] bg-[#242424] text-[#fafafa]"
+                        : "border-[#2e2e2e] text-[#b4b4b4] hover:text-[#fafafa]"
+                        }`}
                     >
                       {name}
                     </button>
@@ -295,13 +293,13 @@ export default function HeroBentoSection({
               className="animate-fade-in-up flex flex-wrap items-center gap-[10px]"
             >
               <a
-                href="#provision"
+                href="/register"
                 className="inline-flex h-[38px] items-center justify-center rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[18px] text-[14px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c]"
               >
-                Start your project
+                Launch Workspace
               </a>
               <a
-                href="#piece-workbench"
+                href="/login"
                 className="inline-flex h-[38px] items-center justify-center rounded-full border border-[#393939] bg-[#1c1c1c] px-[18px] text-[14px] font-normal text-[#fafafa] transition-colors hover:border-[#4d4d4d] hover:bg-[#242424]"
               >
                 Request a demo

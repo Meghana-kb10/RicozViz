@@ -5,171 +5,100 @@ import {
   ShieldAlert,
   ShieldCheck,
   KeyRound,
-  Activity,
   Lock,
   RefreshCw,
-  Copy,
-  Check,
   CheckCircle2,
-  Terminal,
-  Search,
   Zap,
-  Radio,
+  Users,
+  Eye,
+  FileCheck,
   Clock,
-  UserX,
-  FileText,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 
-interface AuditBlock {
+interface AuditSession {
   id: string;
-  blockHeight: number;
+  userName: string;
+  role: string;
   tenantName: string;
   tenantId: string;
-  userName: string;
-  userRole: string;
-  queryText: string;
-  queryEngine: string;
-  durationMs: number;
-  rowsAffected: number;
-  status: "SUCCESS_VERIFIED" | "REVOKED_KILL_SWITCH";
-  blockHash: string;
-  prevBlockHash: string;
-  cryptographicProof: string;
-  timestamp: string;
+  activeQuery: string;
+  duration: string;
+  status: "ACTIVE_VERIFIED" | "TOKEN_REVOKED";
+  merkleHeight: number;
 }
 
-const INITIAL_AUDIT_BLOCKS: AuditBlock[] = [
+const INITIAL_SESSIONS: AuditSession[] = [
   {
-    id: "block-1045",
-    blockHeight: 1045,
-    tenantName: "Acme Enterprise",
-    tenantId: "org_acme_corp",
+    id: "sess-1",
     userName: "Elena Rostova",
-    userRole: "Lead Data Architect",
-    queryText:
-      "SELECT region, sum(revenue_usd) FROM snowflake_wh.sales_fact WHERE tenant_id = 'org_acme_corp' GROUP BY 1 ORDER BY 2 DESC LIMIT 10;",
-    queryEngine: "SNOWFLAKE_PUSHDOWN",
-    durationMs: 4.8,
-    rowsAffected: 10,
-    status: "SUCCESS_VERIFIED",
-    prevBlockHash: "bc38a9202517830b5e82110c94da38654a938174928bcf62047d19385012a9ef",
-    blockHash: "9f8a20bb1b582531e8471e4f9b809a4732168393e506692882a1789c0201e4d2",
-    cryptographicProof: "0x7a89fbc00192ea44109ba2831899a0182741982bca8192837482910fa871b021",
-    timestamp: "2 minutes ago",
+    role: "Lead Data Architect",
+    tenantName: "Acme Enterprise",
+    tenantId: "org_acme",
+    activeQuery: "Aggregating quarterly revenue by region",
+    duration: "1.4 ms",
+    status: "ACTIVE_VERIFIED",
+    merkleHeight: 1045,
   },
   {
-    id: "block-1044",
-    blockHeight: 1044,
-    tenantName: "Finovate Global",
-    tenantId: "org_finovate_bank",
+    id: "sess-2",
     userName: "Marcus Vance",
-    userRole: "Compliance Auditor",
-    queryText:
-      "SELECT account_id, balance_eur, pii_mask(iban) FROM sovereign_vault.accounts WHERE balance_eur > 250000;",
-    queryEngine: "DUCKDB_WASM",
-    durationMs: 1.2,
-    rowsAffected: 154,
-    status: "SUCCESS_VERIFIED",
-    prevBlockHash: "e4d29f8a20bb1b582531e8471e4f9b809a4732168393e506692882a1789c0201",
-    blockHash: "bc38a9202517830b5e82110c94da38654a938174928bcf62047d19385012a9ef",
-    cryptographicProof: "0x18b958df634f19816da09c314051bb94205417852a06148590bf183b069d25ea",
-    timestamp: "5 minutes ago",
+    role: "Compliance Auditor",
+    tenantName: "Finovate Global",
+    tenantId: "org_finovate",
+    activeQuery: "Auditing accounts with dynamic PII masking",
+    duration: "1.2 ms",
+    status: "ACTIVE_VERIFIED",
+    merkleHeight: 1044,
   },
   {
-    id: "block-1043",
-    blockHeight: 1043,
-    tenantName: "HealthPulse Med",
-    tenantId: "org_healthpulse_med",
+    id: "sess-3",
     userName: "Dr. Sarah Lin",
-    userRole: "Chief Medical Officer",
-    queryText:
-      "SELECT cohort_id, count(patient_pseudonym), efficacy_ratio FROM trials_ephi.cohort_telemetry WHERE phase = 3 GROUP BY 1, 3;",
-    queryEngine: "POSTGRES_CDC",
-    durationMs: 6.4,
-    rowsAffected: 42,
-    status: "SUCCESS_VERIFIED",
-    prevBlockHash: "7a89fbc00192ea44109ba2831899a0182741982bca8192837482910fa871b021",
-    blockHash: "e4d29f8a20bb1b582531e8471e4f9b809a4732168393e506692882a1789c0201",
-    cryptographicProof: "0x44fa910bb3219488a0194801ba928410582910ac7482910fa871b0219483011a",
-    timestamp: "12 minutes ago",
-  },
-  {
-    id: "block-1042",
-    blockHeight: 1042,
-    tenantName: "OmniRetail Global",
-    tenantId: "org_omni_retail",
-    userName: "David Chen",
-    userRole: "Staff Streaming Eng",
-    queryText:
-      "SELECT window_start, count(event_id) AS click_rate FROM kafka_stream.checkout_events GROUP BY 1 ORDER BY 1 DESC LIMIT 50;",
-    queryEngine: "KAFKA_STREAM",
-    durationMs: 2.3,
-    rowsAffected: 50,
-    status: "SUCCESS_VERIFIED",
-    prevBlockHash: "18b958df634f19816da09c314051bb94205417852a06148590bf183b069d25ea",
-    blockHash: "7a89fbc00192ea44109ba2831899a0182741982bca8192837482910fa871b021",
-    cryptographicProof: "0x98124018ba201490218ba9481023847192837482910fa871b0219483011a44fa",
-    timestamp: "24 minutes ago",
+    role: "Chief Medical Officer",
+    tenantName: "HealthPulse Med",
+    tenantId: "org_healthpulse",
+    activeQuery: "Analyzing clinical cohort trials (HIPAA)",
+    duration: "6.4 ms",
+    status: "ACTIVE_VERIFIED",
+    merkleHeight: 1043,
   },
 ];
 
 export default function AuditLedgerSection() {
-  const [auditBlocks, setAuditBlocks] = useState<AuditBlock[]>(INITIAL_AUDIT_BLOCKS);
-  const [selectedBlockId, setSelectedBlockId] = useState<string>("block-1045");
-  const [copiedHash, setCopiedHash] = useState<string | null>(null);
-  const [isVerifyingLedger, setIsVerifyingLedger] = useState<boolean>(false);
-  const [verificationPassed, setVerificationPassed] = useState<boolean>(true);
-  const [killSwitchTriggered, setKillSwitchTriggered] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sessions, setSessions] = useState<AuditSession[]>(INITIAL_SESSIONS);
+  const [activeSessionId, setActiveSessionId] = useState<string>("sess-1");
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [verificationDone, setVerificationDone] = useState<boolean>(true);
 
-  const selectedBlock =
-    auditBlocks.find((b) => b.id === selectedBlockId) || auditBlocks[0];
+  const activeSession =
+    sessions.find((s) => s.id === activeSessionId) || sessions[0];
 
-  const filteredBlocks = auditBlocks.filter(
-    (b) =>
-      b.tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.queryText.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.blockHash.includes(searchQuery)
-  );
-
-  const handleCopy = (text: string, id: string) => {
-    void navigator.clipboard.writeText(text);
-    setCopiedHash(id);
-    setTimeout(() => setCopiedHash(null), 2000);
-  };
-
-  const handleVerifyChain = () => {
-    setIsVerifyingLedger(true);
-    setTimeout(() => {
-      setIsVerifyingLedger(false);
-      setVerificationPassed(true);
-    }, 600);
-  };
-
-  const handleTriggerKillSwitch = () => {
-    setKillSwitchTriggered(true);
-    setAuditBlocks((prev) =>
-      prev.map((b) =>
-        b.id === selectedBlockId
-          ? {
-              ...b,
-              status: "REVOKED_KILL_SWITCH",
-              cryptographicProof: "0xREVOKED_KILL_SWITCH_SHA256_IMMEDIATE_EXPIRATION",
-            }
-          : b
+  const handleRevokeSession = (id: string) => {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === id ? { ...s, status: "TOKEN_REVOKED" } : s
       )
     );
+  };
+
+  const handleVerifyMerkle = () => {
+    setIsVerifying(true);
+    setTimeout(() => {
+      setIsVerifying(false);
+      setVerificationDone(true);
+    }, 500);
   };
 
   return (
     <section id="audit-trail" className="mx-auto w-full max-w-[1200px] px-[24px]">
       {/* SECTION HEADER */}
-      <div className="mb-[32px] flex flex-col items-start justify-between gap-[16px] md:flex-row md:items-end">
+      <div className="mb-[36px] flex flex-col items-start justify-between gap-[16px] md:flex-row md:items-end">
         <div>
-          <span className="text-[12px] font-mono-code uppercase tracking-wider text-[#ff6b35] block mb-[6px]">
-            Zero-Trust Observability
-          </span>
+          <div className="inline-flex items-center gap-[6px] rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-[10px] py-[3px] text-[11px] font-mono-code text-[#ff6b35] mb-[10px]">
+            <KeyRound className="h-[12px] w-[12px]" />
+            <span>ZERO-TRUST AUDIT TRAIL</span>
+          </div>
           <h2 className="text-[32px] font-normal leading-[1.18] tracking-[-0.02em] sm:text-[36px]">
             <span className="block text-[#898989]">
               Multi-tenant audit trail &amp;
@@ -180,236 +109,180 @@ export default function AuditLedgerSection() {
           </h2>
         </div>
 
-        <div className="flex items-center gap-[10px]">
-          <button
-            type="button"
-            onClick={handleVerifyChain}
-            disabled={isVerifyingLedger}
-            className="flex items-center gap-[6px] rounded-full border border-[#393939] bg-[#1c1c1c] px-[14px] py-[6px] text-[12px] font-medium text-[#fafafa] transition-colors hover:border-[#4d4d4d] hover:bg-[#242424] disabled:opacity-60 cursor-pointer"
-          >
-            <RefreshCw
-              className={`h-[12px] w-[12px] text-[#ff6b35] ${
-                isVerifyingLedger ? "animate-spin" : ""
-              }`}
-            />
-            <span>
-              {isVerifyingLedger ? "Recalculating Merkle Root…" : "Verify Chain Integrity"}
-            </span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleVerifyMerkle}
+          disabled={isVerifying}
+          className="flex items-center gap-[6px] rounded-full border border-[#393939] bg-[#1c1c1c] px-[16px] py-[8px] text-[12px] font-medium text-[#fafafa] transition-all hover:border-[#4d4d4d] hover:bg-[#242424] disabled:opacity-60 cursor-pointer"
+        >
+          <RefreshCw
+            className={`h-[12px] w-[12px] text-[#ff6b35] ${
+              isVerifying ? "animate-spin" : ""
+            }`}
+          />
+          <span>{isVerifying ? "Recalculating Merkle Root…" : "Verify Ledger Integrity"}</span>
+        </button>
       </div>
 
       {/* AUDIT WORKBENCH CONTAINER */}
-      <div className="rounded-[16px] border border-[#2e2e2e] bg-[#171717] p-[24px] lg:p-[32px]">
-        {/* TOP STATUS BAR */}
-        <div className="mb-[24px] flex flex-wrap items-center justify-between gap-[16px] rounded-[12px] border border-[#2e2e2e] bg-[#121212] px-[16px] py-[12px]">
-          <div className="flex items-center gap-[12px]">
-            <span className="flex h-[8px] w-[8px] rounded-full bg-emerald-400" />
-            <span className="font-mono-code text-[12px] font-medium text-[#fafafa]">
-              RFC 6962 SHA-256 Merkle Ledger
-            </span>
-            <span className="text-[#393939]">|</span>
-            <span className="font-mono-code text-[11px] text-[#898989]">
-              Total Blocks: <strong className="text-[#fafafa]">1,045 Verified</strong>
-            </span>
-          </div>
+      <div className="relative overflow-hidden rounded-[20px] border border-[#2e2e2e] bg-[#171717] p-[24px] sm:p-[32px] shadow-2xl">
+        {/* Subtle Faded Dark Imagery Layer */}
+        <div
+          className="pointer-events-none absolute inset-0 z-0 opacity-10 bg-cover bg-center"
+          style={{ backgroundImage: "url('/images/lineage-cube.jpg')" }}
+        />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-linear-to-b from-[#171717]/80 via-[#171717]/95 to-[#171717]" />
 
-          <div className="flex items-center gap-[10px]">
-            {verificationPassed && (
-              <span className="flex items-center gap-[5px] rounded-full border border-emerald-500/30 bg-emerald-500/10 px-[10px] py-[2px] font-mono-code text-[11px] text-emerald-400">
-                <CheckCircle2 className="h-[12px] w-[12px]" />
-                100% Hash Consistency
-              </span>
-            )}
-            <span className="rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-[10px] py-[2px] font-mono-code text-[11px] text-[#ff6b35]">
-              Hardware HSM Backed
-            </span>
-          </div>
-        </div>
-
-        {/* 2-COLUMN LAYOUT: LOGS LIST & DETAIL INSPECTOR */}
-        <div className="grid grid-cols-1 gap-[24px] lg:grid-cols-12">
-          {/* LEFT 5 COLS: SEARCHABLE BLOCKS LIST */}
-          <div className="flex flex-col gap-[12px] lg:col-span-5">
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-[12px] top-[10px] h-[14px] w-[14px] text-[#898989]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter by tenant, user, or block hash…"
-                className="w-full rounded-[10px] border border-[#2e2e2e] bg-[#121212] py-[8px] pl-[34px] pr-[12px] font-mono-code text-[12px] text-[#fafafa] placeholder-[#898989] focus:border-[#ff6b35] focus:outline-none"
-              />
+        <div className="relative z-10 grid grid-cols-1 gap-[32px] lg:grid-cols-12 items-center">
+          {/* LEFT 6 COLS: Live Sessions & Kill-Switch Interactive List */}
+          <div className="flex flex-col gap-[14px] lg:col-span-6">
+            <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-[10px] text-[11px] font-mono-code text-[#898989]">
+              <span>ACTIVE USER SESSIONS &amp; TENANTS</span>
+              <span className="text-[#ff6b35] font-semibold">1,045 SHA-256 Blocks</span>
             </div>
 
-            {/* List of Blocks */}
-            <div className="flex flex-col gap-[8px] max-h-[460px] overflow-y-auto pr-[2px]">
-              {filteredBlocks.map((block) => {
-                const isSelected = block.id === selectedBlockId;
-                const isRevoked = block.status === "REVOKED_KILL_SWITCH";
+            <div className="flex flex-col gap-[10px]">
+              {sessions.map((sess) => {
+                const isSelected = sess.id === activeSessionId;
+                const isRevoked = sess.status === "TOKEN_REVOKED";
                 return (
-                  <button
-                    key={block.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedBlockId(block.id);
-                      setKillSwitchTriggered(isRevoked);
-                    }}
-                    className={`group flex flex-col items-start rounded-[12px] border p-[14px] text-left transition-all duration-150 cursor-pointer ${
+                  <div
+                    key={sess.id}
+                    onClick={() => setActiveSessionId(sess.id)}
+                    className={`group flex items-center justify-between rounded-[14px] border p-[16px] transition-all duration-200 cursor-pointer ${
                       isSelected
-                        ? "border-[#ff6b35] bg-[#1c1c1c] shadow-[0_0_16px_rgba(255,107,53,0.12)]"
-                        : "border-[#2e2e2e] bg-[#121212] hover:border-[#393939] hover:bg-[#161616]"
+                        ? "border-[#ff6b35] bg-[#1c1c1c] shadow-[0_4px_20px_rgba(255,107,53,0.12)] -translate-y-0.5"
+                        : "border-[#2e2e2e] bg-[#121212]/90 hover:border-[#393939] hover:bg-[#161616]"
                     }`}
                   >
-                    <div className="flex w-full items-center justify-between">
-                      <span className="font-mono-code text-[11px] font-medium text-[#ff6b35]">
-                        #{block.blockHeight} // {block.tenantName}
-                      </span>
-                      <span
-                        className={`font-mono-code text-[10px] px-[6px] py-[1px] rounded ${
-                          isRevoked
-                            ? "bg-red-950/70 border border-red-500/40 text-red-400 font-bold"
-                            : "bg-[#242424] text-[#898989]"
-                        }`}
-                      >
-                        {isRevoked ? "KILL-SWITCHED" : block.timestamp}
-                      </span>
+                    <div className="flex items-center gap-[12px] min-w-0">
+                      <div className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-full border border-[#2e2e2e] bg-[#1c1c1c] text-[12px] font-medium text-[#fafafa] group-hover:border-[#ff6b35]/40 transition-colors">
+                        {sess.userName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-[8px]">
+                          <span className="text-[14px] font-medium text-[#fafafa] truncate">
+                            {sess.userName}
+                          </span>
+                          <span className="text-[11px] font-mono-code text-[#898989]">
+                            #{sess.merkleHeight}
+                          </span>
+                        </div>
+                        <div className="text-[12px] text-[#898989] truncate">
+                          {sess.tenantName} · {sess.activeQuery}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-[6px] text-[13px] font-medium text-[#fafafa] line-clamp-1">
-                      {block.queryText}
+                    <div className="flex items-center gap-[10px] shrink-0 ml-[12px]">
+                      {isRevoked ? (
+                        <span className="rounded-full border border-red-500/30 bg-red-950/40 px-[10px] py-[3px] font-mono-code text-[11px] text-red-400 font-semibold">
+                          REVOKED
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRevokeSession(sess.id);
+                          }}
+                          className="rounded-full border border-red-500/40 bg-red-950/20 px-[10px] py-[3px] font-mono-code text-[11px] text-red-300 hover:bg-red-900/50 hover:border-red-500 transition-colors cursor-pointer"
+                          title="Revoke session token immediately"
+                        >
+                          Kill Token
+                        </button>
+                      )}
                     </div>
-
-                    <div className="mt-[8px] flex w-full items-center justify-between font-mono-code text-[11px] text-[#898989]">
-                      <span>{block.userName}</span>
-                      <span className="text-[#fafafa]">{block.durationMs} ms</span>
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
+
+            {/* Bottom Proof Strip */}
+            <div className="mt-[4px] rounded-[12px] border border-[#2e2e2e] bg-[#121212] p-[12px] flex items-center justify-between text-[11px] font-mono-code text-[#898989]">
+              <span className="flex items-center gap-[6px]">
+                <CheckCircle2 className="h-[14px] w-[14px] text-emerald-400" />
+                <span>RFC 6962 Merkle Chain Root Verified</span>
+              </span>
+              <span className="text-[#fafafa]">100% Tamper Proof</span>
+            </div>
           </div>
 
-          {/* RIGHT 7 COLS: DETAILED CRYPTOGRAPHIC INSPECTOR & KILL SWITCH */}
-          <div className="flex flex-col justify-between rounded-[14px] border border-[#2e2e2e] bg-[#121212] p-[20px] sm:p-[24px] lg:col-span-7">
+          {/* RIGHT 6 COLS: Selected Session Visual Trust Guarantee */}
+          <div className="flex flex-col justify-between rounded-[16px] border border-[#2e2e2e] bg-[#121212]/95 p-[24px] lg:col-span-6 shadow-inner">
             <div>
-              {/* Header */}
-              <div className="flex flex-wrap items-center justify-between gap-[12px] border-b border-[#2e2e2e] pb-[16px]">
-                <div>
-                  <div className="flex items-center gap-[8px]">
-                    <span className="font-mono-code text-[13px] font-semibold text-[#fafafa]">
-                      Block #{selectedBlock.blockHeight} Inspection
-                    </span>
-                    <span
-                      className={`font-mono-code text-[10px] px-[8px] py-[2px] rounded-full ${
-                        selectedBlock.status === "REVOKED_KILL_SWITCH"
-                          ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                          : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                      }`}
-                    >
-                      {selectedBlock.status === "REVOKED_KILL_SWITCH"
-                        ? "TOKEN_REVOKED"
-                        : "VERIFIED_VALID"}
-                    </span>
-                  </div>
-                  <div className="mt-[2px] text-[12px] text-[#898989]">
-                    Actor: {selectedBlock.userName} ({selectedBlock.userRole})
-                  </div>
-                </div>
-
-                {/* Kill Switch Button */}
-                <button
-                  type="button"
-                  onClick={handleTriggerKillSwitch}
-                  disabled={selectedBlock.status === "REVOKED_KILL_SWITCH"}
-                  className="flex items-center gap-[6px] rounded-[8px] border border-red-500/40 bg-red-950/40 px-[12px] py-[6px] font-mono-code text-[11px] font-medium text-red-300 transition-colors hover:bg-red-900/60 disabled:opacity-50 cursor-pointer"
-                  title="Immediately revoke user session token and terminate queries"
-                >
-                  <UserX className="h-[12px] w-[12px]" />
-                  <span>
-                    {selectedBlock.status === "REVOKED_KILL_SWITCH"
-                      ? "Token Killed ✓"
-                      : "Trigger Kill-Switch"}
-                  </span>
-                </button>
+              <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-[14px]">
+                <span className="rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-[10px] py-[3px] font-mono-code text-[11px] text-[#ff6b35]">
+                  SESSION_STATUS // {activeSession.status}
+                </span>
+                <span className="text-[11px] font-mono-code text-emerald-400">
+                  {activeSession.duration} Execution
+                </span>
               </div>
 
-              {/* Parameterized Query Text */}
               <div className="mt-[16px]">
-                <label className="block text-[11px] font-mono-code uppercase text-[#898989]">
-                  Audited Parameterized Query (AST Verified)
-                </label>
-                <div className="mt-[6px] rounded-[10px] border border-[#2e2e2e] bg-[#0d0d0d] p-[14px] font-mono-code text-[12px] text-[#fafafa] leading-[1.6]">
-                  {selectedBlock.queryText}
+                <h3 className="text-[20px] font-normal text-[#fafafa]">
+                  {activeSession.userName} ({activeSession.role})
+                </h3>
+                <p className="mt-[4px] text-[13px] text-[#898989]">
+                  Operating within isolated tenant boundary:{" "}
+                  <strong className="text-[#fafafa] font-mono-code">
+                    {activeSession.tenantId}
+                  </strong>
+                </p>
+              </div>
+
+              {/* Visual Trust Cards Grid */}
+              <div className="mt-[20px] grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+                <div className="rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[14px] hover:border-[#ff6b35]/40 transition-colors">
+                  <div className="flex items-center gap-[8px] text-[12px] font-medium text-[#fafafa] mb-[4px]">
+                    <Lock className="h-[14px] w-[14px] text-[#ff6b35]" />
+                    <span>Row-Level Isolation</span>
+                  </div>
+                  <p className="text-[11px] leading-[1.5] text-[#898989]">
+                    Strict AST rewriting guarantees zero cross-tenant query spill.
+                  </p>
+                </div>
+
+                <div className="rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[14px] hover:border-[#ff6b35]/40 transition-colors">
+                  <div className="flex items-center gap-[8px] text-[12px] font-medium text-[#fafafa] mb-[4px]">
+                    <Eye className="h-[14px] w-[14px] text-[#ff6b35]" />
+                    <span>Automatic PII Mask</span>
+                  </div>
+                  <p className="text-[11px] leading-[1.5] text-[#898989]">
+                    Emails, IP addresses, and account numbers masked on the fly.
+                  </p>
                 </div>
               </div>
 
-              {/* SHA-256 Hashes and Cryptographic Chain Proof */}
-              <div className="mt-[16px] flex flex-col gap-[10px]">
-                <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[12px]">
-                  <div className="flex items-center justify-between text-[11px] font-mono-code">
-                    <span className="text-[#898989]">Current Block Hash (SHA-256):</span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(selectedBlock.blockHash, "curr")}
-                      className="text-[#ff6b35] hover:text-[#ff8252] cursor-pointer"
-                    >
-                      {copiedHash === "curr" ? "Copied" : "Copy"}
-                    </button>
+              {/* Kill-Switch CTA Box */}
+              <div className="mt-[16px] rounded-[12px] border border-red-500/20 bg-red-950/15 p-[16px]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-[8px]">
+                    <ShieldAlert className="h-[16px] w-[16px] text-red-400" />
+                    <span className="text-[13px] font-medium text-red-200">
+                      Zero-Reuse Token Kill-Switch
+                    </span>
                   </div>
-                  <div className="mt-[4px] font-mono-code text-[11px] text-[#ff8252] break-all">
-                    {selectedBlock.blockHash}
-                  </div>
-                </div>
-
-                <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[12px]">
-                  <div className="flex items-center justify-between text-[11px] font-mono-code">
-                    <span className="text-[#898989]">Chained Previous Block Hash:</span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(selectedBlock.prevBlockHash, "prev")}
-                      className="text-[#898989] hover:text-[#fafafa] cursor-pointer"
-                    >
-                      {copiedHash === "prev" ? "Copied" : "Copy"}
-                    </button>
-                  </div>
-                  <div className="mt-[4px] font-mono-code text-[11px] text-[#898989] break-all">
-                    {selectedBlock.prevBlockHash}
-                  </div>
-                </div>
-
-                <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[12px]">
-                  <span className="block text-[11px] font-mono-code text-[#898989]">
-                    Cryptographic Proof Signature:
+                  <span className="text-[10px] font-mono-code text-red-400 uppercase">
+                    Hardware Level
                   </span>
-                  <div className="mt-[4px] font-mono-code text-[11px] text-[#b4b4b4] break-all">
-                    {selectedBlock.cryptographicProof}
-                  </div>
                 </div>
+                <p className="mt-[6px] text-[12px] leading-[1.5] text-[#898989]">
+                  Instantly terminate compromised user sessions across all edge nodes
+                  with one click. Session state is revoked with an immutable proof entry.
+                </p>
               </div>
             </div>
 
-            {/* Bottom Row Stats */}
-            <div className="mt-[20px] grid grid-cols-3 gap-[10px] border-t border-[#2e2e2e] pt-[16px] text-center font-mono-code">
-              <div>
-                <span className="text-[10px] text-[#898989] uppercase">Duration</span>
-                <div className="text-[14px] font-semibold text-[#fafafa]">
-                  {selectedBlock.durationMs} ms
-                </div>
-              </div>
-              <div>
-                <span className="text-[10px] text-[#898989] uppercase">Rows Affected</span>
-                <div className="text-[14px] font-semibold text-[#fafafa]">
-                  {selectedBlock.rowsAffected}
-                </div>
-              </div>
-              <div>
-                <span className="text-[10px] text-[#898989] uppercase">Engine</span>
-                <div className="text-[14px] font-semibold text-[#ff6b35]">
-                  {selectedBlock.queryEngine}
-                </div>
-              </div>
+            {/* Bottom Row */}
+            <div className="mt-[20px] pt-[14px] border-t border-[#2e2e2e] flex items-center justify-between text-[11px] font-mono-code text-[#898989]">
+              <span>Audit Compliance:</span>
+              <span className="text-[#fafafa]">SOC 2 Type II + HIPAA Ready</span>
             </div>
           </div>
         </div>

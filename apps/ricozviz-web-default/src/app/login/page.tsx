@@ -85,7 +85,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#121212] text-[#fafafa] font-sans relative overflow-hidden">
-      {/* Background Matrix & Subtle Coral Glow */}
+      {/* Background Matrix & Subtle Faded Imagery */}
+      {/* <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-10 bg-cover bg-center"
+        style={{ backgroundImage: "url('/images/olap-prism.jpg')" }}
+      /> */}
       <div
         className="pointer-events-none absolute inset-0 z-0 opacity-40"
         style={{
@@ -105,7 +109,7 @@ export default function LoginPage() {
         <div className="mx-auto flex max-w-[1200px] items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
             <img className="size-6 object-contain" src="/images/logo.png" alt="RicozViz" />
-            <span className="text-[17px] font-medium tracking-tight text-[#fafafa]">
+            <span className="text-[17px] font-medium tracking-tight text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
               ricozviz
             </span>
             <span className="rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-2 py-0.5 font-mono-code text-[10px] text-[#ff6b35]">
@@ -126,8 +130,8 @@ export default function LoginPage() {
       {/* Main Login Card */}
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-[420px]">
-          {/* Card Shell */}
-          <div className="rounded-[16px] border border-[#2e2e2e] bg-[#171717] p-8 shadow-2xl transition-all">
+          {/* Card Shell with Hover Reveal & Glow */}
+          <div className="group rounded-[18px] border border-[#2e2e2e] bg-[#171717]/95 backdrop-blur-md p-8 shadow-2xl transition-all duration-300 hover:border-[#ff6b35]/40 hover:shadow-[0_12px_40px_rgba(255,107,53,0.12)]">
             {/* Header */}
             <div className="mb-6">
               <div className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-2.5 py-0.5 font-mono-code text-[11px] text-[#ff6b35] mb-2.5">
@@ -163,11 +167,10 @@ export default function LoginPage() {
                   setIsSsoMode(false);
                   setError(null);
                 }}
-                className={`flex-1 rounded-[8px] py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                  !isSsoMode
+                className={`flex-1 rounded-[8px] py-1.5 text-xs font-medium transition-colors cursor-pointer ${!isSsoMode
                     ? "bg-[#242424] text-[#fafafa]"
                     : "text-[#898989] hover:text-[#fafafa]"
-                }`}
+                  }`}
               >
                 Work Email
               </button>
@@ -177,11 +180,10 @@ export default function LoginPage() {
                   setIsSsoMode(true);
                   setError(null);
                 }}
-                className={`flex-1 rounded-[8px] py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                  isSsoMode
+                className={`flex-1 rounded-[8px] py-1.5 text-xs font-medium transition-colors cursor-pointer ${isSsoMode
                     ? "bg-[#242424] text-[#fafafa]"
                     : "text-[#898989] hover:text-[#fafafa]"
-                }`}
+                  }`}
               >
                 SAML 2.0 / SSO
               </button>
@@ -207,11 +209,10 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="architect@enterprise.io"
                       disabled={isLoading}
-                      className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${
-                        fieldErrors["email"]
+                      className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["email"]
                           ? "border-red-500/60 bg-red-950/20"
                           : "border-[#393939]"
-                      }`}
+                        }`}
                     />
                     <FieldError message={fieldErrors["email"]?.[0]} />
                   </div>
@@ -237,11 +238,10 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       disabled={isLoading}
-                      className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${
-                        fieldErrors["password"]
+                      className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["password"]
                           ? "border-red-500/60 bg-red-950/20"
                           : "border-[#393939]"
-                      }`}
+                        }`}
                     />
                     <FieldError message={fieldErrors["password"]?.[0]} />
                   </div>

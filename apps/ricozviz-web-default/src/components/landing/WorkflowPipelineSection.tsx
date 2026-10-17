@@ -7,590 +7,602 @@ import {
   Cpu,
   ShieldCheck,
   LayoutDashboard,
-  Copy,
-  Check,
   Zap,
   ArrowRight,
-  Code2,
-  Table as TableIcon,
   Play,
-  Terminal,
   Activity,
+  CheckCircle2,
+  Sparkles,
+  TrendingUp,
+  BarChart3,
+  Users,
   Lock,
+  Radio,
+  Eye,
 } from "lucide-react";
 
-interface PipelineStage {
-  step: string;
+interface PipelineStep {
   id: string;
+  stepNumber: string;
   name: string;
   tagline: string;
-  summary: string;
-  badge: string;
-  metrics: { label: string; value: string; detail: string }[];
-  bulletPoints: string[];
+  metricBadge: string;
   icon: React.ComponentType<{ className?: string }>;
-  codeSnippet: {
-    language: string;
-    filename: string;
-    code: string;
-  };
-  sampleOutput: {
-    type: "table" | "json";
-    headers?: string[];
-    rows?: string[][];
-    json?: string;
-  };
+  features: { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }[];
+  visualStats: { label: string; value: string; change: string }[];
+  visualType: "connectors" | "vector" | "compute" | "security" | "canvas";
 }
 
-const PIPELINE_STAGES: PipelineStage[] = [
+const PIPELINE_STEPS: PipelineStep[] = [
   {
-    step: "01",
     id: "sources",
-    name: "Data Sources",
-    tagline: "Enterprise Ingestion & Lakehouse Connectors",
-    summary:
-      "Direct pushdown execution and continuous streaming across enterprise warehouses (Snowflake, ClickHouse, BigQuery, Databricks, Redshift), object storage (S3 Parquet), and relational pools with TLS 1.3 encryption and automated credential rotation.",
-    badge: "Pushdown Connectors",
-    metrics: [
-      { label: "Connectors", value: "9+ Native", detail: "Snowflake, DuckDB, Kafka, S3" },
-      { label: "Handshake", value: "TLS 1.3", detail: "Hardware-grade key rotation" },
-      { label: "Latency", value: "1.4 ms", detail: "Connection pool warm state" },
-    ],
-    bulletPoints: [
-      "Native pushdown adapters for Snowflake, ClickHouse, BigQuery, Databricks, Redshift",
-      "Streaming columnar object storage: S3 Parquet, GCS, Azure Blob with Snappy compression",
-      "Real-time event streaming via Apache Kafka topics and Postgres CDC logical replication",
-    ],
+    stepNumber: "01",
+    name: "Enterprise Ingest",
+    tagline: "Connect warehouses, lakehouses & live streams in one click",
+    metricBadge: "9+ Zero-Config Connectors",
     icon: Database,
-    codeSnippet: {
-      language: "sql",
-      filename: "warehouse_connectors.sql",
-      code: `-- Establish TLS 1.3 encrypted warehouse & lakehouse connection
-CONNECT 'snowflake://prod_account.us-east-1.snowflakecomputing.com/analytics_wh'
-WITH (
-  driver = 'Flight SQL & Snowpipe',
-  pushdown_mode = 'vectorized',
-  tls_version = 'TLSv1.3',
-  credential_ref = 'vault://secret/prod/snowflake_key'
-);
-
--- Attach columnar ClickHouse cluster & S3 Parquet lake
-ATTACH 'clickhouse://ch-node.internal:9000/telemetry' AS ch_events;
-ATTACH 's3://analytics-lake-prod/parquets/*.parquet' AS lake_parquet;`,
-    },
-    sampleOutput: {
-      type: "json",
-      json: JSON.stringify(
-        {
-          active_warehouses: [
-            { type: "SNOWFLAKE", status: "CONNECTED", latency_ms: 2.1, pushdown: "ENABLED" },
-            { type: "CLICKHOUSE", status: "CONNECTED", latency_ms: 1.4, mode: "COLUMNAR_TCP" },
-            { type: "BIGQUERY", status: "CONNECTED", latency_ms: 3.2, stream: "ARROW_STORAGE_API" },
-            { type: "S3_PARQUET", status: "CONNECTED", latency_ms: 1.9, compression: "SNAPPY" },
-            { type: "KAFKA", status: "CONNECTED", latency_ms: 0.8, topic: "orders_realtime" },
-          ],
-          tls_version: "TLSv1.3",
-          audit_ledger: "VERIFIED",
-        },
-        null,
-        2
-      ),
-    },
+    features: [
+      {
+        title: "Direct Warehouse Pushdown",
+        desc: "Executes natively inside Snowflake, BigQuery, Databricks, and ClickHouse without data movement.",
+        icon: Zap,
+      },
+      {
+        title: "Real-Time Event Streaming",
+        desc: "Live ingestion from Apache Kafka, Amazon Kinesis, and Postgres CDC with sub-second lag.",
+        icon: Radio,
+      },
+      {
+        title: "TLS 1.3 Hardware Handshake",
+        desc: "End-to-end encrypted pipelines with automated 90-day credential rotation and zero key leakage.",
+        icon: Lock,
+      },
+    ],
+    visualStats: [
+      { label: "Supported Warehouses", value: "9 Enterprise", change: "+ Snowflake & Kafka" },
+      { label: "Connection Latency", value: "1.4 ms", change: "Warm pool cached" },
+      { label: "Data Egress Cost", value: "$0.00", change: "100% zero-egress pushdown" },
+    ],
+    visualType: "connectors",
   },
   {
-    step: "02",
     id: "vectorize",
-    name: "Vectorize",
-    tagline: "Apache Arrow SIMD Zero-Copy Buffers",
-    summary:
-      "Transforming heterogenous warehouse partitions and stream payloads into standardized, high-performance Apache Arrow columnar record batches with zero serialization overhead and SIMD-128 vector instruction acceleration.",
-    badge: "Zero-Copy Arrow",
-    metrics: [
-      { label: "Memory Layout", value: "Arrow IPC", detail: "Column-oriented zero serialization" },
-      { label: "Vector Scan", value: "SIMD-128", detail: "Hardware vectorized registers" },
-      { label: "Egress", value: "0 B Spill", detail: "Zero intermediate network transfer" },
-    ],
-    bulletPoints: [
-      "Zero-copy columnar projection directly into browser/edge WebAssembly memory space",
-      "Dynamic schema discovery and type coercion across Parquet, Avro, JSON, and Arrow IPC",
-      "SIMD vectorized filtering executing across 25,000,000 rows in sub-2 milliseconds",
-    ],
+    stepNumber: "02",
+    name: "Zero-Copy Vectorize",
+    tagline: "Transform datasets into ultra-fast Apache Arrow memory buffers",
+    metricBadge: "Apache Arrow SIMD-128",
     icon: Layers,
-    codeSnippet: {
-      language: "typescript",
-      filename: "arrow_vectorize.ts",
-      code: `import { tableFromIPC, RecordBatchReader } from "apache-arrow";
-
-// Stream zero-copy IPC record batches into shared WebAssembly buffer
-const reader = await RecordBatchReader.fromUrl("/api/v1/stream/orders.arrow");
-const wasmTable = await tableFromIPC(reader);
-
-// Vectorized SIMD register projection across 10M rows
-const projectedSchema = wasmTable.select(["tenant_id", "timestamp", "revenue_usd"]);
-console.log("Vectorized Arrow Schema:", projectedSchema.schema.fields.map(f => f.name));`,
-    },
-    sampleOutput: {
-      type: "table",
-      headers: ["batch_id", "column_name", "arrow_type", "null_count", "memory_bytes"],
-      rows: [
-        ["batch_001", "tenant_id", "Utf8 (Dictionary)", "0", "4,194,304 B"],
-        ["batch_001", "timestamp", "TimestampMicrosecond", "0", "8,388,608 B"],
-        ["batch_001", "revenue_usd", "Decimal128(18,2)", "0", "16,777,216 B"],
-        ["batch_001", "region_code", "FixedSizeBinary(2)", "0", "2,097,152 B"],
-      ],
-    },
+    features: [
+      {
+        title: "Columnar Memory Layout",
+        desc: "Arrow IPC formats eliminate serialization overhead, slicing across 10M rows in milliseconds.",
+        icon: Layers,
+      },
+      {
+        title: "Hardware SIMD Registers",
+        desc: "Leverages modern CPU vector instructions (AVX-512 & NEON) directly inside the browser and edge.",
+        icon: Cpu,
+      },
+      {
+        title: "Automatic Schema Inference",
+        desc: "Instant type detection and schema drift protection across heterogenous Parquet and JSON files.",
+        icon: Sparkles,
+      },
+    ],
+    visualStats: [
+      { label: "Vector Scan Rate", value: "240k rows/s", change: "SIMD hardware accelerated" },
+      { label: "Memory Footprint", value: "0 B Spill", change: "Snappy compressed in-RAM" },
+      { label: "Serialization Delay", value: "0.0 ms", change: "Zero copy transfer" },
+    ],
+    visualType: "vector",
   },
   {
-    step: "03",
     id: "compute",
-    name: "DuckDB OLAP",
-    tagline: "In-Memory Columnar Vector Execution",
-    summary:
-      "Execute ad-hoc analytical SQL directly in-memory at compiled C++ speeds. DuckDB WebAssembly executes aggregations, window functions, and joins across millions of records in sub-12 milliseconds without round-tripping to cloud warehouses.",
-    badge: "< 12ms In-Memory",
-    metrics: [
-      { label: "P95 Latency", value: "8.4 ms", detail: "Across 1,000,000 in-memory rows" },
-      { label: "Throughput", value: "119k rps", detail: "Vectorized pipelined operators" },
-      { label: "Concurrency", value: "Multi-Core", detail: "Wasm SharedArrayBuffer workers" },
-    ],
-    bulletPoints: [
-      "Full SQL-2016 compatibility including complex CTEs, window functions, and geo joins",
-      "Eliminates 80% of cloud data warehouse query costs and round-trip network delays",
-      "Parallel multi-threaded execution utilizing WebAssembly SIMD-128 and web workers",
-    ],
+    stepNumber: "03",
+    name: "DuckDB Wasm OLAP",
+    tagline: "Blazing fast in-memory analytics engine with sub-12ms queries",
+    metricBadge: "< 12ms P95 Execution",
     icon: Cpu,
-    codeSnippet: {
-      language: "sql",
-      filename: "duckdb_aggregation.sql",
-      code: `-- Sub-12ms in-memory aggregation via DuckDB WASM across 1,000,000 rows
-SELECT 
-  date_trunc('month', ts) AS event_month,
-  region,
-  sum(revenue_usd) AS total_revenue,
-  count(DISTINCT account_id) AS active_accounts,
-  percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms) AS p95_latency
-FROM sales_lakehouse
-WHERE tenant_id = current_tenant_id()
-GROUP BY 1, 2
-ORDER BY 1 DESC, 3 DESC;`,
-    },
-    sampleOutput: {
-      type: "table",
-      headers: ["event_month", "region", "total_revenue", "active_accounts", "p95_latency"],
-      rows: [
-        ["2026-10", "North America", "$2,481,950.00", "1,842", "7.8 ms"],
-        ["2026-10", "Europe", "$1,692,400.00", "1,210", "8.2 ms"],
-        ["2026-10", "Asia-Pacific", "$984,300.00", "890", "8.6 ms"],
-        ["2026-09", "North America", "$2,190,800.00", "1,750", "7.6 ms"],
-      ],
-    },
+    features: [
+      {
+        title: "Compiled Analytical Speed",
+        desc: "Runs compiled C++ vector kernels directly inside WebAssembly, eliminating warehouse roundtrips.",
+        icon: Zap,
+      },
+      {
+        title: "Full SQL-2016 Analytical Power",
+        desc: "Complex joins, window functions, and time-series aggregation without writing custom code.",
+        icon: Activity,
+      },
+      {
+        title: "80% Cloud Warehouse Cost Savings",
+        desc: "Offloads repetitive exploratory queries from costly cloud compute nodes to local client cores.",
+        icon: TrendingUp,
+      },
+    ],
+    visualStats: [
+      { label: "P95 Query Latency", value: "8.4 ms", change: "Sub-12ms verified across 1M rows" },
+      { label: "Query Throughput", value: "119,048 rps", change: "> 100k+ rps sustained" },
+      { label: "Warehouse Offload", value: "84.2%", change: "Local in-memory cached" },
+    ],
+    visualType: "compute",
   },
   {
-    step: "04",
-    id: "guard",
-    name: "RLS & Governance",
-    tagline: "Cryptographic AST Row-Level Security",
-    summary:
-      "Every query is parsed into a syntax tree and injected with cryptographic tenant boundary predicates, role-based column access controls, and dynamic PII masking before execution. The query and cryptographic hash are appended to the tamper-proof ledger.",
-    badge: "Cryptographic AST",
-    metrics: [
-      { label: "Enforcement", value: "Kernel AST", detail: "Zero query bypass capability" },
-      { label: "Audit Hash", value: "SHA-256", detail: "RFC 6962 chained block ledger" },
-      { label: "Compliance", value: "SOC2 & HIPAA", detail: "BAA and ePHI audit validated" },
-    ],
-    bulletPoints: [
-      "AST-level SQL rewrite guarantees zero cross-tenant leakage even on unrestricted user input",
-      "Dynamic PII masking obfuscates emails, IP addresses, and account numbers on-the-fly",
-      "Every query creates a SHA-256 Merkle root entry in the immutable multi-tenant audit ledger",
-    ],
+    id: "security",
+    stepNumber: "04",
+    name: "Cryptographic Guard",
+    tagline: "Kernel Row-Level Security, PII masking & immutable audit trails",
+    metricBadge: "RFC 6962 SHA-256 Ledger",
     icon: ShieldCheck,
-    codeSnippet: {
-      language: "sql",
-      filename: "rls_guard_policy.sql",
-      code: `-- Kernel AST Policy injected transparently before DuckDB execution
-CREATE POLICY tenant_isolation_guard ON enterprise_lake
-FOR ALL TO authenticated_role
-USING (
-  tenant_id = current_setting('request.jwt.claim.tenant_id', true)
-  AND (
-    user_role IN ('DATA_ARCHITECT', 'ADMIN') 
-    OR pii_classified = false
-  )
-);
-
--- Cryptographic signature emitted for SHA-256 audit ledger
-SELECT rfc6962_ledger_append(
-  hash_chain(current_query(), current_user, current_timestamp)
-);`,
-    },
-    sampleOutput: {
-      type: "json",
-      json: JSON.stringify(
-        {
-          policy_name: "tenant_isolation_guard",
-          ast_validation: "PASSED_STRICT",
-          tenant_injected: "org_acme_enterprise",
-          pii_masking: {
-            email: "j***@company.com",
-            ip_address: "192.168.***.***",
-            iban: "DE89****************21",
-          },
-          merkle_block_height: 1045,
-          sha256_block_hash: "9f8a20bb1b582531e8471e4f9b809a4732168393e506692882a1789c0201e4d2",
-          status: "SUCCESS_VERIFIED",
-        },
-        null,
-        2
-      ),
-    },
+    features: [
+      {
+        title: "Deterministic Tenant Isolation",
+        desc: "Cryptographic AST filters guarantee zero cross-tenant leakage, even on custom user SQL.",
+        icon: Lock,
+      },
+      {
+        title: "Real-Time PII Masking",
+        desc: "Automatically obscures emails, financial accounts, and health identifiers for non-admin roles.",
+        icon: Eye,
+      },
+      {
+        title: "Hardware Kill-Switch",
+        desc: "Instantly revoke compromised session tokens and terminate active queries across all tenants.",
+        icon: ShieldCheck,
+      },
+    ],
+    visualStats: [
+      { label: "Tenant Isolation", value: "100% Strict", change: "Kernel AST parsed" },
+      { label: "Audit Hash Chain", value: "SHA-256", change: "Tamper-evident Merkle tree" },
+      { label: "Compliance Standards", value: "SOC 2 & HIPAA", change: "Audited & BAA certified" },
+    ],
+    visualType: "security",
   },
   {
-    step: "05",
-    id: "publish",
-    name: "Canvases & API",
-    tagline: "Multi-Canvas Dashboards & Signed Embedding",
-    summary:
-      "Assemble live interactive charts, multi-tab executive layouts, and streaming widgets. Share securely via short-lived HMAC-signed embed tokens or synchronize cursors in real-time with multiplayer data teammates.",
-    badge: "Live Multiplayer",
-    metrics: [
-      { label: "Sync Protocol", value: "WebSockets", detail: "Sub-5ms cursor presence" },
-      { label: "Embedding", value: "HMAC Signed", detail: "Expiring sandboxed iframe tokens" },
-      { label: "Visualizers", value: "18+ Charts", detail: "Area, Sankey, Geo, Treemap" },
-    ],
-    bulletPoints: [
-      "Real-time collaborative editing with teammate cursor presence, live comments, and bookmarks",
-      "Embed governed dashboards directly into external SaaS products with tenant-scoped tokens",
-      "Scheduled webhook dispatch for automated Slack alerts, threshold breaches, and anomaly spikes",
-    ],
+    id: "canvas",
+    stepNumber: "05",
+    name: "Executive Canvases",
+    tagline: "Assemble interactive dashboards with live multiplayer collaboration",
+    metricBadge: "60 FPS Visual Studio",
     icon: LayoutDashboard,
-    codeSnippet: {
-      language: "typescript",
-      filename: "embed_signed_canvas.ts",
-      code: `import { createSignedCanvasToken } from "@ricoz/viz-sdk";
-
-// Generate cryptographic expiring iframe token for customer tenant
-const sessionToken = await createSignedCanvasToken({
-  tenantId: "client_retail_pro",
-  dashboardId: "dash_executive_q4",
-  allowedRoles: ["VIEWER"],
-  expiresInSeconds: 3600,
-  rlsConstraints: { region: "EMEA", minRevenue: 50000 },
-});
-
-// Embed URL: https://analytics.ricoz.in/embed/dash_executive_q4?token={sessionToken}`,
-    },
-    sampleOutput: {
-      type: "json",
-      json: JSON.stringify(
-        {
-          canvas_id: "dash_executive_q4",
-          rendered_charts: 6,
-          streaming_widgets: 2,
-          multiplayer_peers: [
-            { user: "@sarah_lin", role: "Analyst", cursor: { x: 420, y: 180 } },
-            { user: "@david_chen", role: "Engineer", cursor: { x: 890, y: 340 } },
-          ],
-          render_latency: "3.4 ms",
-          status: "ACTIVE_STREAMING",
-        },
-        null,
-        2
-      ),
-    },
+    features: [
+      {
+        title: "Multi-Canvas Studio",
+        desc: "Drag, drop, and link 18+ visual charts with sub-frame point-and-click data filtering.",
+        icon: BarChart3,
+      },
+      {
+        title: "Live Multiplayer Presence",
+        desc: "See teammates' live cursors, active bookmarks, and shared exploration sessions in real time.",
+        icon: Users,
+      },
+      {
+        title: "Secure Expiring Embeds",
+        desc: "Embed governed canvases into your own customer-facing apps with HMAC-signed expiring tokens.",
+        icon: Sparkles,
+      },
+    ],
+    visualStats: [
+      { label: "Visual Chart Types", value: "18+ Built-in", change: "Area, Sankey, Geo, Treemap" },
+      { label: "Sync Protocol", value: "WebSockets", change: "Sub-5ms cursor presence" },
+      { label: "Frame Rate", value: "60 FPS", change: "GPU accelerated canvas" },
+    ],
+    visualType: "canvas",
   },
 ];
 
 export default function WorkflowPipelineSection() {
-  const [activeStageId, setActiveStageId] = useState<string>("compute");
-  const [activeOutputTab, setActiveOutputTab] = useState<"code" | "output">("code");
-  const [copied, setCopied] = useState<boolean>(false);
+  const [activeStepId, setActiveStepId] = useState<string>("compute");
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
-  const [simulatedDuration, setSimulatedDuration] = useState<number>(8.4);
+  const [metricPulse, setMetricPulse] = useState<number>(8.4);
+  const [selectedChartType, setSelectedChartType] = useState<"area" | "bar" | "donut">("area");
 
-  const activeStage =
-    PIPELINE_STAGES.find((s) => s.id === activeStageId) || PIPELINE_STAGES[2];
+  const currentStep =
+    PIPELINE_STEPS.find((s) => s.id === activeStepId) || PIPELINE_STEPS[2];
 
-  const handleCopyCode = () => {
-    void navigator.clipboard.writeText(activeStage.codeSnippet.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleSimulateExecution = () => {
+  const handleSimulate = () => {
     setIsSimulating(true);
     setTimeout(() => {
-      const randomDuration = Number((6 + Math.random() * 4).toFixed(1));
-      setSimulatedDuration(randomDuration);
+      setMetricPulse(Number((6.5 + Math.random() * 3.5).toFixed(1)));
       setIsSimulating(false);
-    }, 450);
+    }, 400);
   };
 
   return (
     <section id="workflow" className="mx-auto w-full max-w-[1200px] px-[24px]">
       {/* SECTION HEADER */}
-      <div className="mb-[32px] flex flex-col items-start justify-between gap-[16px] md:flex-row md:items-end">
+      <div className="mb-[36px] flex flex-col items-start justify-between gap-[16px] md:flex-row md:items-end">
         <div>
-          <span className="text-[12px] font-mono-code uppercase tracking-wider text-[#ff6b35] block mb-[6px]">
-            End-to-End Pipeline
-          </span>
+          <div className="inline-flex items-center gap-[6px] rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-[10px] py-[3px] text-[11px] font-mono-code text-[#ff6b35] mb-[10px]">
+            <Sparkles className="h-[12px] w-[12px]" />
+            <span>CUSTOMER-FRIENDLY PIPELINE</span>
+          </div>
           <h2 className="text-[32px] font-normal leading-[1.18] tracking-[-0.02em] sm:text-[36px]">
             <span className="block text-[#898989]">
-              From raw data to actionable insight,
+              From raw warehouse data,
             </span>
             <span className="block text-[#fafafa]">
-              accelerated at every pipeline layer
+              to executive canvases in sub-12 milliseconds
             </span>
           </h2>
         </div>
 
-        <div className="flex items-center gap-[8px] text-[12px] font-mono-code text-[#898989]">
-          <span className="flex items-center gap-[6px] rounded-full border border-[#2e2e2e] bg-[#171717] px-[12px] py-[6px]">
+        <div className="flex items-center gap-[8px]">
+          <span className="flex items-center gap-[6px] rounded-full border border-[#2e2e2e] bg-[#171717] px-[14px] py-[6px] text-[12px] font-mono-code text-[#b4b4b4]">
             <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] animate-pulse" />
-            Zero-Copy Architecture
+            Zero Data Movement
           </span>
         </div>
       </div>
 
-      {/* PIPELINE STAGE SELECTOR TABS */}
-      <div className="mb-[24px] grid grid-cols-2 gap-[8px] sm:grid-cols-3 lg:grid-cols-5">
-        {PIPELINE_STAGES.map((stage) => {
-          const isActive = stage.id === activeStageId;
-          const Icon = stage.icon;
+      {/* 5-STEP HORIZONTAL VISUAL STEPPER */}
+      <div className="mb-[28px] grid grid-cols-2 gap-[10px] sm:grid-cols-3 lg:grid-cols-5">
+        {PIPELINE_STEPS.map((step) => {
+          const isActive = step.id === activeStepId;
+          const Icon = step.icon;
           return (
             <button
-              key={stage.id}
+              key={step.id}
               type="button"
               onClick={() => {
-                setActiveStageId(stage.id);
-                setSimulatedDuration(Number((6 + Math.random() * 4).toFixed(1)));
+                setActiveStepId(step.id);
+                setMetricPulse(Number((6.5 + Math.random() * 3.5).toFixed(1)));
               }}
-              className={`group flex flex-col items-start rounded-[14px] border p-[16px] text-left transition-all duration-150 cursor-pointer ${
+              className={`group relative flex flex-col items-start rounded-[16px] border p-[18px] text-left transition-all duration-200 cursor-pointer overflow-hidden ${
                 isActive
-                  ? "border-[#ff6b35] bg-[#1c1c1c] shadow-[0_0_24px_rgba(255,107,53,0.12)]"
-                  : "border-[#2e2e2e] bg-[#171717] hover:border-[#393939] hover:bg-[#191919]"
+                  ? "border-[#ff6b35] bg-[#1c1c1c] shadow-[0_8px_30px_rgba(255,107,53,0.16)] -translate-y-1"
+                  : "border-[#2e2e2e] bg-[#171717] hover:border-[#393939] hover:bg-[#1a1a1a] hover:-translate-y-0.5"
               }`}
             >
+              {/* Subtle top indicator bar */}
+              <div
+                className={`absolute inset-x-0 top-0 h-[2px] transition-colors ${
+                  isActive ? "bg-[#ff6b35]" : "bg-transparent group-hover:bg-[#ff6b35]/40"
+                }`}
+              />
+
               <div className="flex w-full items-center justify-between">
                 <span
                   className={`text-[11px] font-mono-code ${
                     isActive ? "text-[#ff6b35] font-semibold" : "text-[#898989]"
                   }`}
                 >
-                  {stage.step}
+                  {step.stepNumber}
                 </span>
-                <Icon
-                  className={`h-[16px] w-[16px] transition-colors ${
-                    isActive ? "text-[#ff6b35]" : "text-[#898989] group-hover:text-[#fafafa]"
+                <div
+                  className={`flex h-[28px] w-[28px] items-center justify-center rounded-[8px] transition-colors ${
+                    isActive
+                      ? "bg-[#ff6b35]/20 text-[#ff6b35]"
+                      : "bg-[#242424] text-[#898989] group-hover:text-[#fafafa]"
                   }`}
-                />
+                >
+                  <Icon className="h-[14px] w-[14px]" />
+                </div>
               </div>
+
               <div
                 className={`mt-[12px] text-[14px] font-medium transition-colors ${
                   isActive ? "text-[#fafafa]" : "text-[#b4b4b4] group-hover:text-[#fafafa]"
                 }`}
               >
-                {stage.name}
+                {step.name}
               </div>
-              <div className="mt-[4px] text-[11px] text-[#898989] line-clamp-1">
-                {stage.badge}
+
+              <div className="mt-[4px] text-[11px] text-[#898989] truncate w-full">
+                {step.metricBadge}
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* STAGE MAIN WORKBENCH CARD */}
-      <div className="rounded-[16px] border border-[#2e2e2e] bg-[#171717] p-[24px] lg:p-[32px]">
-        <div className="grid grid-cols-1 gap-[32px] lg:grid-cols-12">
-          {/* LEFT 5 COLS: Stage Description & Architecture Highlights */}
-          <div className="flex flex-col justify-between lg:col-span-5">
+      {/* ACTIVE STEP VISUAL WORKBENCH */}
+      <div className="relative overflow-hidden rounded-[20px] border border-[#2e2e2e] bg-[#171717] p-[24px] sm:p-[32px] shadow-2xl">
+        {/* Subtle Ambient Background Faded Artwork */}
+        <div
+          className="pointer-events-none absolute -right-20 -bottom-20 w-[420px] h-[420px] rounded-full opacity-10 blur-3xl"
+          style={{ background: "radial-gradient(circle, #ff6b35 0%, transparent 70%)" }}
+        />
+
+        <div className="relative z-10 grid grid-cols-1 gap-[36px] lg:grid-cols-12 items-center">
+          {/* LEFT 5 COLS: Customer-Friendly Features & Benefits */}
+          <div className="flex flex-col justify-between gap-[24px] lg:col-span-5">
             <div>
               <div className="inline-flex items-center gap-[6px] rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-[10px] py-[3px] text-[11px] font-mono-code text-[#ff6b35]">
-                <span className="font-semibold">{activeStage.step} //</span>
-                <span>{activeStage.badge}</span>
+                <span>STAGE {currentStep.stepNumber} //</span>
+                <span className="font-semibold">{currentStep.metricBadge}</span>
               </div>
 
-              <h3 className="mt-[16px] text-[22px] font-normal leading-[1.25] text-[#fafafa] sm:text-[24px]">
-                {activeStage.tagline}
+              <h3 className="mt-[14px] text-[24px] font-normal leading-[1.2] text-[#fafafa] sm:text-[26px]">
+                {currentStep.tagline}
               </h3>
 
-              <p className="mt-[12px] text-[14px] font-normal leading-[1.6] text-[#898989]">
-                {activeStage.summary}
-              </p>
-
-              {/* Bullet Points */}
-              <div className="mt-[20px] flex flex-col gap-[10px]">
-                {activeStage.bulletPoints.map((point, idx) => (
-                  <div key={idx} className="flex items-start gap-[10px]">
-                    <div className="mt-[4px] flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full bg-[#ff6b35]/15 text-[#ff6b35]">
-                      <Check className="h-[10px] w-[10px] stroke-[3]" />
+              {/* Feature Benefit List */}
+              <div className="mt-[24px] flex flex-col gap-[14px]">
+                {currentStep.features.map((feat, idx) => {
+                  const FeatIcon = feat.icon;
+                  return (
+                    <div
+                      key={idx}
+                      className="group flex items-start gap-[12px] rounded-[12px] border border-transparent p-[10px] transition-all duration-200 hover:border-[#2e2e2e] hover:bg-[#121212]"
+                    >
+                      <div className="mt-[2px] flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[8px] border border-[#2e2e2e] bg-[#121212] text-[#ff6b35] group-hover:border-[#ff6b35]/50 group-hover:bg-[#ff6b35]/10 transition-colors">
+                        <FeatIcon className="h-[14px] w-[14px]" />
+                      </div>
+                      <div>
+                        <h4 className="text-[13px] font-medium text-[#fafafa]">
+                          {feat.title}
+                        </h4>
+                        <p className="mt-[2px] text-[12px] leading-[1.5] text-[#898989]">
+                          {feat.desc}
+                        </p>
+                      </div>
                     </div>
-                    <span className="text-[13px] font-normal leading-[1.5] text-[#b4b4b4]">
-                      {point}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
-            {/* Metrics Pills */}
-            <div className="mt-[28px] grid grid-cols-3 gap-[10px] border-t border-[#2e2e2e] pt-[20px]">
-              {activeStage.metrics.map((m, idx) => (
-                <div key={idx} className="rounded-[10px] border border-[#2e2e2e] bg-[#121212] p-[10px]">
-                  <span className="block text-[10px] font-mono-code uppercase text-[#898989]">
-                    {m.label}
-                  </span>
-                  <span className="mt-[2px] block text-[15px] font-mono-code font-semibold text-[#fafafa]">
-                    {m.value}
-                  </span>
-                  <span className="mt-[2px] block text-[10px] text-[#898989] truncate">
-                    {m.detail}
-                  </span>
-                </div>
-              ))}
+            {/* Quick Interactive Trigger */}
+            <div className="flex flex-wrap items-center gap-[12px] pt-[8px]">
+              <button
+                type="button"
+                onClick={handleSimulate}
+                disabled={isSimulating}
+                className="flex items-center gap-[6px] rounded-full border border-[#ff6b35]/80 bg-[#9a3412] px-[16px] py-[8px] text-[12px] font-medium text-[#fafafa] transition-all hover:border-[#ff6b35] hover:bg-[#c2410c] disabled:opacity-60 cursor-pointer shadow-[0_0_20px_rgba(255,107,53,0.18)]"
+              >
+                <Play className={`h-[12px] w-[12px] ${isSimulating ? "animate-spin" : ""}`} />
+                <span>{isSimulating ? "Measuring Throughput…" : "Simulate Pipeline Run"}</span>
+              </button>
+
+              <a
+                href="#piece-workbench"
+                className="flex items-center gap-[5px] rounded-full border border-[#393939] bg-[#1c1c1c] px-[14px] py-[8px] text-[12px] text-[#b4b4b4] hover:text-[#fafafa] hover:border-[#4d4d4d] transition-colors"
+              >
+                <span>Explore Workbench</span>
+                <ArrowRight className="h-[12px] w-[12px]" />
+              </a>
             </div>
           </div>
 
-          {/* RIGHT 7 COLS: Code & Telemetry Window */}
-          <div className="flex flex-col rounded-[14px] border border-[#2e2e2e] bg-[#121212] overflow-hidden lg:col-span-7">
-            {/* Window Chrome Header */}
-            <div className="flex flex-wrap items-center justify-between gap-[12px] border-b border-[#2e2e2e] bg-[#171717] px-[16px] py-[10px]">
-              <div className="flex items-center gap-[12px]">
-                <div className="flex items-center gap-[6px]">
-                  <span className="h-[8px] w-[8px] rounded-full bg-[#393939]" />
-                  <span className="h-[8px] w-[8px] rounded-full bg-[#393939]" />
-                  <span className="h-[8px] w-[8px] rounded-full bg-[#393939]" />
+          {/* RIGHT 7 COLS: Rich Visual Canvas (Zero Code Clutter) */}
+          <div className="flex flex-col rounded-[16px] border border-[#2e2e2e] bg-[#121212] p-[20px] sm:p-[24px] lg:col-span-7 shadow-inner">
+            {/* Visual Canvas Header */}
+            <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-[14px]">
+              <div className="flex items-center gap-[10px]">
+                <div className="flex gap-[5px]">
+                  <span className="h-[7px] w-[7px] rounded-full bg-[#393939]" />
+                  <span className="h-[7px] w-[7px] rounded-full bg-[#393939]" />
+                  <span className="h-[7px] w-[7px] rounded-full bg-[#393939]" />
                 </div>
-                <div className="h-[14px] w-px bg-[#2e2e2e]" />
-                <span className="font-mono-code text-[12px] text-[#fafafa]">
-                  {activeStage.codeSnippet.filename}
+                <span className="text-[12px] font-mono-code text-[#fafafa]">
+                  Interactive Telemetry Studio
                 </span>
               </div>
 
-              <div className="flex items-center gap-[8px]">
-                {/* Switcher Tab */}
-                <div className="flex rounded-[8px] border border-[#2e2e2e] bg-[#121212] p-[2px]">
-                  <button
-                    type="button"
-                    onClick={() => setActiveOutputTab("code")}
-                    className={`flex items-center gap-[5px] rounded-[6px] px-[9px] py-[3px] text-[11px] font-mono-code transition-colors cursor-pointer ${
-                      activeOutputTab === "code"
-                        ? "bg-[#242424] text-[#fafafa] font-medium"
-                        : "text-[#898989] hover:text-[#fafafa]"
-                    }`}
-                  >
-                    <Code2 className="h-[12px] w-[12px]" />
-                    <span>Config</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveOutputTab("output")}
-                    className={`flex items-center gap-[5px] rounded-[6px] px-[9px] py-[3px] text-[11px] font-mono-code transition-colors cursor-pointer ${
-                      activeOutputTab === "output"
-                        ? "bg-[#242424] text-[#fafafa] font-medium"
-                        : "text-[#898989] hover:text-[#fafafa]"
-                    }`}
-                  >
-                    <TableIcon className="h-[12px] w-[12px]" />
-                    <span>Live Output</span>
-                  </button>
-                </div>
-
-                {/* Simulate Button */}
-                <button
-                  type="button"
-                  onClick={handleSimulateExecution}
-                  disabled={isSimulating}
-                  className="flex items-center gap-[6px] rounded-[8px] border border-[#ff6b35]/70 bg-[#9a3412] px-[11px] py-[4px] text-[11px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c] disabled:opacity-60 cursor-pointer"
-                >
-                  <Play className={`h-[11px] w-[11px] ${isSimulating ? "animate-spin" : ""}`} />
-                  <span>{isSimulating ? "Running…" : "Execute"}</span>
-                </button>
-
-                {/* Copy Button */}
-                <button
-                  type="button"
-                  onClick={handleCopyCode}
-                  className="flex items-center gap-[5px] rounded-[8px] border border-[#2e2e2e] bg-[#171717] px-[9px] py-[4px] text-[11px] font-mono-code text-[#898989] hover:text-[#fafafa] transition-colors cursor-pointer"
-                  title="Copy code snippet"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-[11px] w-[11px] text-[#ff6b35]" />
-                      <span className="text-[#ff6b35]">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-[11px] w-[11px]" />
-                      <span>Copy</span>
-                    </>
-                  )}
-                </button>
+              <div className="flex items-center gap-[6px] rounded-full border border-emerald-500/30 bg-emerald-500/10 px-[10px] py-[2px] font-mono-code text-[11px] text-emerald-400">
+                <span className="h-[6px] w-[6px] rounded-full bg-emerald-400 animate-pulse" />
+                <span>Live Active</span>
               </div>
             </div>
 
-            {/* Code / Output Area */}
-            <div className="flex-1 p-[16px] font-mono-code text-[12px] leading-[1.65] overflow-x-auto min-h-[260px] max-h-[360px]">
-              {activeOutputTab === "code" ? (
-                <pre className="text-[#b4b4b4] whitespace-pre selection:bg-[#ff6b35]/30">
-                  {activeStage.codeSnippet.code}
-                </pre>
-              ) : activeStage.sampleOutput.type === "table" ? (
-                <div className="w-full overflow-x-auto">
-                  <table className="w-full text-left font-mono-code text-[11px]">
-                    <thead>
-                      <tr className="border-b border-[#2e2e2e] text-[#898989]">
-                        {activeStage.sampleOutput.headers?.map((h, idx) => (
-                          <th key={idx} className="pb-[8px] pr-[16px] font-medium">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#2e2e2e]/60 text-[#fafafa]">
-                      {activeStage.sampleOutput.rows?.map((row, rIdx) => (
-                        <tr key={rIdx} className="hover:bg-[#171717]">
-                          {row.map((cell, cIdx) => (
-                            <td
-                              key={cIdx}
-                              className={`py-[8px] pr-[16px] ${
-                                cIdx === 0
-                                  ? "text-[#ff6b35]"
-                                  : cIdx === row.length - 1
-                                  ? "text-[#ff8252] font-semibold"
-                                  : "text-[#b4b4b4]"
-                              }`}
-                            >
-                              {cell}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {/* DYNAMIC VISUAL REPRESENTATION BASED ON STEP */}
+            <div className="my-[20px] flex min-h-[220px] flex-col justify-center">
+              {currentStep.visualType === "connectors" && (
+                /* Step 1 Visual: Connectors Grid with Live Status */
+                <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-3">
+                  {[
+                    { name: "Snowflake", proto: "Flight SQL", status: "Sub-12ms", active: true },
+                    { name: "ClickHouse", proto: "Native TCP", status: "Sub-10ms", active: true },
+                    { name: "Apache Kafka", proto: "Wire Event", status: "Sub-1ms", active: true },
+                    { name: "BigQuery", proto: "Storage API", status: "Direct", active: true },
+                    { name: "S3 Parquet", proto: "Snappy Arrow", status: "Zero-Copy", active: true },
+                    { name: "PostgreSQL", proto: "CDC Replication", status: "Real-Time", active: true },
+                  ].map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="group rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[12px] transition-all hover:border-[#ff6b35]/60 hover:bg-[#1c1c1c] hover:-translate-y-0.5 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12px] font-medium text-[#fafafa]">
+                          {item.name}
+                        </span>
+                        <span className="h-[6px] w-[6px] rounded-full bg-emerald-400" />
+                      </div>
+                      <div className="mt-[6px] flex items-center justify-between text-[10px] font-mono-code">
+                        <span className="text-[#898989]">{item.proto}</span>
+                        <span className="text-[#ff6b35] font-semibold">{item.status}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <pre className="text-[#ff8252] whitespace-pre">
-                  {activeStage.sampleOutput.json}
-                </pre>
+              )}
+
+              {currentStep.visualType === "vector" && (
+                /* Step 2 Visual: Arrow Columnar Memory Projection */
+                <div className="flex flex-col gap-[10px]">
+                  <div className="flex items-center justify-between text-[11px] font-mono-code text-[#898989]">
+                    <span>SIMD-128 Column Buffers</span>
+                    <span className="text-[#ff6b35]">Zero Intermediate Copy</span>
+                  </div>
+                  <div className="flex flex-col gap-[8px]">
+                    {[
+                      { col: "tenant_id", type: "Utf8 Dictionary", fill: "95%", bytes: "4.2 MB" },
+                      { col: "event_timestamp", type: "TimestampMicrosecond", fill: "80%", bytes: "8.4 MB" },
+                      { col: "revenue_metric", type: "Decimal128(18,2)", fill: "100%", bytes: "16.8 MB" },
+                      { col: "region_code", type: "FixedSizeBinary(2)", fill: "60%", bytes: "2.1 MB" },
+                    ].map((col, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[10px] transition-all hover:border-[#ff6b35]/50"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-mono-code mb-[6px]">
+                          <span className="text-[#fafafa] font-semibold">{col.col}</span>
+                          <span className="text-[#898989]">{col.type}</span>
+                          <span className="text-[#ff6b35]">{col.bytes}</span>
+                        </div>
+                        <div className="h-[4px] w-full rounded-full bg-[#242424] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-linear-to-r from-[#9a3412] to-[#ff6b35]"
+                            style={{ width: col.fill }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {currentStep.visualType === "compute" && (
+                /* Step 3 Visual: Real-Time Vector Speed Gauge & Offload */
+                <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2">
+                  <div className="flex flex-col justify-between rounded-[14px] border border-[#2e2e2e] bg-[#171717] p-[16px] text-center hover:border-[#ff6b35]/50 transition-colors">
+                    <span className="text-[11px] font-mono-code uppercase text-[#898989]">
+                      Measured Execution Latency
+                    </span>
+                    <div className="my-[12px]">
+                      <span className="text-[40px] font-bold font-mono-code text-emerald-400">
+                        {metricPulse}
+                      </span>
+                      <span className="text-[18px] font-mono-code text-emerald-400 ml-1">
+                        ms
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-[#898989]">
+                      Sub-12ms SLA Guarantee (1,000,000 Rows)
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col justify-between rounded-[14px] border border-[#2e2e2e] bg-[#171717] p-[16px] hover:border-[#ff6b35]/50 transition-colors">
+                    <span className="text-[11px] font-mono-code uppercase text-[#898989]">
+                      Warehouse Query Offload
+                    </span>
+                    <div className="my-[10px] flex items-center justify-between">
+                      <span className="text-[32px] font-bold font-mono-code text-[#fafafa]">
+                        84.2%
+                      </span>
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-[10px] py-[3px] font-mono-code text-[11px] text-emerald-400">
+                        -$14.8k / mo
+                      </span>
+                    </div>
+                    <div className="h-[6px] w-full rounded-full bg-[#242424] overflow-hidden">
+                      <div className="h-full rounded-full bg-linear-to-r from-emerald-600 to-emerald-400 w-[84%]" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentStep.visualType === "security" && (
+                /* Step 4 Visual: Cryptographic Shield & Dynamic Masking */
+                <div className="flex flex-col gap-[10px]">
+                  <div className="rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[14px] flex items-center justify-between">
+                    <div className="flex items-center gap-[10px]">
+                      <div className="flex h-[32px] w-[32px] items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+                        <CheckCircle2 className="h-[18px] w-[18px]" />
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-medium text-[#fafafa]">
+                          Tenant Boundary Enforced
+                        </div>
+                        <div className="text-[11px] text-[#898989]">
+                          AST rewritten: WHERE tenant_id = &apos;org_enterprise&apos;
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-mono-code text-[10px] rounded border border-emerald-500/30 bg-emerald-500/10 px-[8px] py-[2px] text-emerald-400">
+                      Zero Leakage
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-[10px]">
+                    <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[10px]">
+                      <span className="text-[10px] font-mono-code uppercase text-[#898989] block">
+                        Dynamic PII Obfuscation
+                      </span>
+                      <span className="text-[12px] font-mono-code text-[#ff6b35] block mt-1">
+                        j***@company.com
+                      </span>
+                    </div>
+                    <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[10px]">
+                      <span className="text-[10px] font-mono-code uppercase text-[#898989] block">
+                        SHA-256 Ledger Block
+                      </span>
+                      <span className="text-[12px] font-mono-code text-[#fafafa] block mt-1 truncate">
+                        0x7a89fbc00192ea44…
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentStep.visualType === "canvas" && (
+                /* Step 5 Visual: Interactive Canvas Visualizer with Multiplayer Avatars */
+                <div className="flex flex-col gap-[12px]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-[8px]">
+                      {(["area", "bar", "donut"] as const).map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setSelectedChartType(type)}
+                          className={`rounded-[8px] border px-[10px] py-[4px] text-[11px] font-mono-code uppercase transition-colors cursor-pointer ${
+                            selectedChartType === type
+                              ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-semibold"
+                              : "border-[#2e2e2e] bg-[#171717] text-[#898989] hover:text-[#fafafa]"
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-[6px]">
+                      <div className="flex -space-x-1">
+                        <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-[#ff6b35] text-[9px] font-bold text-white ring-2 ring-[#121212]">
+                          S
+                        </span>
+                        <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-purple-500 text-[9px] font-bold text-white ring-2 ring-[#121212]">
+                          D
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono-code text-[#898989]">
+                        2 Peers Live
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Micro Visual Chart Representation */}
+                  <div className="h-[120px] w-full rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[12px] flex items-end gap-[6px]">
+                    {[45, 60, 52, 78, 65, 88, 92, 105, 98, 124, 115, 142].map(
+                      (val, idx) => (
+                        <div key={idx} className="flex-1 flex flex-col justify-end h-full">
+                          <div
+                            className="w-full rounded-t-[3px] bg-linear-to-t from-[#9a3412] to-[#ff6b35] transition-all duration-300 hover:brightness-125"
+                            style={{ height: `${(val / 150) * 100}%` }}
+                          />
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Footer Telemetry Strip */}
-            <div className="flex flex-wrap items-center justify-between gap-[12px] border-t border-[#2e2e2e] bg-[#171717] px-[16px] py-[8px] text-[11px] font-mono-code text-[#898989]">
-              <div className="flex items-center gap-[8px]">
-                <Activity className="h-[12px] w-[12px] text-[#ff6b35]" />
-                <span className="text-[#fafafa]">
-                  Execution time:{" "}
-                  <strong className="text-[#ff6b35]">{simulatedDuration} ms</strong>
-                </span>
-                <span className="text-[#393939]">|</span>
-                <span>0 B network egress</span>
-              </div>
-              <div className="flex items-center gap-[6px]">
-                <span className="h-[6px] w-[6px] rounded-full bg-emerald-400" />
-                <span className="text-emerald-400 font-medium">Vector Engine Healthy</span>
-              </div>
+            {/* Bottom 3-Column Visual Metrics Strip */}
+            <div className="grid grid-cols-3 gap-[10px] border-t border-[#2e2e2e] pt-[14px]">
+              {currentStep.visualStats.map((st, idx) => (
+                <div key={idx} className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[10px]">
+                  <span className="block text-[10px] font-mono-code uppercase text-[#898989]">
+                    {st.label}
+                  </span>
+                  <span className="mt-[2px] block text-[15px] font-mono-code font-semibold text-[#fafafa]">
+                    {st.value}
+                  </span>
+                  <span className="mt-[2px] block text-[10px] text-emerald-400 truncate">
+                    {st.change}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

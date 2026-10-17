@@ -6,399 +6,295 @@ import {
   Layers,
   Cpu,
   LayoutDashboard,
-  Server,
   Zap,
   Activity,
-  ShieldCheck,
   Radio,
-  ArrowRight,
-  RefreshCw,
   Lock,
   Globe,
   CheckCircle2,
+  ArrowRight,
+  Sparkles,
+  Server,
+  ShieldCheck,
+  Compass,
 } from "lucide-react";
 
 interface TopologyNode {
   id: string;
   name: string;
-  tier: "sources" | "gateway" | "engine" | "surfaces";
-  description: string;
-  protocol: string;
-  latency: string;
-  throughput: string;
+  category: "Warehouse Lake" | "Zero-Copy Bus" | "In-Memory OLAP" | "Executive Surface";
+  tierId: number;
+  protocolBadge: string;
+  latencyBadge: string;
+  speedMultiplier: string;
   egress: string;
-  status: "HEALTHY" | "STREAMING" | "STANDBY";
-  encryption: string;
-  memory: string;
-  highlightMetric: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  features: string[];
 }
 
-const TOPOLOGY_TIERS = [
-  { id: "sources", label: "01 Ingestion", desc: "Warehouses & Streams" },
-  { id: "gateway", label: "02 Zero-Copy Gateway", desc: "Arrow IPC & Buffers" },
-  { id: "engine", label: "03 In-Memory OLAP", desc: "DuckDB Wasm Engine" },
-  { id: "surfaces", label: "04 Governed Surfaces", desc: "Canvases & Embeds" },
-] as const;
-
 const TOPOLOGY_NODES: TopologyNode[] = [
-  // TIER 1: SOURCES
   {
-    id: "src-snowflake",
-    name: "Snowflake Warehouse",
-    tier: "sources",
-    description: "Enterprise Cloud Lakehouse & Snowpipe Pushdown",
-    protocol: "Flight SQL / TLS 1.3",
-    latency: "2.1 ms",
-    throughput: "45.2 MB/s",
-    egress: "0 B Direct Pushdown",
-    status: "HEALTHY",
-    encryption: "mTLS + AES-256",
-    memory: "64 MB Buffer",
-    highlightMetric: "Sub-12ms Pushdown",
+    id: "snowflake",
+    name: "Snowflake Lakehouse",
+    category: "Warehouse Lake",
+    tierId: 1,
+    protocolBadge: "Flight SQL",
+    latencyBadge: "1.8 ms",
+    speedMultiplier: "10x Direct Pushdown",
+    egress: "Zero Egress Spill",
+    icon: Database,
+    description: "Vectorized query execution directly inside your existing cloud warehouse partitions.",
+    features: ["Zero data replication", "Automated TLS 1.3 key exchange", "Snowpipe stream listener"],
   },
   {
-    id: "src-clickhouse",
-    name: "ClickHouse OLAP",
-    tier: "sources",
-    description: "Real-Time Columnar Vector Store",
-    protocol: "Native TCP / TCP_NODELAY",
-    latency: "1.4 ms",
-    throughput: "88.6 MB/s",
-    egress: "Snappy Vector",
-    status: "STREAMING",
-    encryption: "TLS 1.3 ChaCha20",
-    memory: "128 MB Buffer",
-    highlightMetric: "Sub-10ms Columnar",
+    id: "kafka",
+    name: "Apache Kafka Streams",
+    category: "Warehouse Lake",
+    tierId: 1,
+    protocolBadge: "Wire Streaming",
+    latencyBadge: "0.8 ms",
+    speedMultiplier: "Sub-Second Ingest",
+    egress: "Delta Stream",
+    icon: Radio,
+    description: "Continuous real-time event streaming for checkout, order, and telemetry topics.",
+    features: ["Sub-5ms consumer lag", "SASL SCRAM authentication", "Auto-rebalancing consumer groups"],
   },
   {
-    id: "src-kafka",
-    name: "Apache Kafka Cluster",
-    tier: "sources",
-    description: "Live Event Broker for Order & Telemetry Topics",
-    protocol: "Kafka Wire Protocol",
-    latency: "0.8 ms",
-    throughput: "120k msgs/s",
-    egress: "Zero Spill",
-    status: "STREAMING",
-    encryption: "SASL_SSL / SCRAM-512",
-    memory: "96 MB Window",
-    highlightMetric: "Sub-1ms Streaming",
+    id: "arrow",
+    name: "Apache Arrow IPC",
+    category: "Zero-Copy Bus",
+    tierId: 2,
+    protocolBadge: "Arrow IPC",
+    latencyBadge: "0.4 ms",
+    speedMultiplier: "240k rows/s",
+    egress: "In-Memory Buffer",
+    icon: Layers,
+    description: "Standardized columnar record batches mapped directly into client CPU vector registers.",
+    features: ["SIMD-128 register projection", "No JSON/CSV serialization penalty", "Snappy column compression"],
   },
   {
-    id: "src-s3",
-    name: "S3 Parquet Lake",
-    tier: "sources",
-    description: "Object Storage with Zero-Copy Range Requests",
-    protocol: "HTTPS / HTTP/2",
-    latency: "1.9 ms",
-    throughput: "72.4 MB/s",
-    egress: "Snappy Parquet",
-    status: "HEALTHY",
-    encryption: "SSE-KMS / TLS 1.3",
-    memory: "48 MB Chunks",
-    highlightMetric: "Range Pushdown",
-  },
-
-  // TIER 2: GATEWAY
-  {
-    id: "gw-arrow",
-    name: "Arrow IPC Buffer Pool",
-    tier: "gateway",
-    description: "Zero-Copy Columnar Ingress & Type Projection",
-    protocol: "Apache Arrow IPC Stream",
-    latency: "0.4 ms",
-    throughput: "240k rows/s",
-    egress: "Zero Intermediate Copies",
-    status: "HEALTHY",
-    encryption: "Internal SharedMemory",
-    memory: "512 MB Pool",
-    highlightMetric: "SIMD-128 Column Projection",
-  },
-  {
-    id: "gw-schema",
-    name: "Schema Catalog & CDC",
-    tier: "gateway",
-    description: "Continuous Type Coercion & Schema Drift Guard",
-    protocol: "Internal Metadata Bus",
-    latency: "0.2 ms",
-    throughput: "Instant Sync",
-    egress: "0 B Egress",
-    status: "HEALTHY",
-    encryption: "SHA-256 Catalog Key",
-    memory: "16 MB State",
-    highlightMetric: "Auto-Inferred Schemas",
-  },
-
-  // TIER 3: ENGINE
-  {
-    id: "eng-duckdb",
+    id: "duckdb",
     name: "DuckDB Wasm OLAP",
-    tier: "engine",
-    description: "Compiled Vectorized Analytics Kernel",
-    protocol: "WebAssembly SIMD-128",
-    latency: "8.4 ms P95",
-    throughput: "119,048 rps",
-    egress: "0 B Browser Compute",
-    status: "HEALTHY",
-    encryption: "Hardware Enclave Sandboxed",
-    memory: "256 MB Wasm Heap",
-    highlightMetric: "1,000,000 In-Memory Rows",
+    category: "In-Memory OLAP",
+    tierId: 3,
+    protocolBadge: "Wasm Kernel",
+    latencyBadge: "8.4 ms P95",
+    speedMultiplier: "119,048 rps",
+    egress: "0 B Cloud Network",
+    icon: Cpu,
+    description: "Hardware-accelerated C++ vectorized analytical kernel compiled to browser WebAssembly.",
+    features: ["Sub-12ms execution on 1M rows", "Full SQL-2016 window functions", "Multi-core Web Worker thread pool"],
   },
   {
-    id: "eng-rls",
-    name: "Cryptographic RLS Guard",
-    tier: "engine",
-    description: "AST-Level SQL Rewriter & PII Masking Engine",
-    protocol: "Kernel Query Filter",
-    latency: "0.3 ms",
-    throughput: "100% Query Intercept",
+    id: "rls",
+    name: "Kernel RLS Guard",
+    category: "In-Memory OLAP",
+    tierId: 3,
+    protocolBadge: "SHA-256 Ledger",
+    latencyBadge: "0.3 ms",
+    speedMultiplier: "100% Intercept",
     egress: "Tamper Proof",
-    status: "HEALTHY",
-    encryption: "RFC 6962 SHA-256 Ledger",
-    memory: "32 MB Rule Cache",
-    highlightMetric: "Zero Cross-Tenant Leakage",
+    icon: ShieldCheck,
+    description: "Deterministic AST rewrite guarantees zero cross-tenant leakage with dynamic PII masking.",
+    features: ["AST-level query rewriting", "Hardware HSM key envelope", "RFC 6962 verifiable audit chain"],
   },
-
-  // TIER 4: SURFACES
   {
-    id: "srf-dashboards",
+    id: "canvases",
     name: "Executive Canvases",
-    tier: "surfaces",
-    description: "Multi-Canvas Analytics with Sub-Frame Slicing",
-    protocol: "React 19 Canvas Pipeline",
-    latency: "60 FPS Render",
-    throughput: "Interactive",
-    egress: "Local GPU Accelerated",
-    status: "HEALTHY",
-    encryption: "TLS 1.3 Client Session",
-    memory: "60 MB DOM Heap",
-    highlightMetric: "18+ Built-in Visualizers",
-  },
-  {
-    id: "srf-multiplayer",
-    name: "Multiplayer Engine",
-    tier: "surfaces",
-    description: "Collaborative Presence, Cursors & State Sync",
-    protocol: "Secure WebSockets (WSS)",
-    latency: "4.2 ms",
-    throughput: "Live Sync",
-    egress: "Delta Compression",
-    status: "STREAMING",
-    encryption: "mTLS + Token Claims",
-    memory: "12 MB Channel State",
-    highlightMetric: "Sub-5ms Cursor Presence",
-  },
-  {
-    id: "srf-embed",
-    name: "Signed Expiring Embeds",
-    tier: "surfaces",
-    description: "Sandboxed Customer-Facing iFrame Portals",
-    protocol: "HMAC-SHA256 Token",
-    latency: "1.1 ms",
-    throughput: "Multi-Tenant",
-    egress: "Isolated Scope",
-    status: "HEALTHY",
-    encryption: "Ephemeral JWT Claims",
-    memory: "Stateless",
-    highlightMetric: "Safe Third-Party Embedding",
+    category: "Executive Surface",
+    tierId: 4,
+    protocolBadge: "React 19 Canvas",
+    latencyBadge: "60 FPS",
+    speedMultiplier: "Instant Slice",
+    egress: "GPU Accelerated",
+    icon: LayoutDashboard,
+    description: "Point-and-click exploratory dashboards with real-time multiplayer cursor synchronization.",
+    features: ["Multiplayer presence (<5ms)", "18+ interactive visualizers", "Expiring HMAC iframe embedding"],
   },
 ];
 
 export default function InfrastructureTopologySection() {
-  const [selectedNodeId, setSelectedNodeId] = useState<string>("eng-duckdb");
-  const [simulatingPulse, setSimulatingPulse] = useState<boolean>(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string>("duckdb");
+  const [isLivePinging, setIsLivePinging] = useState<boolean>(false);
+  const [liveLatency, setLiveLatency] = useState<number>(8.4);
 
-  const selectedNode =
-    TOPOLOGY_NODES.find((n) => n.id === selectedNodeId) || TOPOLOGY_NODES[6];
+  const activeNode =
+    TOPOLOGY_NODES.find((n) => n.id === selectedNodeId) || TOPOLOGY_NODES[3];
 
-  const handleTriggerPulse = () => {
-    setSimulatingPulse(true);
-    setTimeout(() => setSimulatingPulse(false), 900);
+  const handlePingNetwork = () => {
+    setIsLivePinging(true);
+    setTimeout(() => {
+      setLiveLatency(Number((6.8 + Math.random() * 2.8).toFixed(1)));
+      setIsLivePinging(false);
+    }, 500);
   };
 
   return (
     <section id="topology" className="mx-auto w-full max-w-[1200px] px-[24px]">
       {/* SECTION HEADER */}
-      <div className="mb-[32px] flex flex-col items-start justify-between gap-[16px] md:flex-row md:items-end">
+      <div className="mb-[36px] flex flex-col items-start justify-between gap-[16px] md:flex-row md:items-end">
         <div>
-          <span className="text-[12px] font-mono-code uppercase tracking-wider text-[#ff6b35] block mb-[6px]">
-            Connected Infrastructure
-          </span>
+          <div className="inline-flex items-center gap-[6px] rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-[10px] py-[3px] text-[11px] font-mono-code text-[#ff6b35] mb-[10px]">
+            <Globe className="h-[12px] w-[12px]" />
+            <span>CONNECTED INFRASTRUCTURE TOPOLOGY</span>
+          </div>
           <h2 className="text-[32px] font-normal leading-[1.18] tracking-[-0.02em] sm:text-[36px]">
             <span className="block text-[#898989]">
               Trace every metric to its source,
             </span>
             <span className="block text-[#fafafa]">
-              across distributed warehouse topologies
+              with zero warehouse round-trip latency
             </span>
           </h2>
         </div>
 
-        <div className="flex items-center gap-[10px]">
-          <button
-            type="button"
-            onClick={handleTriggerPulse}
-            disabled={simulatingPulse}
-            className="flex items-center gap-[6px] rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[14px] py-[6px] text-[12px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c] disabled:opacity-60 cursor-pointer"
-          >
-            <Zap className={`h-[12px] w-[12px] ${simulatingPulse ? "animate-bounce" : ""}`} />
-            <span>{simulatingPulse ? "Tracing Topologies…" : "Ping All Nodes"}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handlePingNetwork}
+          disabled={isLivePinging}
+          className="flex items-center gap-[6px] rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[16px] py-[8px] text-[12px] font-medium text-[#fafafa] transition-all hover:border-[#ff6b35] hover:bg-[#c2410c] disabled:opacity-60 cursor-pointer shadow-[0_0_20px_rgba(255,107,53,0.18)]"
+        >
+          <Zap className={`h-[12px] w-[12px] ${isLivePinging ? "animate-bounce" : ""}`} />
+          <span>{isLivePinging ? "Measuring Network Signals…" : "Ping Distributed Topologies"}</span>
+        </button>
       </div>
 
-      {/* MAIN TOPOLOGY CONTAINER */}
-      <div className="rounded-[16px] border border-[#2e2e2e] bg-[#171717] p-[24px] lg:p-[32px]">
-        {/* TOPOLOGY GRID: 4 TIERS */}
-        <div className="grid grid-cols-1 gap-[16px] md:grid-cols-2 lg:grid-cols-4">
-          {TOPOLOGY_TIERS.map((tier) => {
-            const tierNodes = TOPOLOGY_NODES.filter((n) => n.tier === tier.id);
-            return (
-              <div
-                key={tier.id}
-                className="flex flex-col gap-[12px] rounded-[14px] border border-[#2e2e2e] bg-[#121212] p-[16px]"
-              >
-                {/* Tier Title */}
-                <div className="border-b border-[#2e2e2e] pb-[10px]">
-                  <span className="font-mono-code text-[11px] font-medium text-[#ff6b35]">
-                    {tier.label}
-                  </span>
-                  <div className="text-[12px] text-[#898989]">{tier.desc}</div>
-                </div>
+      {/* TOPOLOGY VISUAL WORKBENCH */}
+      <div className="relative overflow-hidden rounded-[20px] border border-[#2e2e2e] bg-[#171717] p-[24px] sm:p-[32px] shadow-2xl">
+        {/* Subtle Faded Dark Imagery Layer */}
+        <div
+          className="pointer-events-none absolute inset-0 z-0 opacity-10 bg-cover bg-center"
+          style={{ backgroundImage: "url('/images/stream-globe.jpg')" }}
+        />
+        <div className="pointer-events-none absolute inset-0 z-0 bg-linear-to-b from-[#171717]/80 via-[#171717]/95 to-[#171717]" />
 
-                {/* Nodes inside Tier */}
-                <div className="flex flex-col gap-[8px]">
-                  {tierNodes.map((node) => {
-                    const isSelected = node.id === selectedNodeId;
-                    return (
-                      <button
-                        key={node.id}
-                        type="button"
-                        onClick={() => setSelectedNodeId(node.id)}
-                        className={`group flex flex-col items-start rounded-[10px] border p-[12px] text-left transition-all duration-150 cursor-pointer ${
-                          isSelected
-                            ? "border-[#ff6b35] bg-[#1c1c1c] shadow-[0_0_16px_rgba(255,107,53,0.15)]"
-                            : "border-[#2e2e2e] bg-[#171717] hover:border-[#393939] hover:bg-[#191919]"
-                        }`}
-                      >
-                        <div className="flex w-full items-center justify-between">
-                          <span
-                            className={`text-[13px] font-medium transition-colors ${
-                              isSelected
-                                ? "text-[#fafafa]"
-                                : "text-[#b4b4b4] group-hover:text-[#fafafa]"
-                            }`}
-                          >
-                            {node.name}
-                          </span>
-                          <span
-                            className={`flex h-[6px] w-[6px] rounded-full ${
-                              node.status === "STREAMING"
-                                ? "bg-[#ff6b35] animate-pulse"
-                                : "bg-emerald-400"
-                            }`}
-                          />
-                        </div>
-
-                        <div className="mt-[6px] flex w-full items-center justify-between text-[11px] font-mono-code text-[#898989]">
-                          <span className="truncate max-w-[120px]">{node.protocol}</span>
-                          <span
-                            className={`font-semibold ${
-                              isSelected ? "text-[#ff6b35]" : "text-[#fafafa]"
-                            }`}
-                          >
-                            {node.latency}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* SELECTED NODE TELEMETRY & ARCHITECTURE INSPECTOR */}
-        <div className="mt-[24px] rounded-[14px] border border-[#2e2e2e] bg-[#121212] p-[20px] sm:p-[24px]">
-          <div className="flex flex-col gap-[16px] lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="flex items-center gap-[10px]">
-                <span className="rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-[10px] py-[2px] font-mono-code text-[11px] text-[#ff6b35]">
-                  NODE_INSPECTOR // {selectedNode.id.toUpperCase()}
-                </span>
-                <span className="flex items-center gap-[5px] text-[11px] font-mono-code text-emerald-400">
-                  <span className="h-[6px] w-[6px] rounded-full bg-emerald-400" />
-                  STATUS: {selectedNode.status}
-                </span>
-              </div>
-
-              <h4 className="mt-[8px] text-[20px] font-medium text-[#fafafa]">
-                {selectedNode.name}
-              </h4>
-              <p className="mt-[4px] text-[13px] text-[#898989]">
-                {selectedNode.description}
-              </p>
+        <div className="relative z-10 grid grid-cols-1 gap-[32px] lg:grid-cols-12 items-center">
+          {/* LEFT 7 COLS: Interactive Visual Topology Nodes Map */}
+          <div className="flex flex-col gap-[14px] lg:col-span-7">
+            <div className="flex items-center justify-between text-[11px] font-mono-code text-[#898989] border-b border-[#2e2e2e] pb-[10px]">
+              <span>ACTIVE TOPOLOGY NODES (CLICK TO INSPECT)</span>
+              <span className="text-emerald-400 flex items-center gap-[5px]">
+                <span className="h-[6px] w-[6px] rounded-full bg-emerald-400 animate-pulse" />
+                6 Nodes Synchronized
+              </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-[10px]">
-              <div className="rounded-[8px] border border-[#2e2e2e] bg-[#171717] px-[12px] py-[6px] font-mono-code text-[11px] text-[#b4b4b4]">
-                Protocol: <span className="text-[#fafafa]">{selectedNode.protocol}</span>
-              </div>
-              <div className="rounded-[8px] border border-[#2e2e2e] bg-[#171717] px-[12px] py-[6px] font-mono-code text-[11px] text-[#b4b4b4]">
-                Security: <span className="text-[#ff6b35]">{selectedNode.encryption}</span>
-              </div>
+            {/* Visual Node Cards Grid */}
+            <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+              {TOPOLOGY_NODES.map((node) => {
+                const isSelected = node.id === selectedNodeId;
+                const Icon = node.icon;
+                return (
+                  <button
+                    key={node.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedNodeId(node.id);
+                      setLiveLatency(Number((6.8 + Math.random() * 2.8).toFixed(1)));
+                    }}
+                    className={`group relative flex flex-col items-start rounded-[14px] border p-[16px] text-left transition-all duration-200 cursor-pointer overflow-hidden ${
+                      isSelected
+                        ? "border-[#ff6b35] bg-[#1c1c1c] shadow-[0_8px_24px_rgba(255,107,53,0.14)] -translate-y-1"
+                        : "border-[#2e2e2e] bg-[#121212]/90 hover:border-[#393939] hover:bg-[#161616] hover:-translate-y-0.5"
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <div
+                        className={`flex h-[32px] w-[32px] items-center justify-center rounded-[8px] border transition-colors ${
+                          isSelected
+                            ? "border-[#ff6b35]/40 bg-[#ff6b35]/20 text-[#ff6b35]"
+                            : "border-[#2e2e2e] bg-[#1c1c1c] text-[#898989] group-hover:text-[#fafafa]"
+                        }`}
+                      >
+                        <Icon className="h-[16px] w-[16px]" />
+                      </div>
+
+                      <div className="flex items-center gap-[6px]">
+                        <span className="rounded-full border border-[#2e2e2e] bg-[#171717] px-[8px] py-[2px] font-mono-code text-[10px] text-[#898989]">
+                          {node.protocolBadge}
+                        </span>
+                        <span className="h-[6px] w-[6px] rounded-full bg-emerald-400" />
+                      </div>
+                    </div>
+
+                    <div className="mt-[12px] text-[14px] font-medium text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
+                      {node.name}
+                    </div>
+
+                    <div className="mt-[6px] flex w-full items-center justify-between text-[11px] font-mono-code">
+                      <span className="text-[#898989]">{node.category}</span>
+                      <span
+                        className={`font-semibold ${
+                          isSelected ? "text-[#ff6b35]" : "text-emerald-400"
+                        }`}
+                      >
+                        {node.latencyBadge}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* TELEMETRY STRIP */}
-          <div className="mt-[20px] grid grid-cols-2 gap-[10px] border-t border-[#2e2e2e] pt-[16px] sm:grid-cols-4">
-            <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[12px]">
-              <span className="block text-[10px] font-mono-code uppercase text-[#898989]">
-                Round-Trip Latency
-              </span>
-              <span className="mt-[4px] block text-[16px] font-mono-code font-semibold text-emerald-400">
-                {selectedNode.latency}
-              </span>
-              <span className="mt-[2px] block text-[10px] text-[#898989]">
-                Sub-12ms SLA Guarantee
-              </span>
+          {/* RIGHT 5 COLS: Selected Node Real-Time Telemetry Inspector */}
+          <div className="flex flex-col justify-between rounded-[16px] border border-[#2e2e2e] bg-[#121212]/95 p-[24px] lg:col-span-5 shadow-inner">
+            <div>
+              <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-[14px]">
+                <span className="rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-[10px] py-[3px] font-mono-code text-[11px] text-[#ff6b35]">
+                  NODE_INSPECTOR // {activeNode.id.toUpperCase()}
+                </span>
+                <span className="text-[11px] font-mono-code text-emerald-400">
+                  ✓ VERIFIED_ONLINE
+                </span>
+              </div>
+
+              <div className="mt-[16px]">
+                <h3 className="text-[20px] font-normal text-[#fafafa]">
+                  {activeNode.name}
+                </h3>
+                <p className="mt-[4px] text-[13px] leading-[1.5] text-[#898989]">
+                  {activeNode.description}
+                </p>
+              </div>
+
+              {/* Graphical Speed & Latency Meter */}
+              <div className="mt-[20px] rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[16px] text-center">
+                <span className="text-[10px] font-mono-code uppercase text-[#898989] block">
+                  Measured Round-Trip Ping
+                </span>
+                <div className="my-[8px] flex items-center justify-center gap-[4px]">
+                  <span className="text-[36px] font-bold font-mono-code text-emerald-400">
+                    {liveLatency}
+                  </span>
+                  <span className="text-[16px] font-mono-code text-emerald-400">ms</span>
+                </div>
+                <div className="flex items-center justify-center gap-[8px] text-[11px] text-[#898989]">
+                  <span className="text-[#ff6b35] font-semibold">{activeNode.speedMultiplier}</span>
+                  <span>·</span>
+                  <span>{activeNode.egress}</span>
+                </div>
+              </div>
+
+              {/* Node Feature Badges */}
+              <div className="mt-[18px] flex flex-col gap-[8px]">
+                {activeNode.features.map((feat, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-[8px] rounded-[8px] border border-[#2e2e2e]/60 bg-[#171717]/60 px-[10px] py-[7px] text-[12px] text-[#b4b4b4]"
+                  >
+                    <CheckCircle2 className="h-[13px] w-[13px] text-[#ff6b35] shrink-0" />
+                    <span>{feat}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[12px]">
-              <span className="block text-[10px] font-mono-code uppercase text-[#898989]">
-                Vector Throughput
-              </span>
-              <span className="mt-[4px] block text-[16px] font-mono-code font-semibold text-[#fafafa]">
-                {selectedNode.throughput}
-              </span>
-              <span className="mt-[2px] block text-[10px] text-[#898989]">
-                Vectorized SIMD Stream
-              </span>
-            </div>
-
-            <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[12px]">
-              <span className="block text-[10px] font-mono-code uppercase text-[#898989]">
-                Network Egress
-              </span>
-              <span className="mt-[4px] block text-[16px] font-mono-code font-semibold text-[#ff6b35]">
-                {selectedNode.egress}
-              </span>
-              <span className="mt-[2px] block text-[10px] text-[#898989]">
-                Zero warehouse penalty
-              </span>
-            </div>
-
-            <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[12px]">
-              <span className="block text-[10px] font-mono-code uppercase text-[#898989]">
-                Memory Footprint
-              </span>
-              <span className="mt-[4px] block text-[16px] font-mono-code font-semibold text-[#fafafa]">
-                {selectedNode.memory}
-              </span>
-              <span className="mt-[2px] block text-[10px] text-[#898989]">
-                Arrow Zero-Copy Buffer
-              </span>
+            {/* Bottom Guarantee */}
+            <div className="mt-[20px] pt-[14px] border-t border-[#2e2e2e] flex items-center justify-between text-[11px] font-mono-code text-[#898989]">
+              <span>Hardware Encryption:</span>
+              <span className="text-[#fafafa]">TLS 1.3 + ChaCha20</span>
             </div>
           </div>
         </div>
