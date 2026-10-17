@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Inter, IBM_Plex_Mono } from "next/font/google";
+import { Manrope, Inter, IBM_Plex_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../contexts/auth-context";
 import { WorkspaceProvider } from "../contexts/workspace-context";
 import { ThemeProvider } from "../contexts/theme-context";
 import { ScrollProgressBar } from "../components/shell/ScrollProgressBar";
 
-const fontHeading = Manrope({
+const fontHeading = Inter({
   subsets: ["latin"],
   variable: "--font-heading",
   display: "swap",
@@ -20,12 +20,15 @@ const fontSans = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
-const fontMono = IBM_Plex_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
   weight: ["400", "500", "600"],
 });
+
+
+
 export const metadata: Metadata = {
   title: {
     default: "RicozViz — Enterprise Intelligence & Governed Analytics",

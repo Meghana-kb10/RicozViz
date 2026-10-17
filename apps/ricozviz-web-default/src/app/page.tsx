@@ -1,434 +1,469 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import {
-  ArrowRight,
-  Database,
-  Layers,
-  Terminal,
-  Shield,
-  Zap,
-} from "lucide-react";
-import { Hero3DCanvas } from "@/components/3d/Hero3DCanvas";
-import { IsometricPipeline } from "@/components/3d/IsometricPipeline";
-import { DataNetworkGraph } from "@/components/3d/DataNetworkGraph";
-import { BentoGrid, BentoCard } from "@/components/shell/BentoGrid";
-import { HaikeiBackground } from "@/components/shell/HaikeiBackground";
-import { BrandLogo } from "@/components/shell/BrandLogo";
-import { TechnicalFooter } from "@/components/shell/TechnicalFooter";
-import { HeroDashboardPreview } from "@/components/dashboard/HeroDashboardPreview";
-import { QueryIdeWindow } from "@/components/shell/QueryIdeWindow";
-import { ThemeToggle } from "@/components/shell/ThemeToggle";
-import { ConnectorGridLogoCloud } from "@/components/shell/ConnectorGridLogoCloud";
-import { SecurityGovernanceBadges } from "@/components/shell/SecurityGovernanceBadges";
-import { DedicatedRlsGovernanceBlock } from "@/components/shell/DedicatedRlsGovernanceBlock";
-import { MultiTenantAuditTrailMockup } from "@/components/shell/MultiTenantAuditTrailMockup";
-import { CollaborativeMultiplayerCanvas } from "@/components/shell/CollaborativeMultiplayerCanvas";
-import { TerminalQuickstartSnippet } from "@/components/shell/TerminalQuickstartSnippet";
+"use client";
 
-export const metadata: Metadata = {
-  title: "RicozViz — Enterprise Intelligence & In-Memory Analytics",
-  description:
-    "Connect your data, explore insights, build high-performance dashboards, and share governed analytics across your organization — all from one intelligent workspace.",
-};
+import React, { useState } from "react";
+import HeroBentoSection from "@/components/landing/HeroBentoSection";
+import InteractiveWorkbench from "@/components/landing/InteractiveWorkbench";
+import CapabilityGrid from "@/components/landing/CapabilityGrid";
+import ParticleCtaSection from "@/components/landing/ParticleCtaSection";
+
+const DATA_CONNECTORS = [
+  "PostgreSQL",
+  "Snowflake",
+  "BigQuery",
+  "ClickHouse",
+  "Databricks",
+  "Amazon Redshift",
+  "S3 Parquet",
+  "Apache Kafka",
+  "MySQL",
+];
+
+interface Testimonial {
+  handle: string;
+  role: string;
+  avatar: string;
+  category: "engineering" | "security" | "analytics";
+  quote: string;
+}
+
+const TESTIMONIALS: Testimonial[] = [
+  {
+    handle: "@lukas_v",
+    role: "VP Data Platform, FinCore",
+    avatar: "LV",
+    category: "engineering",
+    quote:
+      "Compiling DuckDB to WebAssembly inside ricozviz eliminated 80% of our warehouse round-trips. Analysts slice 25M Parquet rows from S3 in 1.4 milliseconds.",
+  },
+  {
+    handle: "@sarah_ciso",
+    role: "Head of Information Security, VaultHealth",
+    avatar: "SC",
+    category: "security",
+    quote:
+      "Row-Level Security, parameterized SQL AST validation, and automatic PII masking allowed us to open self-service SQL to 400 regional managers without a single compliance exception.",
+  },
+  {
+    handle: "@dev_kaito",
+    role: "Staff Streaming Architect, PulsePay",
+    avatar: "DK",
+    category: "engineering",
+    quote:
+      "Joining live Apache Kafka topics against historical Snowflake tables in a single unified canvas used to take three pipelines. In viz, it is a single query.",
+  },
+  {
+    handle: "@nadia_bi",
+    role: "Director of Revenue Operations, ScaleGrid",
+    avatar: "NB",
+    category: "analytics",
+    quote:
+      "The multi-canvas dashboard builder and real-time multiplayer presence completely replaced our static weekly slide decks. Everyone explores the live numbers together.",
+  },
+  {
+    handle: "@marcus_audit",
+    role: "Principal Governance Lead, EuroBank",
+    avatar: "MA",
+    category: "security",
+    quote:
+      "Tamper-evident SHA-256 query logs and SAML 2.0 / SCIM group provisioning gave our external auditors instant verification of multi-tenant data isolation.",
+  },
+  {
+    handle: "@chloe_product",
+    role: "Lead Product Manager, CloudMetrics",
+    avatar: "CP",
+    category: "analytics",
+    quote:
+      "We embedded ricozviz customer-facing dashboards in two afternoons using expiring iframe tokens. Zero cross-tenant leakage and native dark-mode polish.",
+  },
+  {
+    handle: "@arjun_olap",
+    role: "Distinguished Engineer, QuantFlow",
+    avatar: "AO",
+    category: "engineering",
+    quote:
+      "The performance monitoring telemetry—inspecting Wasm memory footprint, vectorized scan throughput, and P99 execution times—feels like a true midnight IDE for data.",
+  },
+  {
+    handle: "@elena_exec",
+    role: "Chief Data Officer, OmniRetail",
+    avatar: "EE",
+    category: "analytics",
+    quote:
+      "From raw data source discovery to automated anomaly webhooks, ricozviz gives us end-to-end lineage visibility for every executive decision.",
+  },
+];
 
 export default function HomePage() {
+  const [selectedConnector, setSelectedConnector] =
+    useState<string>("Snowflake");
+  const [testimonialFilter, setTestimonialFilter] = useState<
+    "all" | "engineering" | "security" | "analytics"
+  >("all");
+
+  // Interactive Demo / Workspace Form State
+  const [workEmail, setWorkEmail] = useState<string>("");
+  const [workspaceSlug, setWorkspaceSlug] = useState<string>("acme-analytics");
+  const [selectedSources, setSelectedSources] = useState<string[]>([
+    "PostgreSQL",
+    "Snowflake",
+    "Apache Kafka",
+  ]);
+  const [provisionSubmitted, setProvisionSubmitted] = useState<boolean>(false);
+
+  // Interactive Auth / SAML Modal State
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+  const [ssoDomain, setSsoDomain] = useState<string>("acmecorp.io");
+
+  const toggleSourceSelection = (name: string) => {
+    setSelectedSources((prev) =>
+      prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name]
+    );
+  };
+
+  const filteredTestimonials = TESTIMONIALS.filter((t) =>
+    testimonialFilter === "all" ? true : t.category === testimonialFilter
+  );
+
   return (
-    <div className="flex min-h-screen flex-col bg-[#F4F1EA] dark:bg-[#111827] text-[#172B3A] dark:text-[#E5E7EB] selection:bg-[#147D78] selection:text-white antialiased relative overflow-x-hidden font-sans transition-colors duration-200">
-      {/* ============================================================ */}
-      {/* 1. TOPBAR: Precision Navigation & Actions                    */}
-      {/* ============================================================ */}
-      <header className="sticky top-0 z-50 border-b border-[#DADFD9] dark:border-[#374151] bg-[#F4F1EA]/90 dark:bg-[#111827]/90 backdrop-blur-md transition-colors duration-200">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Logo & Navigation */}
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <BrandLogo size={30} priority />
-              <div className="flex flex-col leading-none">
-                <span className="text-base font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
-                  Ricoz<span className="text-[#147D78] dark:text-[#4F9D8E]">Viz</span>
-                </span>
-                <span className="text-[9px] uppercase tracking-wider font-mono text-[#596775] dark:text-[#9CA3AF]">
-                  Intelligence OS
-                </span>
-              </div>
-            </Link>
+    <div className="min-h-screen bg-[#121212] text-[#fafafa]">
+      {/* PIECE 1: Top Nav, 2-Column Hero, 12-Column Product Bento Grid, and Framed 2x6 Connector Grid */}
+      <HeroBentoSection
+        selectedConnector={selectedConnector}
+        onSelectConnector={setSelectedConnector}
+        onOpenAuthModal={() => setAuthModalOpen(true)}
+      />
 
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-[#596775] dark:text-[#9CA3AF]">
-              <a href="#capabilities" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Platform
-              </a>
-              <a href="#connectors" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Connectors
-              </a>
-              <a href="#governance" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Security & Trust
-              </a>
-              <a href="#audit-trail" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Audit Trail
-              </a>
-              <a href="#workflow" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Pipeline
-              </a>
-              <a href="#topology" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Topology
-              </a>
-              <Link href="/docs" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Docs
-              </Link>
-              <Link href="/benchmarks" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Benchmarks
-              </Link>
-              <Link href="/status" className="hover:text-[#172B3A] dark:hover:text-[#E5E7EB] transition">
-                Status
-              </Link>
-            </nav>
-          </div>
+      {/* PIECE 2: Framed 2x6 Monochrome Connector Grid & Full-Chrome Dark IDE Application Window */}
+      <InteractiveWorkbench
+        selectedConnector={selectedConnector}
+        onSelectConnector={setSelectedConnector}
+      />
 
-          {/* Right Actions with Theme Toggle */}
-          <div className="flex items-center gap-2.5">
-            <ThemeToggle />
-            <Link
-              href="/login"
-              className="px-3.5 py-1.5 text-xs rounded-lg border border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#1F2937] hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] transition font-medium shadow-xs"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="px-4 py-1.5 text-xs rounded-lg bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] text-white font-medium transition flex items-center gap-1.5 shadow-xs"
-            >
-              <span>Launch Workspace</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* PIECE 3: Split SDK Inspector, 2x2 Governance Showcase, 4-Col Masonry Testimonials, and Instant Provisioner */}
+      <div id="piece-governance-social" className="flex flex-col gap-[88px] pb-[80px]">
+        <CapabilityGrid />
 
-      {/* ============================================================ */}
-      {/* 2. HERO SECTION: Editorial Hierarchy & Dashboard Focus      */}
-      {/* ============================================================ */}
-      <section className="relative overflow-hidden pt-12 pb-16 lg:pt-16 lg:pb-24">
-        <Hero3DCanvas />
-
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
-          <div className="text-center max-w-3xl mx-auto">
-            {/* Confident, High-Contrast Typography */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB] leading-[1.16]">
-              Turn enterprise data into{" "}
-              <span className="text-[#147D78] dark:text-[#4F9D8E]">decisions</span>.
-            </h1>
-
-            {/* Clear, Professional Subtext */}
-            <p className="mt-4 text-base sm:text-lg text-[#596775] dark:text-[#9CA3AF] max-w-2xl mx-auto leading-relaxed">
-              Connect relational databases, stream in-memory columnar datasets,
-              and explore sub-12ms analytics with cryptographic row-level
-              security.
-            </p>
-
-            {/* Restrained CTAs */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                href="/register"
-                className="bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] text-white px-5 py-2.5 text-xs rounded-lg font-medium flex items-center gap-2 shadow-xs transition"
-              >
-                <span>Launch Workspace</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <a
-                href="#topology"
-                className="bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/40 hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] px-5 py-2.5 text-xs rounded-lg flex items-center gap-2 transition shadow-xs"
-              >
-                <Layers className="h-3.5 w-3.5 text-[#147D78] dark:text-[#4F9D8E]" />
-                <span>Explore Topology</span>
-              </a>
-              <Link
-                href="/benchmarks"
-                className="bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] hover:border-[#147D78]/40 dark:hover:border-[#4F9D8E]/40 hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] px-5 py-2.5 text-xs rounded-lg flex items-center gap-2 transition shadow-xs"
-              >
-                <Database className="h-3.5 w-3.5 text-[#147D78] dark:text-[#4F9D8E]" />
-                <span>View DuckDB Benchmarks</span>
-              </Link>
-            </div>
-
-            {/* Terminal-Style Quickstart / SDK Snippet */}
-            <div className="mt-5 max-w-xl mx-auto">
-              <TerminalQuickstartSnippet />
-            </div>
-
-            {/* Technical Sub-Caption */}
-            <p className="mt-4 text-[11px] font-mono text-[#596775] dark:text-[#9CA3AF]">
-              In-Memory DuckDB OLAP · Zero-Copy Arrow Buffers · Cryptographic RLS
-            </p>
-          </div>
-
-          {/* ============================================================ */}
-          {/* REALISTIC RICOZVIZ DASHBOARD PREVIEW (THE VISUAL FOCUS)     */}
-          {/* ============================================================ */}
-          <div className="mt-12">
-            <HeroDashboardPreview />
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* 3. ARCHITECTURAL CAPABILITIES (TECHNICAL BENTO GRID)         */}
-      {/* ============================================================ */}
-      <section
-        id="capabilities"
-        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
-              Architectural Capabilities
-            </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
-              Engineered for speed, isolation, and craft.
+        {/* 4-COLUMN MASONRY CUSTOMER STORIES */}
+        <section
+          id="testimonials"
+          className="mx-auto w-full max-w-[1200px] px-[24px]"
+        >
+          <div className="mb-[32px] flex flex-col items-start justify-between gap-[16px] md:flex-row md:items-end">
+            <h2 className="text-[32px] font-normal leading-[1.18] tracking-[-0.02em] sm:text-[36px]">
+              <span className="block text-[#898989]">
+                Data-driven decision making
+              </span>
+              <span className="block text-[#fafafa]">
+                trusted by engineering and security leaders
+              </span>
             </h2>
-            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] leading-relaxed">
-              Built with dedicated in-memory OLAP acceleration, cryptographic
-              row-level security, and real-time multiplayer state synchronization.
-            </p>
-          </div>
 
-          {/* Technical Bento Grid */}
-          <BentoGrid>
-            {/* Bento Card 1: 2x2 Core Engine */}
-            <BentoCard
-              span="2x2"
-              variant="technical"
-              badge="Core Engine"
-              title="Self-Service Visualization Studio & DuckDB Engine"
-              subtitle="Parameterized SQL-injection safe analytics with sub-12ms in-memory aggregation across relational and tabular datasets."
-            >
-              <div className="mt-4">
-                <QueryIdeWindow />
-              </div>
-            </BentoCard>
-
-            {/* Bento Card 2: 1x1 Dedicated Cryptographic Row-Level Security & RBAC */}
-            <BentoCard
-              span="1x1"
-              variant="technical"
-              badge="Security & Governance"
-              title="Row-Level Security (RLS) & RBAC"
-              subtitle="Granular row filters and cryptographic token policies dynamically isolate tenants and mask columns without database rebuilds."
-            >
-              <div className="mt-3 flex-1 flex flex-col justify-between">
-                <DedicatedRlsGovernanceBlock compact />
-              </div>
-            </BentoCard>
-
-            {/* Bento Card 3: 1x1 Real-Time Collaboration */}
-            <BentoCard
-              span="1x1"
-              variant="technical"
-              badge="Real-Time Collaboration"
-              title="Live Multiplayer Analytics"
-              subtitle="Multi-user live presence, cursor and widget focus locks, and conflict-safe optimistic concurrency control."
-            >
-              <div className="mt-3 flex-1 flex flex-col justify-between">
-                <CollaborativeMultiplayerCanvas compact />
-              </div>
-            </BentoCard>
-
-            {/* Bento Card 4: 2x1 Public & Embedded Analytics */}
-            <BentoCard
-              span="2x1"
-              variant="technical"
-              badge="Embedded Analytics"
-              title="Public & Embedded Analytics Engine"
-              subtitle="Secure iframe embedding with origin policy restrictions, auto-expiring cryptographic tokens, and zero credential leakage."
-            >
-              <div className="mt-3 flex items-center gap-3">
-                <code className="text-xs font-mono bg-[#F4F1EA] dark:bg-[#111827] px-3 py-2 rounded-lg border border-[#DADFD9] dark:border-[#374151] text-[#172B3A] dark:text-[#E5E7EB] flex-1 truncate">
-                  &lt;iframe src=&quot;https://ricozviz.app/embed/tok_48char&quot; ... /&gt;
-                </code>
-                <Link
-                  href="/docs"
-                  className="bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] text-white px-3.5 py-1.5 text-xs rounded-lg font-medium whitespace-nowrap transition"
+            <div className="flex flex-wrap gap-[8px]">
+              {(
+                [
+                  { id: "all", label: "All Teams" },
+                  { id: "engineering", label: "Data Engineering" },
+                  { id: "security", label: "Security & Audit" },
+                  { id: "analytics", label: "Executive BI" },
+                ] as const
+              ).map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setTestimonialFilter(f.id)}
+                  className={`rounded-full border px-[14px] py-[6px] text-[12px] transition-colors cursor-pointer ${testimonialFilter === f.id
+                    ? "border-[#fafafa] bg-[#1c1c1c] font-medium text-[#fafafa]"
+                    : "border-[#2e2e2e] bg-transparent text-[#898989] hover:border-[#393939] hover:text-[#fafafa]"
+                    }`}
                 >
-                  View Embed Specs
-                </Link>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="columns-1 gap-[16px] space-y-[16px] sm:columns-2 lg:columns-4">
+            {filteredTestimonials.map((item) => (
+              <div
+                key={item.handle}
+                className="break-inside-avoid rounded-[16px] border border-[#2e2e2e] bg-[#171717] p-[20px] transition-colors hover:border-[#393939]"
+              >
+                <div className="flex items-center gap-[12px]">
+                  <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full border border-[#393939] bg-[#242424] text-[12px] font-medium text-[#fafafa]">
+                    {item.avatar}
+                  </div>
+                  <div>
+                    <div className="text-[14px] font-medium leading-[1.43] text-[#fafafa]">
+                      {item.handle}
+                    </div>
+                    <div className="text-[12px] font-normal leading-[1.5] text-[#898989]">
+                      {item.role}
+                    </div>
+                  </div>
+                </div>
+                <p className="mt-[14px] text-[14px] font-normal leading-[1.5] text-[#b4b4b4]">
+                  &ldquo;{item.quote}&rdquo;
+                </p>
               </div>
-            </BentoCard>
+            ))}
+          </div>
+        </section>
 
-            {/* Bento Card 5: 1x1 Automated Alerts */}
-            <BentoCard
-              span="1x1"
-              variant="technical"
-              badge="Automated Alerts"
-              title="Alerts & Scheduled Reports"
-              subtitle="Metric anomaly detection and cron-driven delivery across email, webhooks, and workspace notifications."
-            >
-              <div className="mt-3 flex items-center justify-between text-xs font-mono text-[#596775] dark:text-[#9CA3AF]">
-                <span>Anomaly Threshold: &gt; 95%</span>
-                <span className="text-[#D9A441] font-semibold bg-[#F4F1EA] dark:bg-[#111827] border border-[#DADFD9] dark:border-[#374151] px-2 py-0.5 rounded text-[10px]">
-                  CRON ACTIVE
-                </span>
+        {/* INSTANT WORKSPACE PROVISIONER CTA SECTION */}
+        <section
+          id="provision"
+          className="mx-auto w-full max-w-[1200px] px-[24px]"
+        >
+          <div className="rounded-[16px] border border-[#2e2e2e] bg-[#171717] p-[24px] sm:p-[40px]">
+            <div className="grid grid-cols-1 gap-[32px] lg:grid-cols-12">
+              <div className="flex flex-col justify-between lg:col-span-6">
+                <div>
+                  <h2 className="text-[32px] font-normal leading-[1.18] tracking-[-0.02em] sm:text-[36px]">
+                    <span className="block text-[#898989]">
+                      Build in minutes,
+                    </span>
+                    <span className="block text-[#fafafa]">
+                      govern across every tenant
+                    </span>
+                  </h2>
+                  <p className="mt-[12px] text-[15px] font-normal leading-[1.5] text-[#898989]">
+                    Configure your isolated multi-tenant workspace, select your
+                    initial data connectors, and launch an in-memory DuckDB
+                    WebAssembly analytics environment.
+                  </p>
+
+                  <div className="mt-[24px]">
+                    <label className="block text-[12px] text-[#898989]">
+                      Select Data Sources to Pre-Connect:
+                    </label>
+                    <div className="mt-[10px] flex flex-wrap gap-[8px]">
+                      {DATA_CONNECTORS.map((name) => {
+                        const active = selectedSources.includes(name);
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => toggleSourceSelection(name)}
+                            className={`rounded-full border px-[12px] py-[5px] text-[12px] transition-colors cursor-pointer ${active
+                              ? "border-[#fafafa] bg-[#242424] font-medium text-[#fafafa]"
+                              : "border-[#2e2e2e] bg-transparent text-[#898989] hover:border-[#393939] hover:text-[#fafafa]"
+                              }`}
+                          >
+                            {active ? "✓ " : "+ "}
+                            {name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-[24px] rounded-[11px] border border-[#2e2e2e] bg-[#0d0d0d] p-[16px] font-mono-code text-[11px] text-[#b4b4b4]">
+                  <div className="text-[#898989]">
+                    // WORKSPACE CONFIGURATION MANIFEST
+                  </div>
+                  <div className="mt-[6px]">
+                    tenant:{" "}
+                    <span className="text-[#fafafa]">
+                      &quot;{workspaceSlug || "default-org"}&quot;
+                    </span>
+                    <br />
+                    engine:{" "}
+                    <span className="text-[#fafafa]">
+                      &quot;duckdb_wasm_simd128&quot;
+                    </span>
+                    <br />
+                    sources: [{selectedSources.map((s) => `"${s}"`).join(", ")}]
+                    <br />
+                    guardrails:{" "}
+                    <span className="text-[#fafafa]">
+                      &quot;RLS + RBAC + PII_MASK + SAML_2.0&quot;
+                    </span>
+                  </div>
+                </div>
               </div>
-            </BentoCard>
-          </BentoGrid>
-        </div>
-      </section>
 
-      {/* ============================================================ */}
-      {/* 4. ENTERPRISE DATA CONNECTOR GRID & LOGO CLOUD               */}
-      {/* ============================================================ */}
-      <section
-        id="connectors"
-        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
-              Enterprise Integrations
+              <div className="flex flex-col justify-between rounded-[16px] border border-[#2e2e2e] bg-[#121212] p-[24px] lg:col-span-6">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setProvisionSubmitted(true);
+                  }}
+                  className="flex flex-col gap-[16px]"
+                >
+                  <div className="text-[16px] font-medium text-[#fafafa]">
+                    Start your RicozViz project
+                  </div>
+
+                  <div>
+                    <label className="mb-[6px] block text-[12px] text-[#898989]">
+                      Work Email (SAML 2.0 / SSO Auto-Discovery)
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={workEmail}
+                      onChange={(e) => setWorkEmail(e.target.value)}
+                      placeholder="architect@enterprise.io"
+                      className="w-full rounded-[8px] border border-[#393939] bg-[#121212] px-[12px] py-[8px] text-[14px] font-normal text-[#fafafa] placeholder-[#898989] focus:border-[#ff6b35] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-[6px] block text-[12px] text-[#898989]">
+                      Isolated Tenant Slug
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={workspaceSlug}
+                      onChange={(e) => setWorkspaceSlug(e.target.value)}
+                      placeholder="acme-global-analytics"
+                      className="w-full rounded-[8px] border border-[#393939] bg-[#121212] px-[12px] py-[8px] text-[14px] font-normal text-[#fafafa] placeholder-[#898989] focus:border-[#ff6b35] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2">
+                    <div>
+                      <label className="mb-[6px] block text-[12px] text-[#898989]">
+                        Primary Region (RLS Anchor)
+                      </label>
+                      <select className="w-full rounded-[8px] border border-[#393939] bg-[#121212] px-[12px] py-[8px] text-[14px] font-normal text-[#fafafa] focus:border-[#ff6b35] focus:outline-none">
+                        <option>US-East (N. Virginia)</option>
+                        <option>EU-Central (Frankfurt)</option>
+                        <option>AP-Southeast (Singapore)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-[6px] block text-[12px] text-[#898989]">
+                        Identity Provider
+                      </label>
+                      <select className="w-full rounded-[8px] border border-[#393939] bg-[#121212] px-[12px] py-[8px] text-[14px] font-normal text-[#fafafa] focus:border-[#ff6b35] focus:outline-none">
+                        <option>Okta SAML 2.0 + SCIM</option>
+                        <option>Microsoft Entra ID</option>
+                        <option>Google Workspace SSO</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-[6px] flex flex-wrap items-center gap-[10px]">
+                    <button
+                      type="submit"
+                      className="h-[38px] flex-1 rounded-full border border-[#ff6b35]/80 bg-[#9a3412] px-[18px] text-[14px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c] cursor-pointer"
+                    >
+                      {provisionSubmitted
+                        ? "Workspace Provisioned ✓"
+                        : "Start your project"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthModalOpen(true)}
+                      className="h-[38px] rounded-full border border-[#393939] bg-[#1c1c1c] px-[16px] text-[14px] font-normal text-[#fafafa] hover:border-[#4d4d4d] cursor-pointer"
+                    >
+                      Request a demo
+                    </button>
+                  </div>
+                </form>
+
+                {provisionSubmitted && (
+                  <div className="mt-[14px] rounded-[8px] border border-[#ff6b35] bg-[#0d0d0d] p-[10px] font-mono-code text-[11px] text-[#fafafa]">
+                    ✓ Tenant <span className="text-[#ff6b35]">{workspaceSlug}</span>{" "}
+                    provisioned with {selectedSources.length} connectors &amp;
+                    SHA-256 audit ledger.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* DYNAMIC PARTICLE CTA SECTION */}
+      <ParticleCtaSection onOpenAuthModal={() => setAuthModalOpen(true)} />
+
+      {/* FOOTER */}
+      <footer className="border-t border-[#2e2e2e] bg-[#121212] py-[48px]">
+        <div className="mx-auto flex max-w-[1200px] flex-col items-start justify-between gap-[24px] px-[24px] sm:flex-row sm:items-center">
+          <div className="flex items-center gap-[10px]">
+            <img className="size-6" src="images/logo.png" alt="" />
+            <span className="text-[14px] font-medium text-[#fafafa]">
+              ricozviz
             </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
-              Native connectors for modern data warehouses & lakehouses
-            </h2>
-            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
-              Direct pushdown execution and zero-copy streaming across Snowflake, ClickHouse, BigQuery, Databricks, Redshift, and S3 Parquet with cryptographic access tokens.
-            </p>
-          </div>
-
-          <ConnectorGridLogoCloud />
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* 5. ENTERPRISE SECURITY & GOVERNANCE BADGES                   */}
-      {/* ============================================================ */}
-      <section
-        id="governance"
-        className="py-20 bg-[#F4F1EA] dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
-              Enterprise Trust & Governance
+            <span className="text-[12px] text-[#898989]">
+              — In-Memory OLAP, Real-Time Streaming &amp; Zero-Trust Governance
             </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
-              Cryptographically verified security and compliance
-            </h2>
-            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
-              Audited SOC 2 Type II controls, HIPAA ready data boundaries, ISO 27001 certification, and hardware-grade cryptographic row-level security.
+          </div>
+
+          <div className="flex flex-wrap gap-[24px] text-[12px] text-[#898989]">
+            <a href="#products" className="hover:text-[#fafafa]">
+              DuckDB Wasm
+            </a>
+            <a href="#piece-workbench" className="hover:text-[#fafafa]">
+              Interactive Workbench
+            </a>
+            <a href="#piece-governance-social" className="hover:text-[#fafafa]">
+              RLS &amp; Audit Ledger
+            </a>
+            <a href="#provision" className="hover:text-[#fafafa]">
+              SAML 2.0 SSO
+            </a>
+          </div>
+        </div>
+      </footer>
+
+      {/* INTERACTIVE SAML 2.0 SSO MODAL */}
+      {authModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#121212]/85 p-[24px]">
+          <div className="w-full max-w-[440px] rounded-[16px] border border-[#2e2e2e] bg-[#171717] p-[24px]">
+            <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-[12px]">
+              <span className="font-mono-code text-[11px] text-[#ff6b35]">
+                ENTERPRISE_AUTH // SAML_2.0_SSO
+              </span>
+              <button
+                type="button"
+                onClick={() => setAuthModalOpen(false)}
+                className="rounded-full border border-[#393939] px-[10px] py-[2px] text-[12px] text-[#b4b4b4] hover:text-[#fafafa] cursor-pointer"
+              >
+                ESC
+              </button>
+            </div>
+            <h3 className="mt-[16px] text-[20px] font-normal text-[#fafafa]">
+              Sign in to ricozviz
+            </h3>
+            <p className="mt-[6px] text-[14px] text-[#898989]">
+              Authenticate via your organization&apos;s SAML 2.0 Identity
+              Provider to inherit RBAC and Row-Level Security policies.
             </p>
-          </div>
-
-          <SecurityGovernanceBadges />
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* 5.5 MULTI-TENANT AUDIT TRAIL & CRYPTOGRAPHIC LEDGER         */}
-      {/* ============================================================ */}
-      <section
-        id="audit-trail"
-        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
-              Zero-Trust Observability
-            </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
-              Multi-tenant audit trail & cryptographic kill-switch
-            </h2>
-            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
-              Explore hardware-grade immutable query logs chained via RFC 6962 SHA-256 blocks, real-time distributed user session presence, and instant zero-reuse token revocation.
-            </p>
-          </div>
-
-          <MultiTenantAuditTrailMockup />
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* 6. DATA WORKFLOW PIPELINE                                   */}
-      {/* ============================================================ */}
-      <section
-        id="workflow"
-        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] relative transition-colors duration-200"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
-              End-to-End Pipeline
-            </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
-              From raw data to actionable insight
-            </h2>
-            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF]">
-              An architectural pipeline transforming raw tabular data into
-              governed decision assets.
-            </p>
-          </div>
-
-          <IsometricPipeline />
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* 5. DATA TOPOLOGY                                            */}
-      {/* ============================================================ */}
-      <section
-        id="topology"
-        className="py-20 bg-white dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] text-[#172B3A] dark:text-[#E5E7EB] relative overflow-hidden transition-colors duration-200"
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[#147D78] dark:text-[#4F9D8E]">
-              Connected Infrastructure
-            </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-heading font-bold text-[#172B3A] dark:text-[#E5E7EB] tracking-tight">
-              Trace every metric to its source.
-            </h2>
-            <p className="mt-3 text-sm text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
-              From relational connection pools and CSV streams through schema
-              discovery and parameterized query execution into live executive canvases.
-            </p>
-          </div>
-
-          <DataNetworkGraph />
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* 6. CALL TO ACTION                                           */}
-      {/* ============================================================ */}
-      <section className="py-20 bg-[#F4F1EA] dark:bg-[#111827] border-t border-[#DADFD9] dark:border-[#374151] text-[#172B3A] dark:text-[#E5E7EB] relative transition-colors duration-200">
-        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center z-10">
-          <h2 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight text-[#172B3A] dark:text-[#E5E7EB]">
-            Bring your enterprise data into focus.
-          </h2>
-          <p className="mt-3 text-sm sm:text-base text-[#596775] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
-            Connect data sources, build responsive charts, collaborate in real
-            time, and share governed analytics with confidence.
-          </p>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/register"
-              className="bg-[#147D78] hover:bg-[#106963] dark:bg-[#4F9D8E] dark:hover:bg-[#43887B] text-white font-medium px-5 py-2.5 text-xs rounded-lg shadow-xs transition"
-            >
-              Get Started Free
-            </Link>
-            <Link
-              href="/login"
-              className="border border-[#DADFD9] dark:border-[#374151] bg-white dark:bg-[#1F2937] hover:bg-[#F4F1EA] dark:hover:bg-[#283548] text-[#172B3A] dark:text-[#E5E7EB] font-medium px-5 py-2.5 text-xs rounded-lg transition shadow-xs"
-            >
-              Sign In to Workspace
-            </Link>
+            <div className="mt-[16px]">
+              <label className="mb-[6px] block text-[12px] text-[#898989]">
+                Organization Domain
+              </label>
+              <input
+                type="text"
+                value={ssoDomain}
+                onChange={(e) => setSsoDomain(e.target.value)}
+                className="w-full rounded-[8px] border border-[#393939] bg-[#121212] px-[12px] py-[8px] text-[14px] text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
+              />
+            </div>
+            <div className="mt-[20px] flex justify-end gap-[10px]">
+              <button
+                type="button"
+                onClick={() => setAuthModalOpen(false)}
+                className="rounded-full border border-[#393939] bg-transparent px-[16px] py-[8px] text-[13px] text-[#fafafa] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthModalOpen(false)}
+                className="rounded-full border border-[#ff6b35]/80 bg-[#9a3412] px-[16px] py-[8px] text-[13px] font-medium text-[#fafafa] cursor-pointer"
+              >
+                Continue with SAML SSO
+              </button>
+            </div>
           </div>
         </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* 7. COMPREHENSIVE TECHNICAL FOOTER                           */}
-      {/* ============================================================ */}
-      <TechnicalFooter />
+      )}
     </div>
   );
 }

@@ -51,38 +51,59 @@
 
 :root {
   /* ---- Editorial Enterprise Palette (Light Marketing & Default Theme) ---- */
-  --background: 42 31% 94%;           /* #F4F1EA - Main background */
-  --foreground: 206 43% 16%;          /* #172B3A - Primary text */
+  --background: 42 31% 94%;
+  /* #F4F1EA - Main background */
+  --foreground: 206 43% 16%;
+  /* #172B3A - Primary text */
 
-  --surface: 0 0% 100%;               /* #FFFFFF - Surface / card background */
-  --surface-border: 110 9% 86%;       /* #DADFD9 - Hairline borders */
-  --surface-subtle: 40 16% 91%;       /* #EBE7DF - Soft panel / tag fill */
+  --surface: 0 0% 100%;
+  /* #FFFFFF - Surface / card background */
+  --surface-border: 110 9% 86%;
+  /* #DADFD9 - Hairline borders */
+  --surface-subtle: 40 16% 91%;
+  /* #EBE7DF - Soft panel / tag fill */
 
-  --primary: 177 72% 28%;             /* #147D78 - Primary accent */
-  --primary-hover: 176 74% 24%;       /* #106963 - Accent hover */
-  --primary-foreground: 0 0% 100%;    /* Crisp readable white */
+  --primary: 177 72% 28%;
+  /* #147D78 - Primary accent */
+  --primary-hover: 176 74% 24%;
+  /* #106963 - Accent hover */
+  --primary-foreground: 0 0% 100%;
+  /* Crisp readable white */
   --primary-glow: 177 72% 28% / 0.12;
 
-  --secondary: 40 16% 91%;            /* #EBE7DF */
-  --secondary-foreground: 206 43% 16%;/* #172B3A */
+  --secondary: 40 16% 91%;
+  /* #EBE7DF */
+  --secondary-foreground: 206 43% 16%;
+  /* #172B3A */
 
-  --accent: 177 72% 28%;              /* #147D78 */
-  --accent-hover: 176 74% 24%;        /* #106963 */
+  --accent: 177 72% 28%;
+  /* #147D78 */
+  --accent-hover: 176 74% 24%;
+  /* #106963 */
   --accent-foreground: 0 0% 100%;
 
-  --highlight: 39 68% 55%;            /* #D9A441 - Subtle highlight */
+  --highlight: 39 68% 55%;
+  /* #D9A441 - Subtle highlight */
 
   --muted: 40 16% 91%;
-  --muted-foreground: 210 14% 40%;    /* #596775 - Secondary text */
+  --muted-foreground: 210 14% 40%;
+  /* #596775 - Secondary text */
 
-  --card: 0 0% 100%;                  /* #FFFFFF */
-  --card-foreground: 206 43% 16%;     /* #172B3A */
-  --card-border: 110 9% 86%;          /* #DADFD9 */
+  --card: 0 0% 100%;
+  /* #FFFFFF */
+  --card-foreground: 206 43% 16%;
+  /* #172B3A */
+  --card-border: 110 9% 86%;
+  /* #DADFD9 */
 
-  --success: 160 84% 39%;             /* #10B981 */
-  --warning: 39 68% 55%;              /* #D9A441 */
-  --danger: 350 89% 60%;              /* #EF4444 */
-  --info: 199 89% 48%;                /* #38BDF8 */
+  --success: 160 84% 39%;
+  /* #10B981 */
+  --warning: 39 68% 55%;
+  /* #D9A441 */
+  --danger: 350 89% 60%;
+  /* #EF4444 */
+  --info: 199 89% 48%;
+  /* #38BDF8 */
 
   /* ---- Restrained Radii & Subtle Shadows ---- */
   --radius-xs: 0.25rem;
@@ -98,33 +119,46 @@
 
 .dark {
   /* ---- Precision Dark Analytics Workspace Palette ---- */
-  --background: 221 39% 11%;          /* #111827 - Background */
-  --foreground: 220 14% 91%;          /* #E5E7EB - Primary text */
+  --background: 221 39% 11%;
+  /* #111827 - Background */
+  --foreground: 220 14% 91%;
+  /* #E5E7EB - Primary text */
 
-  --surface: 215 28% 17%;             /* #1F2937 - Card surfaces */
-  --surface-border: 217 19% 27%;      /* #374151 - Borders */
-  --surface-subtle: 217 25% 21%;      /* #283548 - Secondary panel fill */
+  --surface: 215 28% 17%;
+  /* #1F2937 - Card surfaces */
+  --surface-border: 217 19% 27%;
+  /* #374151 - Borders */
+  --surface-subtle: 217 25% 21%;
+  /* #283548 - Secondary panel fill */
 
-  --primary: 168 33% 46%;             /* #4F9D8E - Accent */
-  --primary-hover: 168 35% 40%;       /* #43887B */
+  --primary: 168 33% 46%;
+  /* #4F9D8E - Accent */
+  --primary-hover: 168 35% 40%;
+  /* #43887B */
   --primary-foreground: 0 0% 100%;
   --primary-glow: 168 33% 46% / 0.15;
 
   --secondary: 215 28% 17%;
   --secondary-foreground: 220 14% 91%;
 
-  --accent: 168 33% 46%;              /* #4F9D8E */
+  --accent: 168 33% 46%;
+  /* #4F9D8E */
   --accent-hover: 168 35% 40%;
   --accent-foreground: 0 0% 100%;
 
-  --highlight: 39 68% 55%;            /* #D9A441 */
+  --highlight: 39 68% 55%;
+  /* #D9A441 */
 
   --muted: 215 28% 17%;
-  --muted-foreground: 218 11% 65%;    /* #9CA3AF - Secondary text */
+  --muted-foreground: 218 11% 65%;
+  /* #9CA3AF - Secondary text */
 
-  --card: 215 28% 17%;                /* #1F2937 */
-  --card-foreground: 220 14% 91%;     /* #E5E7EB */
-  --card-border: 217 19% 27%;         /* #374151 */
+  --card: 215 28% 17%;
+  /* #1F2937 */
+  --card-foreground: 220 14% 91%;
+  /* #E5E7EB */
+  --card-border: 217 19% 27%;
+  /* #374151 */
 
   --shadow-tactile: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
   --shadow-float: 0 4px 14px -2px rgba(0, 0, 0, 0.4);
@@ -156,13 +190,23 @@ body {
 }
 
 /* Headings: Manrope with purposeful, disciplined weighting */
-h1, h2, h3, h4, h5, h6, .font-heading {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-heading {
   font-family: var(--font-heading, "Manrope", sans-serif);
   letter-spacing: -0.02em;
 }
 
 /* Technical Metrics, Query Timings & Code: IBM Plex Mono strictly */
-code, kbd, samp, pre, .font-mono {
+code,
+kbd,
+samp,
+pre,
+.font-mono {
   font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
   letter-spacing: -0.015em;
 }
@@ -280,28 +324,28 @@ code, kbd, samp, pre, .font-mono {
 }
 
 .haikei-grid {
-  background-image: 
+  background-image:
     linear-gradient(to right, hsl(var(--surface-border) / 0.7) 1px, transparent 1px),
     linear-gradient(to bottom, hsl(var(--surface-border) / 0.7) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
 .haikei-tech-grid {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(20, 125, 120, 0.06) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(20, 125, 120, 0.06) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 .dark .haikei-tech-grid {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(79, 157, 142, 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(79, 157, 142, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 .haikei-emerald-grid {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(20, 125, 120, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(20, 125, 120, 0.05) 1px, transparent 1px);
   background-size: 36px 36px;
@@ -334,13 +378,16 @@ code, kbd, samp, pre, .font-mono {
   width: 5px;
   height: 5px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--foreground) / 0.18);
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--foreground) / 0.32);
 }
