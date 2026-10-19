@@ -82,31 +82,34 @@ export default function OpenApiPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F1EA] text-[#172B3A] flex flex-col font-sans selection:bg-[#147D78] selection:text-white">
+    <div className="min-h-screen bg-[#121212] text-[#fafafa] flex flex-col font-sans selection:bg-[#ff6b35] selection:text-white antialiased">
       {/* Top Bar */}
-      <header className="sticky top-0 z-40 border-b border-[#DADFD9] bg-[#F4F1EA]/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-[#242424] bg-[#121212]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition">
               <BrandLogo size={28} />
-              <span className="text-base font-heading font-bold text-[#172B3A] tracking-tight">RicozViz</span>
+              <span className="text-base font-bold text-[#fafafa] tracking-tight">RicozViz</span>
             </Link>
-            <span className="text-[#DADFD9]">/</span>
-            <span className="text-xs font-mono font-semibold text-[#147D78]">OpenAPI 3.1 Specs</span>
+            <span className="text-[#333333]">/</span>
+            <span className="text-xs font-mono-code font-semibold text-[#ff6b35]">OpenAPI 3.1 Specs</span>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-mono">
+          <div className="flex items-center gap-4 text-xs font-mono-code">
             <button
               onClick={downloadSpec}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#DADFD9] bg-white hover:bg-[#F4F1EA] px-3 py-1.5 text-[#147D78] font-medium transition cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#ff6b35]/40 bg-[#ff6b35]/10 hover:bg-[#ff6b35]/20 px-3 py-1.5 text-[#ff6b35] font-medium transition cursor-pointer"
             >
               <Download className="h-3.5 w-3.5" />
               <span>Download JSON</span>
             </button>
-            <Link href="/docs" className="text-[#596775] hover:text-[#172B3A] transition">
+            <Link href="/docs" className="text-[#898989] hover:text-[#fafafa] transition">
               Docs
             </Link>
-            <Link href="/status" className="text-[#147D78] hover:text-[#106963] transition">
+            <Link href="/benchmarks" className="text-[#898989] hover:text-[#fafafa] transition">
+              Benchmarks
+            </Link>
+            <Link href="/status" className="text-[#ff6b35] hover:text-[#c2410c] transition">
               Status
             </Link>
           </div>
@@ -117,27 +120,27 @@ export default function OpenApiPage() {
       <main className="flex-1 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 w-full">
         {/* Title */}
         <div className="mb-8">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#DADFD9] bg-white px-3 py-0.5 text-xs font-mono text-[#147D78] mb-4 shadow-xs">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-3 py-0.5 text-xs font-mono-code text-[#ff6b35] mb-4">
             <span>REST Specification · OpenAPI 3.1.0 Standard</span>
           </div>
-          <h1 className="text-3xl font-heading font-bold text-[#172B3A] tracking-tight">
+          <h1 className="text-3xl font-bold text-[#fafafa] tracking-tight">
             OpenAPI Specs & Contract Reference
           </h1>
-          <p className="mt-2 text-sm text-[#596775]">
+          <p className="mt-2 text-sm text-[#898989]">
             Contract-driven Fastify API surface with automated input validation, sanitized error envelopes, and cryptographic tokens.
           </p>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-2 mb-6 text-xs font-mono">
+        <div className="flex flex-wrap items-center gap-2 mb-6 text-xs font-mono-code">
           {tags.map((tag) => (
             <button
               key={tag}
               onClick={() => setSelectedTag(tag)}
               className={`px-3 py-1.5 rounded-lg border transition cursor-pointer ${
                 selectedTag === tag
-                  ? "border-[#147D78] bg-[#147D78] text-white font-medium shadow-xs"
-                  : "border-[#DADFD9] bg-white text-[#596775] hover:text-[#172B3A] hover:border-[#147D78]/40"
+                  ? "border-[#ff6b35] bg-[#ff6b35] text-white font-medium"
+                  : "border-[#242424] bg-[#141414] text-[#898989] hover:text-[#fafafa] hover:border-[#ff6b35]/50"
               }`}
             >
               {tag}
@@ -146,38 +149,38 @@ export default function OpenApiPage() {
         </div>
 
         {/* Endpoints Table */}
-        <div className="rounded-xl border border-[#DADFD9] bg-white overflow-hidden shadow-xs">
-          <div className="divide-y divide-[#DADFD9]">
+        <div className="rounded-xl border border-[#242424] bg-[#141414] overflow-hidden">
+          <div className="divide-y divide-[#242424]">
             {filtered.map((ep, idx) => {
               const methodBg =
                 ep.method === "GET"
-                  ? "bg-[#147D78]/10 text-[#147D78] border-[#147D78]/30"
+                  ? "bg-[#ff6b35]/15 text-[#ff6b35] border-[#ff6b35]/30"
                   : ep.method === "POST"
-                  ? "bg-[#2E5B70]/10 text-[#2E5B70] border-[#2E5B70]/30"
+                  ? "bg-blue-500/15 text-blue-400 border-blue-500/30"
                   : ep.method === "PUT"
-                  ? "bg-[#D9A441]/15 text-[#D9A441] border-[#D9A441]/35"
-                  : "bg-red-50 text-red-600 border-red-200";
+                  ? "bg-amber-500/15 text-amber-400 border-amber-500/35"
+                  : "bg-rose-500/15 text-rose-400 border-rose-500/30";
 
               return (
-                <div key={idx} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-[#F4F1EA]/40 transition">
+                <div key={idx} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-[#181818] transition">
                   <div className="flex items-center gap-3">
-                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${methodBg} w-14 text-center`}>
+                    <span className={`text-[10px] font-mono-code font-bold px-2 py-0.5 rounded border ${methodBg} w-14 text-center`}>
                       {ep.method}
                     </span>
-                    <span className="font-mono text-xs text-[#172B3A] font-semibold">
+                    <span className="font-mono-code text-xs text-[#fafafa] font-semibold">
                       {ep.path}
                     </span>
                     {ep.authRequired && (
-                      <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono text-[#596775] bg-[#F4F1EA] border border-[#DADFD9] px-1.5 py-0.5 rounded">
-                        <Lock className="h-2.5 w-2.5 text-[#D9A441]" />
+                      <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono-code text-[#898989] bg-[#181818] border border-[#242424] px-1.5 py-0.5 rounded">
+                        <Lock className="h-2.5 w-2.5 text-amber-400" />
                         Bearer
                       </span>
                     )}
                   </div>
 
-                  <div className="text-xs text-[#596775] sm:text-right">
+                  <div className="text-xs text-[#898989] sm:text-right">
                     <span>{ep.summary}</span>
-                    <span className="ml-3 text-[10px] font-mono text-[#596775] bg-[#F4F1EA] px-1.5 py-0.5 rounded border border-[#DADFD9]">
+                    <span className="ml-3 text-[10px] font-mono-code text-[#898989] bg-[#181818] px-1.5 py-0.5 rounded border border-[#242424]">
                       {ep.tag}
                     </span>
                   </div>

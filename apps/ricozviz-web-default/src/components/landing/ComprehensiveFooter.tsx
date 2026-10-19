@@ -19,7 +19,7 @@ export default function ComprehensiveFooter() {
         <div className="mb-[48px] grid grid-cols-1 gap-[32px] pb-[40px] border-b border-[#2e2e2e] lg:grid-cols-12">
           <div className="flex flex-col gap-[14px] lg:col-span-5">
             <Link href="/" className="flex items-center gap-[10px]">
-              <img className="size-6" src="images/logo.png" alt="RicozViz Logo" />
+              <img className="size-6 rounded-md object-contain" src="/images/logo.png" alt="RicozViz Logo" />
               <span className="text-[18px] font-medium tracking-[-0.02em] text-[#fafafa]">
                 ricozviz
               </span>
@@ -28,8 +28,8 @@ export default function ComprehensiveFooter() {
               </span>
             </Link>
             <p className="max-w-[420px] text-[14px] leading-[1.6] text-[#898989]">
-              In-memory DuckDB WebAssembly analytics, real-time Kafka event streaming,
-              zero-copy Apache Arrow buffers, and hardware-grade cryptographic row-level security.
+              Universal SQL pushdown and cloud warehouse connectors, Natural Language to Chart AI,
+              10+ interactive Recharts visualizations, and secure expiring embeds.
             </p>
             <div className="flex items-center gap-[10px] text-[12px] font-mono-code text-[#898989]">
               <span className="flex h-[8px] w-[8px] rounded-full bg-emerald-400" />
@@ -41,25 +41,29 @@ export default function ComprehensiveFooter() {
             </div>
           </div>
 
-          <div className="flex flex-col justify-center rounded-[14px] border border-[#2e2e2e] bg-[#171717] p-[20px] lg:col-span-7">
+          <div className="flex flex-col justify-between rounded-[14px] border border-[#2e2e2e] bg-[#171717] p-[20px] lg:col-span-7">
             <div className="flex items-center justify-between">
-              <span className="font-mono-code text-[12px] text-[#fafafa] flex items-center gap-[6px]">
-                <Terminal className="h-[14px] w-[14px] text-[#ff6b35]" />
-                Zero-Config Local CLI Workspace
+              <span className="text-[14px] font-medium text-[#fafafa]">
+                Ready to build interactive dashboards?
               </span>
-              <span className="font-mono-code text-[11px] text-[#898989]">v0.1.0</span>
+              <span className="font-mono-code text-[11px] text-emerald-400">✓ Instant Setup</span>
             </div>
-            <div className="mt-[10px] flex items-center justify-between rounded-[8px] border border-[#2e2e2e] bg-[#0d0d0d] px-[14px] py-[10px] font-mono-code text-[12px]">
-              <span className="text-[#fafafa]">
-                <span className="text-[#ff6b35]">$</span> npx @ricoz/viz init
-              </span>
-              <button
-                type="button"
-                onClick={() => void navigator.clipboard.writeText("npx @ricoz/viz init")}
-                className="text-[11px] text-[#898989] hover:text-[#fafafa] transition-colors cursor-pointer"
+            <p className="mt-[6px] text-[13px] text-[#898989]">
+              Connect your databases in seconds, synthesize charts with AI, and embed governed canvases.
+            </p>
+            <div className="mt-[14px] flex items-center gap-[10px]">
+              <Link
+                href="/register"
+                className="rounded-full border border-[#ff6b35]/80 bg-[#9a3412] px-[16px] py-[6px] text-[12px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c]"
               >
-                Copy
-              </button>
+                Launch Free Workspace →
+              </Link>
+              <Link
+                href="/login"
+                className="rounded-full border border-[#393939] bg-[#121212] px-[14px] py-[6px] text-[12px] text-[#b4b4b4] hover:text-[#fafafa] transition-colors"
+              >
+                Sign In
+              </Link>
             </div>
           </div>
         </div>
@@ -73,23 +77,20 @@ export default function ComprehensiveFooter() {
             </span>
             <div className="flex flex-col gap-[9px] text-[13px] text-[#898989]">
               <a href="#products" className="hover:text-[#fafafa] transition-colors">
-                DuckDB Wasm OLAP
+                Universal Data Engine
               </a>
               <a href="#piece-workbench" className="hover:text-[#fafafa] transition-colors">
-                Multi-Canvas Workbench
+                Interactive Studio
+              </a>
+              <a href="#capabilities" className="hover:text-[#fafafa] transition-colors">
+                Platform Capabilities
               </a>
               <a href="#workflow" className="hover:text-[#fafafa] transition-colors">
-                Data Pipeline &amp; Vectorizer
+                Analytics Pipeline
               </a>
-              <a href="#topology" className="hover:text-[#fafafa] transition-colors">
-                Infrastructure Topology
-              </a>
-              <a href="#audit-trail" className="hover:text-[#fafafa] transition-colors">
-                Audit Trail &amp; Kill-Switch
-              </a>
-              <a href="#governance" className="hover:text-[#fafafa] transition-colors">
-                Cryptographic Governance
-              </a>
+              <Link href="/benchmarks" className="hover:text-[#fafafa] transition-colors">
+                DuckDB Benchmarks
+              </Link>
             </div>
           </div>
 
@@ -100,22 +101,22 @@ export default function ComprehensiveFooter() {
             </span>
             <div className="flex flex-col gap-[9px] text-[13px] text-[#898989]">
               <a href="#connectors" className="hover:text-[#fafafa] transition-colors">
-                Snowflake Flight SQL
+                PostgreSQL &amp; MySQL
               </a>
               <a href="#connectors" className="hover:text-[#fafafa] transition-colors">
-                ClickHouse Columnar
+                Snowflake Cloud SQL
+              </a>
+              <a href="#connectors" className="hover:text-[#fafafa] transition-colors">
+                ClickHouse Direct TCP
               </a>
               <a href="#connectors" className="hover:text-[#fafafa] transition-colors">
                 Google BigQuery Storage
               </a>
               <a href="#connectors" className="hover:text-[#fafafa] transition-colors">
-                Databricks Delta Lake
+                SQLite &amp; File DBs
               </a>
               <a href="#connectors" className="hover:text-[#fafafa] transition-colors">
-                Amazon S3 Parquet
-              </a>
-              <a href="#connectors" className="hover:text-[#fafafa] transition-colors">
-                Apache Kafka Streaming
+                REST API &amp; Spreadsheets
               </a>
             </div>
           </div>
@@ -129,17 +130,14 @@ export default function ComprehensiveFooter() {
               <Link href="/docs" className="hover:text-[#fafafa] transition-colors">
                 Documentation
               </Link>
-              <Link href="/benchmarks" className="hover:text-[#fafafa] transition-colors">
-                DuckDB Benchmarks
+              <Link href="/data-quality" className="hover:text-[#fafafa] transition-colors">
+                Data Quality Profiler
               </Link>
               <Link href="/status" className="hover:text-[#fafafa] transition-colors">
                 System Status
               </Link>
-              <Link href="/whitepaper" className="hover:text-[#fafafa] transition-colors">
-                Security Whitepaper
-              </Link>
-              <Link href="/openapi" className="hover:text-[#fafafa] transition-colors">
-                OpenAPI Specification
+              <Link href="/docs" className="hover:text-[#fafafa] transition-colors">
+                API Reference
               </Link>
             </div>
           </div>
@@ -156,15 +154,18 @@ export default function ComprehensiveFooter() {
               <Link href="/register" className="text-[#ff6b35] hover:text-[#ff8252] transition-colors font-medium">
                 Launch Free Project →
               </Link>
-              <a href="#provision" className="hover:text-[#fafafa] transition-colors">
-                Request Enterprise Demo
-              </a>
-              <a href="#governance" className="hover:text-[#fafafa] transition-colors">
-                SOC 2 Attestation
-              </a>
-              <a href="#governance" className="hover:text-[#fafafa] transition-colors">
-                HIPAA BAA Agreement
-              </a>
+              <Link href="/dashboards" className="hover:text-[#fafafa] transition-colors">
+                Dashboard Studio
+              </Link>
+              <Link href="/data-sources" className="hover:text-[#fafafa] transition-colors">
+                Data Source Manager
+              </Link>
+              <Link href="/alerts" className="hover:text-[#fafafa] transition-colors">
+                Threshold Alerts
+              </Link>
+              <Link href="/audit" className="hover:text-[#fafafa] transition-colors">
+                Activity Audit Ledger
+              </Link>
             </div>
           </div>
         </div>

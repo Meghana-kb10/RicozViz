@@ -3,69 +3,103 @@
 import React, { useState } from "react";
 
 const PIPELINE_STAGES = [
-  { id: "sources", label: "01. Sources", metric: "9 Connectors · TLS 1.3" },
-  { id: "discovery", label: "02. Discovery", metric: "1,420 Tables Cataloged" },
-  { id: "execution", label: "03. DuckDB SQL", metric: "1.4ms Vectorized Scan" },
-  { id: "viz", label: "04. Dashboards", metric: "60 FPS Multi-Canvas" },
-  { id: "decision", label: "05. Decisions", metric: "Automated KPI Action" },
+  { id: "sources", label: "01. Sources", metric: "9 Connectors · SQL & REST" },
+  { id: "discovery", label: "02. Schema", metric: "Automated Quality Profiling" },
+  { id: "execution", label: "03. SQL & AI", metric: "Natural Language to Chart" },
+  { id: "viz", label: "04. Dashboards", metric: "10+ Recharts Visualizers" },
+  { id: "decision", label: "05. Alerts", metric: "Automated Webhook Dispatches" },
 ];
 
 const SDK_SNIPPETS = {
-  duckdb: {
-    label: "DuckDB Wasm",
-    docsLabel: "Read docs for DuckDB Wasm ↗",
-    code: `export default async function AnalyticsView() {
-  const db = await ricoz.connect('snowflake://prod_warehouse')
-
-  useEffect(() => {
-    ricoz.from('revenue_metrics').select('*')
-      .then(({ data }) => setRows(data))
-  }, [])
-
-  return <DashboardCanvas rows={rows} />
-}`,
+  ai_nl_chart: {
+    label: "NL-to-Chart AI",
+    docsLabel: "View AI Analytics API ↗",
+    code: `// POST /api/v1/ai/nl-to-chart
+const response = await fetch('/api/v1/ai/nl-to-chart', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: \`Bearer \${token}\`,
   },
-  rls: {
-    label: "Row-Level Security",
-    docsLabel: "Read docs for RLS Policies ↗",
-    code: `export const rlsPolicy = ricoz.security.definePolicy({
-  table: 'enterprise_metrics',
-  using: "tenant_id = current_setting('app.tenant_id')",
-  rbacRoles: ['admin', 'regional_manager', 'analyst'],
-  maskPiiColumns: ['customer_email', 'tax_id'],
-})`,
+  body: JSON.stringify({
+    prompt: 'Plot monthly ARR growth by acquisition cohort',
+    dataSourceId: 'ds_postgres_prod',
+  }),
+})
+
+const { chartType, sqlQuery, vizConfig } = await response.json()
+return <DynamicRecharts chartType={chartType} config={vizConfig} />`,
   },
-  kafka: {
-    label: "Kafka Streaming",
-    docsLabel: "Read docs for Streaming ↗",
-    code: `const stream = await ricoz.stream.subscribe({
-  topic: 'kafka://orders_live',
-  window: '5s_tumbling',
-  onAnomaly: (event) => ricoz.alerts.notify(event),
+  sql_dataset: {
+    label: "Dataset SQL Query",
+    docsLabel: "View Dataset Query API ↗",
+    code: `// POST /api/v1/datasets/execute
+const result = await fetch('/api/v1/datasets/execute', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: \`Bearer \${token}\`,
+  },
+  body: JSON.stringify({
+    dataSourceId: 'ds_snowflake_analytics',
+    sql: 'SELECT region, SUM(amount) AS revenue FROM orders GROUP BY 1',
+  }),
+})
+
+const { rows, executionMs } = await result.json()`,
+  },
+  alerts: {
+    label: "Threshold Alerts",
+    docsLabel: "View Alerts API ↗",
+    code: `// POST /api/v1/alerts
+const alert = await fetch('/api/v1/alerts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: \`Bearer \${token}\`,
+  },
+  body: JSON.stringify({
+    name: 'High Churn Alert',
+    metric: 'churn_rate',
+    operator: 'GREATER_THAN',
+    threshold: 4.5,
+    channel: 'WEBHOOK',
+    webhookUrl: 'https://api.acme.io/webhooks/ops',
+  }),
 })`,
   },
   embed: {
-    label: "Embedded Iframes",
-    docsLabel: "Read docs for Embedded SDK ↗",
-    code: `const signedUrl = await ricoz.embeds.createToken({
-  dashboardId: 'exec_kpi_v4',
-  tenantId: session.orgId,
-  expiresIn: '15m',
-})`,
+    label: "Signed Embeds",
+    docsLabel: "View Embed API ↗",
+    code: `// POST /api/v1/dashboards/embed/token
+const embed = await fetch('/api/v1/dashboards/embed/token', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: \`Bearer \${token}\`,
+  },
+  body: JSON.stringify({
+    dashboardId: 'dash_exec_q4',
+    expiresInSeconds: 3600,
+  }),
+})
+
+const { iframeUrl } = await embed.json()
+// https://viz.ricoz.in/dashboards/embed/rvz_signed_tok_8f12a`,
   },
 };
 
 export default function CapabilityGrid() {
   const [selectedSdk, setSelectedSdk] =
-    useState<keyof typeof SDK_SNIPPETS>("duckdb");
+    useState<keyof typeof SDK_SNIPPETS>("ai_nl_chart");
   const [selectedStageIdx, setSelectedStageIdx] = useState<number>(2);
   const [activeAuditIdx, setActiveAuditIdx] = useState<number>(0);
-  const [identityMode, setIdentityMode] = useState<"saml" | "scim">("saml");
+  const [identityMode, setIdentityMode] = useState<"roles" | "invites">("roles");
   const [activeAlertChannel, setActiveAlertChannel] = useState<number>(1);
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-[88px] px-[24px]">
-      {/* PART A: SPLIT SDK CODE INSPECTOR (Matches top of supabase-lower.png) */}
+    <div id="capabilities" className="mx-auto flex max-w-[1200px] flex-col gap-[88px] px-[24px]">
+      {/* PART A: SPLIT SDK CODE INSPECTOR */}
       <div className="grid grid-cols-1 items-center gap-[32px] border-b border-[#2e2e2e] pb-[72px] lg:grid-cols-12">
         <div className="flex flex-col gap-[18px] lg:col-span-5">
           <h2 className="text-[32px] font-normal leading-[1.16] tracking-[-0.02em] sm:text-[36px]">
@@ -73,13 +107,13 @@ export default function CapabilityGrid() {
               Self-service analytics
             </span>
             <span className="block text-[#fafafa]">
-              with parameterized SQL &amp; SDKs
+              with multi-source SQL &amp; AI
             </span>
           </h2>
           <p className="text-[14px] leading-[1.55] text-[#898989]">
-            Enable analysts and engineering teams to execute parameterized SQL,
-            subscribe to real-time streams, and embed dashboards without
-            bottlenecks.
+            Enable analysts and engineering teams to query databases directly,
+            synthesize visual charts using natural language AI, and embed dashboards
+            with signed security tokens.
           </p>
 
           <div className="flex flex-wrap gap-[8px] pt-[4px]">
@@ -120,7 +154,7 @@ export default function CapabilityGrid() {
           </pre>
           <div className="flex justify-end">
             <a
-              href="#provision"
+              href="/register"
               className="rounded-full border border-[#2e2e2e] bg-[#171717] px-[14px] py-[6px] text-[12px] text-[#b4b4b4] transition-colors hover:border-[#393939] hover:text-[#fafafa]"
             >
               {SDK_SNIPPETS[selectedSdk].docsLabel}
@@ -129,7 +163,7 @@ export default function CapabilityGrid() {
         </div>
       </div>
 
-      {/* PART B: 2x2 FLUSH-BOTTOM MINI-WINDOW GOVERNANCE CARDS (Matches supabase-lower.png 1:1) */}
+      {/* PART B: 2x2 FLUSH-BOTTOM MINI-WINDOW GOVERNANCE CARDS */}
       <div>
         <div className="mb-[36px] flex flex-col items-start justify-between gap-[16px] sm:flex-row sm:items-end">
           <h2 className="text-[32px] font-normal leading-[1.16] tracking-[-0.02em] sm:text-[36px]">
@@ -137,19 +171,19 @@ export default function CapabilityGrid() {
               Govern every pipeline stage
             </span>
             <span className="block text-[#fafafa]">
-              with enterprise templates and controls
+              with enterprise quality and controls
             </span>
           </h2>
           <a
-            href="#provision"
+            href="/dashboards"
             className="text-[13px] text-[#b4b4b4] underline underline-offset-4 hover:text-[#fafafa]"
           >
-            View all governance modules
+            Explore Dashboard Studio →
           </a>
         </div>
 
         <div className="grid grid-cols-1 gap-[20px] lg:grid-cols-2">
-          {/* Card 1: Data Pipeline Visibility (Flush-bottom mini-window wireframe) */}
+          {/* Card 1: Data Pipeline Visibility */}
           <div className="flex flex-col justify-between overflow-hidden rounded-[16px] border border-[#2e2e2e] bg-[#171717] px-[28px] pt-[28px] pb-0 transition-colors hover:border-[#393939]">
             <div>
               <div className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#fafafa] text-[11px] font-medium text-[#121212]">
@@ -159,8 +193,8 @@ export default function CapabilityGrid() {
                 Data Pipeline Visibility
               </h3>
               <p className="mt-[6px] text-[14px] leading-[1.5] text-[#898989]">
-                Track lineage end-to-end from data sources and dataset discovery
-                through DuckDB query execution, visualizations, and decisions.
+                Track lineage from multi-source databases through automated schema
+                discovery, AI SQL execution, Recharts visualizations, and alerts.
               </p>
             </div>
 
@@ -205,18 +239,18 @@ export default function CapabilityGrid() {
             </div>
           </div>
 
-          {/* Card 2: Audit Logging and Governance (Flush-bottom mini-window wireframe) */}
+          {/* Card 2: Audit Logging and Activity History */}
           <div className="flex flex-col justify-between overflow-hidden rounded-[16px] border border-[#2e2e2e] bg-[#171717] px-[28px] pt-[28px] pb-0 transition-colors hover:border-[#393939]">
             <div>
               <div className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-[#393939] bg-[#242424] text-[11px] font-medium text-[#fafafa]">
                 A
               </div>
               <h3 className="mt-[14px] text-[16px] font-medium text-[#fafafa]">
-                Audit Logging &amp; Governance
+                Audit Logging &amp; Activity Tracking
               </h3>
               <p className="mt-[6px] text-[14px] leading-[1.5] text-[#898989]">
-                Maintain tamper-evident SHA-256 query logs, track user activity,
-                and audit data access operations across every workspace.
+                Maintain granular activity audit logs tracking every query
+                execution, dataset export, user invitation, and permission change.
               </p>
             </div>
 
@@ -228,12 +262,12 @@ export default function CapabilityGrid() {
                   <span className="h-[6px] w-[6px] rounded-full bg-[#2e2e2e]" />
                 </div>
                 <span className="font-mono-code text-[10px] text-[#898989]">
-                  sha256_tamper_evident
+                  activity_audit_trail
                 </span>
               </div>
               <div className="grid grid-cols-12 gap-[10px] p-[16px]">
                 <div className="col-span-4 space-y-[6px]">
-                  {["q_904_exec", "rls_check", "scim_sync"].map((item, i) => (
+                  {["query_exec", "dataset_export", "user_invited"].map((item, i) => (
                     <button
                       key={item}
                       type="button"
@@ -256,11 +290,11 @@ export default function CapabilityGrid() {
                 <div className="col-span-8 flex flex-col justify-between rounded-[8px] border border-[#242424] bg-[#161616] p-[12px] font-mono-code text-[10px] text-[#898989]">
                   <div className="text-[#fafafa]">
                     {activeAuditIdx === 0 &&
-                      "sha256:9f8a..41c2 · Parameterized SQL Verified"}
+                      "audit:9f8a · SQL Query Executed on PostgreSQL"}
                     {activeAuditIdx === 1 &&
-                      "sha256:7d2e..88b0 · RLS Region EMEA Enforced"}
+                      "audit:7d2e · Dataset Exported to CSV Spreadsheet"}
                     {activeAuditIdx === 2 &&
-                      "sha256:3c11..09fa · SCIM 14 Seats Provisioned"}
+                      "audit:3c11 · Team Member Invited to Workspace"}
                   </div>
                   <div className="mt-[8px] grid grid-cols-3 gap-[6px]">
                     <div className="h-[22px] rounded-[4px] bg-[#222222]" />
@@ -272,19 +306,18 @@ export default function CapabilityGrid() {
             </div>
           </div>
 
-          {/* Card 3: Enterprise Identity Integration (Flush-bottom mini-window wireframe) */}
+          {/* Card 3: Multi-Tenant Workspace & RBAC */}
           <div className="flex flex-col justify-between overflow-hidden rounded-[16px] border border-[#2e2e2e] bg-[#171717] px-[28px] pt-[28px] pb-0 transition-colors hover:border-[#393939]">
             <div>
               <div className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-[#393939] bg-[#242424] text-[11px] font-medium text-[#fafafa]">
-                S
+                W
               </div>
               <h3 className="mt-[14px] text-[16px] font-medium text-[#fafafa]">
-                SAML 2.0 SSO &amp; SCIM Provisioning
+                Workspace Multi-Tenancy &amp; RBAC
               </h3>
               <p className="mt-[6px] text-[14px] leading-[1.5] text-[#898989]">
-                Support enterprise authentication and automated role
-                provisioning mapped to Administrators, Regional Managers,
-                Analysts, and Auditors.
+                Organize teams into isolated workspaces with role-based access
+                controls for Administrators and Members, safeguarding database credentials.
               </p>
             </div>
 
@@ -296,7 +329,7 @@ export default function CapabilityGrid() {
                   <span className="h-[6px] w-[6px] rounded-full bg-[#2e2e2e]" />
                 </div>
                 <div className="flex gap-[6px]">
-                  {(["saml", "scim"] as const).map((m) => (
+                  {(["roles", "invites"] as const).map((m) => (
                     <button
                       key={m}
                       type="button"
@@ -312,15 +345,15 @@ export default function CapabilityGrid() {
               </div>
               <div className="grid grid-cols-3 gap-[10px] p-[16px]">
                 {[
-                  { title: "Okta SAML", active: identityMode === "saml" },
-                  { title: "RBAC Sync", active: true },
-                  { title: "SCIM 2.0", active: identityMode === "scim" },
+                  { title: "Admin Role", active: identityMode === "roles" },
+                  { title: "Org Isolation", active: true },
+                  { title: "Member Access", active: identityMode === "invites" },
                 ].map((col, idx) => (
                   <button
                     key={col.title}
                     type="button"
                     onClick={() =>
-                      setIdentityMode(idx === 2 ? "scim" : "saml")
+                      setIdentityMode(idx === 2 ? "invites" : "roles")
                     }
                     className={`flex h-[88px] flex-col justify-between rounded-[8px] border p-[10px] text-left cursor-pointer ${
                       col.active
@@ -342,19 +375,19 @@ export default function CapabilityGrid() {
             </div>
           </div>
 
-          {/* Card 4: Automated Alerts & Performance Monitoring (Flush-bottom mini-window wireframe) */}
+          {/* Card 4: Automated Alerts & Performance Monitoring */}
           <div className="flex flex-col justify-between overflow-hidden rounded-[16px] border border-[#2e2e2e] bg-[#171717] px-[28px] pt-[28px] pb-0 transition-colors hover:border-[#393939]">
             <div>
               <div className="flex h-[24px] w-[24px] items-center justify-center rounded-full border border-[#393939] bg-[#242424] text-[11px] font-medium text-[#fafafa]">
                 M
               </div>
               <h3 className="mt-[14px] text-[16px] font-medium text-[#fafafa]">
-                Automated Alerts &amp; Performance Telemetry
+                Automated Alerts &amp; Metric Telemetry
               </h3>
               <p className="mt-[6px] text-[14px] leading-[1.5] text-[#898989]">
-                Inspect query execution times, throughput, and Wasm memory while
-                delivering scheduled reports via email, webhooks, and workspace
-                alerts.
+                Inspect query execution times and data health scores while
+                delivering scheduled reports via webhooks and workspace
+                notifications.
               </p>
             </div>
 
@@ -366,7 +399,7 @@ export default function CapabilityGrid() {
                   <span className="h-[6px] w-[6px] rounded-full bg-[#2e2e2e]" />
                 </div>
                 <span className="font-mono-code text-[10px] text-[#898989]">
-                  1.4ms P99 · 142k rows/s
+                  1.2ms latency · 0 ETL
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-[10px] p-[16px]">

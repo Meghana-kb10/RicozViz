@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   FileText,
-  ArrowLeft,
   Search,
   Filter,
   RefreshCw,
@@ -18,7 +17,9 @@ import {
   X,
   Clock,
   Layers,
+  Sparkles,
 } from "lucide-react";
+import { AppShell } from "../../components/shell/AppShell";
 import {
   apiQueryAuditLogs,
   apiGetAuditLogStats,
@@ -58,24 +59,22 @@ export default function AuditLogsPage() {
       setLoading(true);
       setError(null);
       const offset = (page - 1) * limit;
-
-      const [res, statsRes] = await Promise.all([
+      const [queryRes, statsRes] = await Promise.all([
         apiQueryAuditLogs({
-          search: search.trim() || undefined,
+          limit,
+          offset,
           action: actionFilter || undefined,
           resourceType: resourceFilter || undefined,
           status: statusFilter || undefined,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
-          limit,
-          offset,
+          search: search || undefined,
         }),
-        apiGetAuditLogStats().catch(() => null),
+        apiGetAuditLogStats(),
       ]);
-
-      setLogs(res.logs || []);
-      setTotal(res.total || 0);
-      if (statsRes) setStats(statsRes);
+      setLogs(queryRes.logs || []);
+      setTotal(queryRes.total);
+      setStats(statsRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load audit logs");
     } finally {
@@ -90,98 +89,87 @@ export default function AuditLogsPage() {
   }
 
   function handleExportCsv() {
-    if (logs.length === 0) return;
-    const columns = ["Timestamp", "Action", "ResourceType", "ResourceId", "Status", "User", "Workspace"];
-    const rows = logs.map((l) => [
-      `"${l.createdAt}"`,
-      `"${l.action}"`,
-      `"${l.resourceType}"`,
-      `"${l.resourceId || ""}"`,
-      `"${l.status}"`,
-      `"${l.user?.name || l.user?.email || l.userId}"`,
-      `"${l.workspace?.name || ""}"`,
+    if (!logs.length) return;
+    const headers = ["ID", "Timestamp", "Action", "Resource Type", "Resource ID", "User ID", "User Name", "Status", "IP Address"];
+    const rows = logs.map((log) => [
+      log.id,
+      new Date(log.createdAt).toISOString(),
+      log.action,
+      log.resourceType,
+      log.resourceId || "",
+      log.userId || "",
+      log.user?.name || "",
+      log.status,
+      log.ipAddress || "",
     ]);
-    const csvContent = [columns.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
-    downloadCsv(`audit-logs-${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+    downloadCsv(`audit_logs_${new Date().toISOString().slice(0, 10)}.csv`, csvContent);
   }
 
   const totalPages = Math.ceil(total / limit) || 1;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/workspace"
-                className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Back to Workspace"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-                <FileText className="w-8 h-8 text-amber-400" />
-                Audit Logs & Governance
-              </h1>
-            </div>
-            <p className="text-sm text-slate-400">
-              Immutable, append-only governance trail of security, authentication, and data modifications.
-            </p>
+    <AppShell
+      title="Audit Logs & Governance"
+      subtitle="Immutable, append-only governance trail of security, authentication, and data modifications."
+      breadcrumbs={[
+        { label: "Governance", href: "/workspace" },
+        { label: "Audit Logs" },
+      ]}
+      actions={
+        <div className="flex items-center gap-2.5">
+          {/* View Mode Switcher */}
+          <div className="flex items-center p-0.5 rounded-lg bg-[#141414] border border-[#242424] text-xs font-mono-code">
+            <button
+              type="button"
+              onClick={() => setViewMode("tabular")}
+              className={`px-3 py-1.5 rounded-md transition font-semibold cursor-pointer ${
+                viewMode === "tabular"
+                  ? "bg-[#ff6b35] text-white"
+                  : "text-[#898989] hover:text-[#fafafa]"
+              }`}
+            >
+              Tabular Events
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("preview")}
+              className={`px-3 py-1.5 rounded-md transition font-semibold flex items-center gap-1.5 cursor-pointer ${
+                viewMode === "preview"
+                  ? "bg-[#ff6b35] text-white"
+                  : "text-[#898989] hover:text-[#fafafa]"
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Multi-Tenant WORM</span>
+            </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* View Mode Switcher */}
-            <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono">
+          {viewMode === "tabular" && (
+            <>
               <button
-                type="button"
-                onClick={() => setViewMode("tabular")}
-                className={`px-3 py-1.5 rounded-lg transition font-semibold cursor-pointer ${
-                  viewMode === "tabular"
-                    ? "bg-amber-600 text-white"
-                    : "text-slate-400 hover:text-white"
-                }`}
+                onClick={handleExportCsv}
+                disabled={logs.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#141414] hover:bg-[#202020] text-xs font-mono-code text-[#fafafa] disabled:opacity-50 cursor-pointer"
               >
-                Tabular Events
+                <Download className="w-3.5 h-3.5" />
+                <span>CSV</span>
               </button>
               <button
-                type="button"
-                onClick={() => setViewMode("preview")}
-                className={`px-3 py-1.5 rounded-lg transition font-semibold flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === "preview"
-                    ? "bg-[#147D78] text-white"
-                    : "text-slate-400 hover:text-white"
-                }`}
+                onClick={loadAuditData}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] hover:bg-[#222222] text-xs font-mono-code text-[#fafafa] transition cursor-pointer"
               >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Multi-Tenant WORM Preview</span>
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#ff6b35]" : ""}`} />
+                <span>Refresh</span>
               </button>
-            </div>
-
-            {viewMode === "tabular" && (
-              <>
-                <button
-                  onClick={handleExportCsv}
-                  disabled={logs.length === 0}
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 disabled:opacity-50 cursor-pointer"
-                >
-                  <Download className="w-4 h-4" />
-                  Export CSV
-                </button>
-                <button
-                  onClick={loadAuditData}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 text-white font-medium rounded-lg text-xs transition-colors cursor-pointer"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                  Refresh
-                </button>
-              </>
-            )}
-          </div>
+            </>
+          )}
         </div>
-
+      }
+    >
+      <div className="space-y-6 max-w-7xl mx-auto">
         {viewMode === "preview" ? (
           <div className="pt-2">
             <MultiTenantAuditTrailMockup />
@@ -189,320 +177,334 @@ export default function AuditLogsPage() {
         ) : (
           <>
             {error && (
-              <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center gap-3 text-sm">
-                <ShieldAlert className="w-5 h-5 flex-shrink-0" />
+              <div className="rounded-xl border border-red-500/30 bg-red-950/40 p-4 text-xs font-mono-code text-red-300 flex items-center gap-3">
+                <ShieldAlert className="w-5 h-5 flex-shrink-0 text-red-400" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* Stats Row */}
             {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium">TOTAL AUDIT EVENTS</span>
-              <div className="text-3xl font-extrabold text-white">{stats.total.toLocaleString()}</div>
-              <div className="text-xs text-slate-500">Immutable governance records</div>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl border border-[#242424] bg-[#141414] space-y-1">
+                  <span className="text-xs text-[#898989] font-mono-code">TOTAL AUDIT EVENTS</span>
+                  <div className="text-2xl font-bold font-mono-code text-[#fafafa]">{stats.total.toLocaleString()}</div>
+                  <div className="text-[11px] text-[#666666] font-mono-code">Immutable governance records</div>
+                </div>
 
-            <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium">SUCCESSFUL OPERATIONS</span>
-              <div className="text-3xl font-extrabold text-emerald-400">
-                {stats.successCount.toLocaleString()}
+                <div className="p-4 rounded-xl border border-[#242424] bg-[#141414] space-y-1">
+                  <span className="text-xs text-[#898989] font-mono-code">SUCCESSFUL OPERATIONS</span>
+                  <div className="text-2xl font-bold font-mono-code text-emerald-400">
+                    {stats.successCount.toLocaleString()}
+                  </div>
+                  <div className="text-[11px] text-[#666666] font-mono-code">Authorized actions executed</div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-[#242424] bg-[#141414] space-y-1">
+                  <span className="text-xs text-[#898989] font-mono-code">BLOCKED / FAILED ATTEMPTS</span>
+                  <div className="text-2xl font-bold font-mono-code text-rose-400">
+                    {stats.failureCount.toLocaleString()}
+                  </div>
+                  <div className="text-[11px] text-[#666666] font-mono-code">Denied or failed actions</div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-[#242424] bg-[#141414] space-y-1">
+                  <span className="text-xs text-[#898989] font-mono-code">CREDENTIALS REDACTED</span>
+                  <div className="text-2xl font-bold font-mono-code text-[#ff6b35]">100%</div>
+                  <div className="text-[11px] text-[#666666] font-mono-code">Passwords & tokens never stored</div>
+                </div>
               </div>
-              <div className="text-xs text-slate-500">Authorized actions executed</div>
-            </div>
+            )}
 
-            <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium">BLOCKED / FAILED ATTEMPTS</span>
-              <div className="text-3xl font-extrabold text-rose-400">
-                {stats.failureCount.toLocaleString()}
+            {/* Filters and Search Bar */}
+            <div className="p-4 rounded-xl border border-[#242424] bg-[#141414] space-y-3">
+              <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 text-[#898989] absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Search by action, resource type, user email or name..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-[#181818] border border-[#2e2e2e] rounded-lg pl-9 pr-4 py-1.5 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-[#ff6b35] hover:bg-[#c2410c] text-white font-semibold rounded-lg text-xs font-mono-code transition cursor-pointer"
+                >
+                  Search
+                </button>
+              </form>
+
+              {/* Filter Selects */}
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#242424]">
+                <select
+                  value={actionFilter}
+                  onChange={(e) => {
+                    setActionFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="bg-[#181818] border border-[#2e2e2e] rounded-lg px-2.5 py-1 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+                >
+                  <option value="">All Actions</option>
+                  <option value="USER_LOGIN">USER_LOGIN</option>
+                  <option value="USER_REGISTER">USER_REGISTER</option>
+                  <option value="USER_LOGOUT">USER_LOGOUT</option>
+                  <option value="CREATE_DASHBOARD">CREATE_DASHBOARD</option>
+                  <option value="UPDATE_DASHBOARD">UPDATE_DASHBOARD</option>
+                  <option value="DELETE_DASHBOARD">DELETE_DASHBOARD</option>
+                  <option value="CREATE_DATASET">CREATE_DATASET</option>
+                  <option value="UPLOAD_DATASET">UPLOAD_DATASET</option>
+                  <option value="CREATE_WORKSPACE">CREATE_WORKSPACE</option>
+                  <option value="TEST_DATASOURCE">TEST_DATASOURCE</option>
+                  <option value="ACCESS_DENIED">ACCESS_DENIED</option>
+                </select>
+
+                <select
+                  value={resourceFilter}
+                  onChange={(e) => {
+                    setResourceFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="bg-[#181818] border border-[#2e2e2e] rounded-lg px-2.5 py-1 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+                >
+                  <option value="">All Resources</option>
+                  <option value="AUTH">AUTH</option>
+                  <option value="WORKSPACE">WORKSPACE</option>
+                  <option value="DASHBOARD">DASHBOARD</option>
+                  <option value="DATASET">DATASET</option>
+                  <option value="DATASOURCE">DATASOURCE</option>
+                  <option value="VISUALIZATION">VISUALIZATION</option>
+                </select>
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="bg-[#181818] border border-[#2e2e2e] rounded-lg px-2.5 py-1 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="SUCCESS">Success Only</option>
+                  <option value="FAILURE">Failure Only</option>
+                </select>
+
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="bg-[#181818] border border-[#2e2e2e] rounded-lg px-2 py-1 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+                  title="Filter from date"
+                />
+
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="bg-[#181818] border border-[#2e2e2e] rounded-lg px-2 py-1 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+                  title="Filter to date"
+                />
+
+                {(actionFilter || resourceFilter || statusFilter || startDate || endDate || search) && (
+                  <button
+                    onClick={() => {
+                      setActionFilter("");
+                      setResourceFilter("");
+                      setStatusFilter("");
+                      setStartDate("");
+                      setEndDate("");
+                      setSearch("");
+                      setPage(1);
+                    }}
+                    className="px-2.5 py-1 text-xs font-mono-code text-[#ff6b35] hover:underline cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
-              <div className="text-xs text-slate-500">Denied or failed actions</div>
             </div>
 
-            <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium">SENSITIVE CREDENTIALS REDACTED</span>
-              <div className="text-3xl font-extrabold text-indigo-400">100%</div>
-              <div className="text-xs text-slate-500">Passwords & tokens never stored</div>
-            </div>
-          </div>
-        )}
+            {/* Tabular Log Events Table */}
+            <div className="rounded-xl border border-[#242424] bg-[#141414] overflow-hidden shadow-xl">
+              {loading && logs.length === 0 ? (
+                <div className="p-16 text-center text-xs font-mono-code text-[#898989]">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent mb-3" />
+                  <p>Querying immutable audit database...</p>
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="p-16 text-center text-xs font-mono-code text-[#898989]">
+                  No audit logs match the specified filter query.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse font-mono-code">
+                    <thead>
+                      <tr className="bg-[#181818] border-b border-[#242424] text-[#898989] uppercase tracking-wider text-[11px]">
+                        <th className="py-3 px-4 font-semibold">Timestamp</th>
+                        <th className="py-3 px-4 font-semibold">Action</th>
+                        <th className="py-3 px-4 font-semibold">Resource</th>
+                        <th className="py-3 px-4 font-semibold">User</th>
+                        <th className="py-3 px-4 font-semibold">Workspace</th>
+                        <th className="py-3 px-4 font-semibold">Status</th>
+                        <th className="py-3 px-4 text-right font-semibold">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#242424]">
+                      {logs.map((log) => (
+                        <tr key={log.id} className="hover:bg-[#181818]/60 transition-colors">
+                          <td className="py-3 px-4 text-[#898989] text-[11px] whitespace-nowrap">
+                            {new Date(log.createdAt).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-[#ff6b35]/15 text-[#ff6b35] border border-[#ff6b35]/30">
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-[#fafafa]">{log.resourceType}</div>
+                            {log.resourceId && (
+                              <div className="text-[10px] text-[#666666] truncate max-w-[140px]" title={log.resourceId}>
+                                {log.resourceId}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-[#fafafa]">
+                            {log.user ? (
+                              <div>
+                                <div className="font-medium text-[#fafafa]">{log.user.name}</div>
+                                <div className="text-[10px] text-[#898989]">{log.user.email}</div>
+                              </div>
+                            ) : (
+                              <span className="text-[#666666]">{log.userId}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-[#898989]">
+                            {log.workspace?.name || "Global / Org"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                log.status === "SUCCESS"
+                                  ? "bg-emerald-950/60 border border-emerald-500/40 text-emerald-300"
+                                  : "bg-rose-950/60 border border-rose-500/40 text-rose-300"
+                              }`}
+                            >
+                              {log.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => setInspectLog(log)}
+                              className="p-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] hover:bg-[#222222] text-[#898989] hover:text-[#fafafa] transition-colors cursor-pointer"
+                              title="Inspect Metadata"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-        {/* Filters and Search Bar */}
-        <div className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
-          <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-              <input
-                type="text"
-                placeholder="Search by action, resource type, user email or name..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded-lg text-xs transition-colors"
-            >
-              Search
-            </button>
-          </form>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-slate-800/80">
-            {/* Action filter */}
-            <select
-              value={actionFilter}
-              onChange={(e) => {
-                setActionFilter(e.target.value);
-                setPage(1);
-              }}
-              className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            >
-              <option value="">All Actions</option>
-              <option value="USER_LOGIN">USER_LOGIN</option>
-              <option value="USER_REGISTER">USER_REGISTER</option>
-              <option value="USER_LOGOUT">USER_LOGOUT</option>
-              <option value="DATASET_CREATED">DATASET_CREATED</option>
-              <option value="DATASET_UPDATED">DATASET_UPDATED</option>
-              <option value="DATASET_DELETED">DATASET_DELETED</option>
-              <option value="DATASET_RLS_RULE_CREATED">DATASET_RLS_RULE_CREATED</option>
-              <option value="DATASET_RLS_RULE_UPDATED">DATASET_RLS_RULE_UPDATED</option>
-              <option value="DATASET_RLS_RULE_DELETED">DATASET_RLS_RULE_DELETED</option>
-              <option value="DASHBOARD_CREATED">DASHBOARD_CREATED</option>
-              <option value="DASHBOARD_UPDATED">DASHBOARD_UPDATED</option>
-              <option value="DASHBOARD_DELETED">DASHBOARD_DELETED</option>
-              <option value="DASHBOARD_VERSION_CREATED">DASHBOARD_VERSION_CREATED</option>
-              <option value="DASHBOARD_VERSION_RESTORED">DASHBOARD_VERSION_RESTORED</option>
-              <option value="WORKSPACE_MEMBER_ROLE_UPDATED">WORKSPACE_MEMBER_ROLE_UPDATED</option>
-              <option value="METRIC_CREATED">METRIC_CREATED</option>
-              <option value="ALERT_CREATED">ALERT_CREATED</option>
-              <option value="DATA_EXPORTED">DATA_EXPORTED</option>
-              <option value="TEMPLATE_APPLIED">TEMPLATE_APPLIED</option>
-            </select>
-
-            {/* Resource filter */}
-            <select
-              value={resourceFilter}
-              onChange={(e) => {
-                setResourceFilter(e.target.value);
-                setPage(1);
-              }}
-              className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            >
-              <option value="">All Resource Types</option>
-              <option value="User">User</option>
-              <option value="Dataset">Dataset</option>
-              <option value="Dashboard">Dashboard</option>
-              <option value="DashboardVersion">DashboardVersion</option>
-              <option value="RowLevelSecurityRule">RowLevelSecurityRule</option>
-              <option value="WORKSPACE">WORKSPACE</option>
-              <option value="DataSource">DataSource</option>
-              <option value="Metric">Metric</option>
-              <option value="Alert">Alert</option>
-              <option value="DashboardTemplate">DashboardTemplate</option>
-            </select>
-
-
-            {/* Status filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="SUCCESS">SUCCESS</option>
-              <option value="FAILURE">FAILURE</option>
-              <option value="WARNING">WARNING</option>
-            </select>
-
-            {/* Limit selector */}
-            <select
-              value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setPage(1);
-              }}
-              className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            >
-              <option value={20}>20 records per page</option>
-              <option value={50}>50 records per page</option>
-              <option value={100}>100 records per page</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Audit Log Table */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-          {loading ? (
-            <div className="py-20 text-center text-slate-500 text-sm">Loading audit events...</div>
-          ) : logs.length === 0 ? (
-            <div className="py-20 text-center text-slate-500 text-sm">No audit logs matching this query.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
-                    <th className="py-3 px-4">Timestamp</th>
-                    <th className="py-3 px-4">Action</th>
-                    <th className="py-3 px-4">Resource</th>
-                    <th className="py-3 px-4">User</th>
-                    <th className="py-3 px-4">Workspace</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Details</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                        {new Date(log.createdAt).toLocaleString()}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-300">{log.resourceType}</div>
-                        {log.resourceId && (
-                          <div className="text-[10px] text-slate-500 font-mono truncate max-w-[140px]" title={log.resourceId}>
-                            {log.resourceId}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-slate-300">
-                        {log.user ? (
-                          <div>
-                            <div className="font-medium text-slate-200">{log.user.name}</div>
-                            <div className="text-[10px] text-slate-500">{log.user.email}</div>
-                          </div>
-                        ) : (
-                          <span className="font-mono text-slate-500">{log.userId}</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-slate-400">
-                        {log.workspace?.name || "Global / Org"}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            log.status === "SUCCESS"
-                              ? "bg-emerald-500/20 text-emerald-400"
-                              : "bg-rose-500/20 text-rose-400"
-                          }`}
-                        >
-                          {log.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => setInspectLog(log)}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                          title="Inspect Metadata"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pagination */}
-          <div className="p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <div>
-              Showing {logs.length > 0 ? (page - 1) * limit + 1 : 0} to{" "}
-              {Math.min(page * limit, total)} of {total.toLocaleString()} records
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 transition-colors"
-              >
-                Previous
-              </button>
-              <span className="px-2 font-mono">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 transition-colors"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Metadata Inspector Modal */}
-        {inspectLog && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              {/* Pagination */}
+              <div className="p-3.5 border-t border-[#242424] flex items-center justify-between text-xs font-mono-code text-[#898989]">
+                <div>
+                  Showing {logs.length > 0 ? (page - 1) * limit + 1 : 0} to{" "}
+                  {Math.min(page * limit, total)} of {total.toLocaleString()} records
+                </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-amber-500/20 text-amber-300">
-                    {inspectLog.action}
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                    className="px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] hover:bg-[#202020] disabled:opacity-40 text-[#fafafa] transition cursor-pointer"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-2">
+                    Page {page} of {totalPages}
                   </span>
-                  <span className="text-xs text-slate-400">Audit Detail</span>
+                  <button
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                    className="px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] hover:bg-[#202020] disabled:opacity-40 text-[#fafafa] transition cursor-pointer"
+                  >
+                    Next
+                  </button>
                 </div>
-                <button
-                  onClick={() => setInspectLog(null)}
-                  className="p-1 rounded text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/80">
-                  <div>
-                    <span className="text-slate-500">Record ID:</span>
-                    <p className="font-mono text-slate-300 mt-0.5">{inspectLog.id}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Timestamp:</span>
-                    <p className="text-slate-300 mt-0.5">{new Date(inspectLog.createdAt).toISOString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Resource:</span>
-                    <p className="text-slate-300 mt-0.5">{inspectLog.resourceType} ({inspectLog.resourceId || "N/A"})</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Operator:</span>
-                    <p className="text-slate-300 mt-0.5">{inspectLog.user?.name || inspectLog.userId}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-slate-400 font-semibold">Event Context Metadata (Sanitized):</span>
-                  <pre className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 font-mono text-[11px] overflow-x-auto max-h-60">
-                    {JSON.stringify(inspectLog.metadata || {}, null, 2)}
-                  </pre>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2 border-t border-slate-800">
-                <button
-                  onClick={() => setInspectLog(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg"
-                >
-                  Close
-                </button>
               </div>
             </div>
-          </div>
+
+            {/* Metadata Inspector Modal */}
+            {inspectLog && (
+              <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-[#141414] border border-[#262626] rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl text-[#fafafa]">
+                  <div className="flex items-center justify-between border-b border-[#242424] pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded font-mono-code font-bold text-xs bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35]">
+                        {inspectLog.action}
+                      </span>
+                      <span className="text-xs font-mono-code text-[#898989]">Audit Detail</span>
+                    </div>
+                    <button
+                      onClick={() => setInspectLog(null)}
+                      className="p-1 rounded text-[#898989] hover:text-[#fafafa] cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 text-xs font-mono-code">
+                    <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#181818] border border-[#262626]">
+                      <div>
+                        <span className="text-[#666666]">Record ID:</span>
+                        <p className="text-[#fafafa] mt-0.5 truncate">{inspectLog.id}</p>
+                      </div>
+                      <div>
+                        <span className="text-[#666666]">Timestamp:</span>
+                        <p className="text-[#fafafa] mt-0.5">{new Date(inspectLog.createdAt).toISOString()}</p>
+                      </div>
+                      <div>
+                        <span className="text-[#666666]">Resource:</span>
+                        <p className="text-[#fafafa] mt-0.5">{inspectLog.resourceType} ({inspectLog.resourceId || "N/A"})</p>
+                      </div>
+                      <div>
+                        <span className="text-[#666666]">Operator:</span>
+                        <p className="text-[#fafafa] mt-0.5">{inspectLog.user?.name || inspectLog.userId}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[#898989] font-semibold">Event Context Metadata (Sanitized):</span>
+                      <pre className="p-3 rounded-xl bg-[#121212] border border-[#242424] text-[#fafafa] text-[11px] overflow-x-auto max-h-60">
+                        {JSON.stringify(inspectLog.metadata || {}, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-3 border-t border-[#242424]">
+                    <button
+                      onClick={() => setInspectLog(null)}
+                      className="px-4 py-2 bg-[#181818] border border-[#2e2e2e] hover:bg-[#202020] text-[#fafafa] text-xs font-mono-code font-semibold rounded-lg cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
-      </>
-    )}
-  </div>
-</div>
-);
+      </div>
+    </AppShell>
+  );
 }

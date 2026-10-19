@@ -8,7 +8,6 @@ import {
   FileText,
   FileCode,
   Image as ImageIcon,
-  ArrowLeft,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -17,7 +16,9 @@ import {
   Database,
   LayoutDashboard,
   Filter,
+  Sparkles,
 } from "lucide-react";
+import { AppShell } from "../../components/shell/AppShell";
 import {
   apiListDatasets,
   apiListDashboards,
@@ -58,22 +59,23 @@ export default function ExportCenterPage() {
           apiListDashboards({ workspaceId }).catch(() => ({ dashboards: [] })),
           apiListVisualizations({ workspaceId }).catch(() => []),
         ]);
-        const dashList = Array.isArray(dashRes) ? dashRes : (dashRes?.dashboards || []);
+
         setDatasets(dsData);
-        setDashboards(dashList);
+        setDashboards(dashRes.dashboards);
         setVisualizations(vizData);
 
         if (resourceType === "DATASET" && dsData.length > 0) {
           setSelectedResourceId(dsData[0].id);
-        } else if (resourceType === "DASHBOARD" && dashList.length > 0) {
-          setSelectedResourceId(dashList[0].id);
+        } else if (resourceType === "DASHBOARD" && dashRes.dashboards.length > 0) {
+          setSelectedResourceId(dashRes.dashboards[0].id);
         } else if (resourceType === "VISUALIZATION" && vizData.length > 0) {
           setSelectedResourceId(vizData[0].id);
         }
       } catch (err) {
-        setErrorMessage("Failed to load export resources");
+        setErrorMessage(err instanceof Error ? err.message : "Failed to load resources for export");
       }
     }
+
     loadData();
     loadExportHistory();
   }, [workspaceId]);
@@ -85,16 +87,18 @@ export default function ExportCenterPage() {
       setSelectedResourceId(dashboards[0].id);
     } else if (resourceType === "VISUALIZATION" && visualizations.length > 0) {
       setSelectedResourceId(visualizations[0].id);
+    } else {
+      setSelectedResourceId("");
     }
   }, [resourceType, datasets, dashboards, visualizations]);
 
   async function loadExportHistory() {
     try {
       setLoadingHistory(true);
-      const res = await apiListExportHistory(workspaceId);
-      setHistory(res);
+      const jobs = await apiListExportHistory(workspaceId);
+      setHistory(jobs);
     } catch {
-      // non-fatal
+      // Non-blocking
     } finally {
       setLoadingHistory(false);
     }
@@ -102,20 +106,19 @@ export default function ExportCenterPage() {
 
   async function handleExport() {
     if (!selectedResourceId) {
-      setErrorMessage("Please select a resource to export");
+      setErrorMessage("Please select a resource to export.");
       return;
     }
 
-    try {
-      setExporting(true);
-      setErrorMessage(null);
-      setStatusMessage("Generating export file...");
+    setExporting(true);
+    setErrorMessage(null);
+    setStatusMessage("Compiling in-memory export package...");
 
+    try {
       const res = await apiExportResource({
         resourceType,
         resourceId: selectedResourceId,
         format,
-        workspaceId,
         options: {
           rowLimit,
           includeHeaders: true,
@@ -161,115 +164,111 @@ export default function ExportCenterPage() {
 
       setStatusMessage(`Successfully generated ${res.filename} (${(res.fileSizeBytes / 1024).toFixed(1)} KB)`);
       loadExportHistory();
+      setTimeout(() => setStatusMessage(null), 5000);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Export failed");
+      setErrorMessage(err instanceof Error ? err.message : "Export failed. Please check parameters.");
     } finally {
       setExporting(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/workspace"
-                className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Back to Workspace"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-                <Download className="w-8 h-8 text-cyan-400" />
-                Advanced Export Center
-              </h1>
-            </div>
-            <p className="text-sm text-slate-400">
-              Centralized export engine for Datasets, Visualizations, and Dashboards in CSV, Excel, PDF, and PNG formats.
-            </p>
-          </div>
-        </div>
-
+    <AppShell
+      title="Advanced Export Center"
+      subtitle="Centralized export engine for Datasets, Visualizations, and Dashboards in CSV, Excel, PDF, and PNG formats."
+      breadcrumbs={[
+        { label: "Governance", href: "/workspace" },
+        { label: "Exports" },
+      ]}
+      actions={
+        <button
+          onClick={loadExportHistory}
+          disabled={loadingHistory}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] hover:bg-[#222222] text-xs font-mono-code text-[#fafafa] transition cursor-pointer"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? "animate-spin text-[#ff6b35]" : ""}`} />
+          <span>Refresh History</span>
+        </button>
+      }
+    >
+      <div className="space-y-6 max-w-7xl mx-auto">
         {/* Feedback messages */}
         {errorMessage && (
-          <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center gap-3 text-sm">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <div className="p-4 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 flex items-center gap-3 text-xs font-mono-code">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {statusMessage && (
-          <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-3 text-sm">
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+          <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 flex items-center gap-3 text-xs font-mono-code">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
             <span>{statusMessage}</span>
           </div>
         )}
 
         {/* Export Configuration Card */}
-        <div className="p-6 md:p-8 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-6 shadow-xl">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Filter className="w-5 h-5 text-indigo-400" />
-            Export Configuration
+        <div className="p-6 rounded-2xl border border-[#242424] bg-[#141414] space-y-6 shadow-xl">
+          <h2 className="text-base font-bold text-[#fafafa] flex items-center gap-2">
+            <Filter className="w-4 h-4 text-[#ff6b35]" />
+            <span>Export Configuration Matrix</span>
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Resource Type */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <label className="text-xs font-mono-code font-semibold text-[#898989] uppercase tracking-wider">
                 1. Resource Scope
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setResourceType("DATASET")}
-                  className={`p-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                  className={`p-2.5 rounded-lg border text-xs font-mono-code font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     resourceType === "DATASET"
-                      ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-950/50"
-                      : "bg-slate-900 border-slate-700 text-slate-400 hover:text-white"
+                      ? "bg-[#ff6b35]/15 text-[#ff6b35] border-[#ff6b35]/40"
+                      : "bg-[#181818] border-[#2e2e2e] text-[#898989] hover:text-[#fafafa] hover:bg-[#202020]"
                   }`}
                 >
-                  <Database className="w-4 h-4" />
-                  Dataset
+                  <Database className="w-3.5 h-3.5" />
+                  <span>Dataset</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setResourceType("DASHBOARD")}
-                  className={`p-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                  className={`p-2.5 rounded-lg border text-xs font-mono-code font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     resourceType === "DASHBOARD"
-                      ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-950/50"
-                      : "bg-slate-900 border-slate-700 text-slate-400 hover:text-white"
+                      ? "bg-[#ff6b35]/15 text-[#ff6b35] border-[#ff6b35]/40"
+                      : "bg-[#181818] border-[#2e2e2e] text-[#898989] hover:text-[#fafafa] hover:bg-[#202020]"
                   }`}
                 >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>Dashboard</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setResourceType("VISUALIZATION")}
-                  className={`p-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                  className={`p-2.5 rounded-lg border text-xs font-mono-code font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     resourceType === "VISUALIZATION"
-                      ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-950/50"
-                      : "bg-slate-900 border-slate-700 text-slate-400 hover:text-white"
+                      ? "bg-[#ff6b35]/15 text-[#ff6b35] border-[#ff6b35]/40"
+                      : "bg-[#181818] border-[#2e2e2e] text-[#898989] hover:text-[#fafafa] hover:bg-[#202020]"
                   }`}
                 >
-                  <Layers className="w-4 h-4" />
-                  Visualization
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Chart</span>
                 </button>
               </div>
             </div>
 
             {/* Target Resource Dropdown */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <label className="text-xs font-mono-code font-semibold text-[#898989] uppercase tracking-wider">
                 2. Select Target Item
               </label>
               <select
                 value={selectedResourceId}
                 onChange={(e) => setSelectedResourceId(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full bg-[#181818] border border-[#2e2e2e] rounded-lg p-2.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
               >
                 {resourceType === "DATASET" ? (
                   datasets.length === 0 ? (
@@ -305,13 +304,13 @@ export default function ExportCenterPage() {
 
             {/* Row Limit */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <label className="text-xs font-mono-code font-semibold text-[#898989] uppercase tracking-wider">
                 Row Limit Safeguard
               </label>
               <select
                 value={rowLimit}
                 onChange={(e) => setRowLimit(Number(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full bg-[#181818] border border-[#2e2e2e] rounded-lg p-2.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
               >
                 <option value={1000}>1,000 rows (Fast)</option>
                 <option value={5000}>5,000 rows (Standard)</option>
@@ -322,8 +321,8 @@ export default function ExportCenterPage() {
           </div>
 
           {/* Export Format Selector */}
-          <div className="space-y-3 pt-4 border-t border-slate-800">
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+          <div className="space-y-3 pt-4 border-t border-[#242424]">
+            <label className="text-xs font-mono-code font-semibold text-[#898989] uppercase tracking-wider">
               3. Select Export Format
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -341,17 +340,17 @@ export default function ExportCenterPage() {
                     onClick={() => setFormat(fmt.key)}
                     className={`cursor-pointer p-4 rounded-xl border transition-all ${
                       isSelected
-                        ? "bg-cyan-500/10 border-cyan-500 text-white shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-500"
-                        : "bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white"
+                        ? "bg-[#ff6b35]/15 border-[#ff6b35] text-white shadow-lg shadow-[#ff6b35]/5"
+                        : "bg-[#181818] border-[#262626] text-[#898989] hover:border-[#2e2e2e] hover:text-[#fafafa]"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${isSelected ? "bg-cyan-500 text-slate-900 font-bold" : "bg-slate-800"}`}>
-                        <Icon className="w-5 h-5" />
+                      <div className={`p-2 rounded-lg ${isSelected ? "bg-[#ff6b35] text-white font-bold" : "bg-[#141414] text-[#898989]"}`}>
+                        <Icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="font-semibold text-sm text-slate-100">{fmt.label}</div>
-                        <div className="text-[11px] text-slate-500">{fmt.desc}</div>
+                        <div className="font-semibold text-xs text-[#fafafa] font-mono-code">{fmt.label}</div>
+                        <div className="text-[11px] text-[#898989]">{fmt.desc}</div>
                       </div>
                     </div>
                   </div>
@@ -361,14 +360,14 @@ export default function ExportCenterPage() {
           </div>
 
           {/* Action Trigger */}
-          <div className="pt-4 flex justify-end">
+          <div className="pt-4 flex justify-end border-t border-[#242424]">
             <button
               onClick={handleExport}
               disabled={exporting || !selectedResourceId}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-cyan-950/50"
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#ff6b35] hover:bg-[#c2410c] disabled:opacity-50 text-white font-semibold rounded-lg text-xs font-mono-code transition cursor-pointer shadow-sm"
             >
-              <Download className={`w-4 h-4 ${exporting ? "animate-pulse" : ""}`} />
-              {exporting ? "Generating Export..." : `Export ${format} Now`}
+              <Download className={`w-4 h-4 ${exporting ? "animate-bounce" : ""}`} />
+              <span>{exporting ? "Compiling Export..." : `Export ${format} Now`}</span>
             </button>
           </div>
         </div>
@@ -376,76 +375,68 @@ export default function ExportCenterPage() {
         {/* Export History Table */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Clock className="w-5 h-5 text-slate-400" />
-              Recent Export Activity & Downloads
+            <h2 className="text-base font-bold text-[#fafafa] flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#ff6b35]" />
+              <span>Recent Export Activity & Downloads</span>
             </h2>
-            <button
-              onClick={loadExportHistory}
-              disabled={loadingHistory}
-              className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 p-1.5 rounded hover:bg-slate-800"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? "animate-spin" : ""}`} />
-              Refresh History
-            </button>
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+          <div className="rounded-xl border border-[#242424] bg-[#141414] overflow-hidden shadow-xl">
             {history.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-sm">
+              <div className="p-12 text-center text-[#898989] text-xs font-mono-code">
                 No exports have been recorded yet in this workspace.
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full text-left text-xs border-collapse font-mono-code">
                   <thead>
-                    <tr className="bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
-                      <th className="py-3 px-4">Resource</th>
-                      <th className="py-3 px-4">Type</th>
-                      <th className="py-3 px-4">Format</th>
-                      <th className="py-3 px-4">Rows</th>
-                      <th className="py-3 px-4">File Size</th>
-                      <th className="py-3 px-4">Triggered By</th>
-                      <th className="py-3 px-4">Date</th>
-                      <th className="py-3 px-4">Status</th>
+                    <tr className="bg-[#181818] border-b border-[#242424] text-[#898989] uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-4 font-semibold">Resource</th>
+                      <th className="py-3 px-4 font-semibold">Type</th>
+                      <th className="py-3 px-4 font-semibold">Format</th>
+                      <th className="py-3 px-4 font-semibold">Rows</th>
+                      <th className="py-3 px-4 font-semibold">File Size</th>
+                      <th className="py-3 px-4 font-semibold">Triggered By</th>
+                      <th className="py-3 px-4 font-semibold">Date</th>
+                      <th className="py-3 px-4 font-semibold">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 font-sans">
+                  <tbody className="divide-y divide-[#242424]">
                     {history.map((job) => (
-                      <tr key={job.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-bold text-slate-200">
+                      <tr key={job.id} className="hover:bg-[#181818]/60 transition-colors">
+                        <td className="py-3 px-4 font-bold text-[#fafafa]">
                           {job.resourceName}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px]">
+                          <span className="px-2 py-0.5 rounded bg-[#181818] border border-[#2e2e2e] text-[#898989] text-[10px]">
                             {job.resourceType}
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                          <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-[#ff6b35]/15 text-[#ff6b35] border border-[#ff6b35]/30">
                             {job.format}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-slate-300 font-mono">
+                        <td className="py-3 px-4 text-[#fafafa]">
                           {job.rowCount !== undefined ? job.rowCount.toLocaleString() : "—"}
                         </td>
-                        <td className="py-3 px-4 text-slate-400 font-mono">
+                        <td className="py-3 px-4 text-[#898989]">
                           {job.fileSize ? `${(job.fileSize / 1024).toFixed(1)} KB` : "—"}
                         </td>
-                        <td className="py-3 px-4 text-slate-400">
+                        <td className="py-3 px-4 text-[#898989]">
                           {job.user?.name || job.user?.email || "User"}
                         </td>
-                        <td className="py-3 px-4 text-slate-500">
+                        <td className="py-3 px-4 text-[#898989]">
                           {new Date(job.createdAt).toLocaleString()}
                         </td>
                         <td className="py-3 px-4">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                               job.status === "COMPLETED"
-                                ? "bg-emerald-500/20 text-emerald-400"
+                                ? "bg-emerald-950/60 border border-emerald-500/40 text-emerald-300"
                                 : job.status === "PROCESSING"
-                                ? "bg-cyan-500/20 text-cyan-400"
-                                : "bg-rose-500/20 text-rose-400"
+                                ? "bg-sky-950/60 border border-sky-500/40 text-sky-300"
+                                : "bg-rose-950/60 border border-rose-500/40 text-rose-300"
                             }`}
                           >
                             {job.status}
@@ -460,6 +451,6 @@ export default function ExportCenterPage() {
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -30,14 +30,14 @@ import { MapRenderer } from "../visualization/MapRenderer";
 
 export const COLOR_PALETTES: Record<string, string[]> = {
   default: [
-    "#147D78", // Primary Editorial Accent (Teal)
-    "#D9A441", // Subtle Highlight (Ochre/Gold)
-    "#2E5B70", // Deep Slate Cyan
-    "#10B981", // Semantic Success
-    "#E11D48", // Semantic Danger / Alert
-    "#596775", // Secondary Text Slate
-    "#0F625D", // Darker Forest Teal
-    "#F59E0B", // Amber Warning
+    "#ff6b35", // Primary Coral Accent
+    "#38bdf8", // Sky Telemetry
+    "#10b981", // Emerald Positive
+    "#f59e0b", // Amber Warning
+    "#8b5cf6", // Violet Signal
+    "#ec4899", // Rose Metric
+    "#06b6d4", // Cyan
+    "#f43f5e", // Crimson Alert
   ],
   editorial: [
     "#147D78",
@@ -175,10 +175,10 @@ export function ChartRenderer({
     return (
       <div
         style={{ height }}
-        className="flex flex-col items-center justify-center rounded-xl bg-gray-50/50 p-6 text-center animate-pulse"
+        className="flex flex-col items-center justify-center rounded-xl bg-[#141414] border border-[#242424] p-6 text-center animate-pulse"
       >
-        <div className="h-8 w-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin mb-3" />
-        <p className="text-xs font-medium text-gray-500">Executing query engine...</p>
+        <div className="h-8 w-8 rounded-full border-2 border-[#ff6b35] border-t-transparent animate-spin mb-3" />
+        <p className="text-xs font-semibold text-white">Executing query engine...</p>
       </div>
     );
   }
@@ -187,11 +187,11 @@ export function ChartRenderer({
     return (
       <div
         style={{ height }}
-        className="flex flex-col items-center justify-center rounded-xl bg-red-50/50 border border-red-200 p-6 text-center"
+        className="flex flex-col items-center justify-center rounded-xl bg-red-950/20 border border-red-900/40 p-6 text-center"
       >
         <span className="text-2xl mb-2">⚠️</span>
-        <h5 className="text-xs font-bold text-red-800">Query Failed</h5>
-        <p className="mt-1 text-[11px] text-red-600 max-w-xs">{error}</p>
+        <h5 className="text-xs font-semibold text-red-300">Query Failed</h5>
+        <p className="mt-1 text-[11px] text-red-400 max-w-xs">{error}</p>
       </div>
     );
   }
@@ -200,11 +200,11 @@ export function ChartRenderer({
     return (
       <div
         style={{ height }}
-        className="flex flex-col items-center justify-center rounded-xl bg-gray-50/50 border border-dashed border-gray-200 p-6 text-center"
+        className="flex flex-col items-center justify-center rounded-xl bg-[#141414] border border-dashed border-[#262626] p-6 text-center"
       >
-        <span className="text-2xl mb-1 text-gray-400">∅</span>
-        <p className="text-xs font-semibold text-gray-600">No data returned</p>
-        <p className="mt-1 text-[11px] text-gray-400">
+        <span className="text-2xl mb-1 text-[#888888]">∅</span>
+        <p className="text-xs font-semibold text-white">No data returned</p>
+        <p className="mt-1 text-[11px] text-[#888888]">
           Run query or adjust filters/dimensions in the configuration panel.
         </p>
       </div>
@@ -212,7 +212,7 @@ export function ChartRenderer({
   }
 
   if (!mounted) {
-    return <div style={{ height }} className="bg-gray-50/40 rounded-xl" />;
+    return <div style={{ height }} className="bg-[#141414] rounded-xl" />;
   }
 
   const mapped = mapQueryResultToChartData(chartType, queryResult, config);

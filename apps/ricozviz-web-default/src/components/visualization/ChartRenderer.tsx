@@ -72,11 +72,11 @@ export function ChartRenderer({
     return (
       <div
         style={{ height }}
-        className="flex flex-col items-center justify-center rounded-xl bg-gray-50/50 p-6 text-center animate-pulse border border-dashed border-gray-200"
+        className="flex flex-col items-center justify-center rounded-xl bg-[#141414] p-6 text-center animate-pulse border border-dashed border-[#262626]"
       >
-        <div className="h-9 w-9 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin mb-3" />
-        <p className="text-xs font-semibold text-gray-700">Executing Secure Query Engine...</p>
-        <p className="text-[11px] text-gray-400 mt-1">Applying filters, groupings and aggregations</p>
+        <div className="h-8 w-8 rounded-full border-2 border-[#ff6b35] border-t-transparent animate-spin mb-3" />
+        <p className="text-xs font-semibold text-white">Executing Secure Query Engine...</p>
+        <p className="text-[11px] text-[#888888] font-mono mt-1">Applying filters, groupings and aggregations</p>
       </div>
     );
   }
@@ -85,14 +85,14 @@ export function ChartRenderer({
     return (
       <div
         style={{ height }}
-        className="flex flex-col items-center justify-center rounded-xl bg-red-50/60 border border-red-200 p-6 text-center"
+        className="flex flex-col items-center justify-center rounded-xl bg-red-950/20 border border-red-900/40 p-6 text-center"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 mb-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10 text-red-400 mb-2 border border-red-500/20">
           <span className="text-lg font-bold">!</span>
         </div>
-        <h5 className="text-xs font-bold text-red-900">Query Engine Execution Error</h5>
-        <p className="mt-1 text-[11px] text-red-600 max-w-sm leading-relaxed">{error}</p>
-        <span className="mt-2 text-[10px] text-gray-400">
+        <h5 className="text-xs font-semibold text-red-300">Query Engine Execution Error</h5>
+        <p className="mt-1 text-[11px] text-red-400 max-w-sm leading-relaxed">{error}</p>
+        <span className="mt-2 text-[10px] text-[#777777] font-mono">
           Check dataset permissions, column types, or filter values.
         </span>
       </div>
@@ -103,20 +103,20 @@ export function ChartRenderer({
     return (
       <div
         style={{ height }}
-        className="flex flex-col items-center justify-center rounded-xl bg-gray-50/40 border border-dashed border-gray-200 p-6 text-center"
+        className="flex flex-col items-center justify-center rounded-xl bg-[#141414] border border-dashed border-[#262626] p-6 text-center"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400 mb-2 text-base">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1c1c1c] text-[#888888] border border-[#2a2a2a] mb-2 text-base">
           ∅
         </div>
-        <p className="text-xs font-bold text-gray-700">No data for the selected filters.</p>
-        <p className="mt-1 text-[11px] text-gray-500 max-w-xs leading-relaxed">
+        <p className="text-xs font-semibold text-white">No data for the selected filters.</p>
+        <p className="mt-1 text-[11px] text-[#888888] max-w-xs leading-relaxed">
           The query returned 0 rows. Try adjusting your selections or clearing active filters.
         </p>
         {onClearFilter && (
           <button
             type="button"
             onClick={onClearFilter}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 shadow-2xs hover:bg-gray-50"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1.5 text-xs font-medium text-[#ff6b35] hover:bg-[#222222] hover:text-[#ff8a5c] transition cursor-pointer"
           >
             <RotateCcw className="h-3 w-3" />
             <span>Clear filters</span>
@@ -127,7 +127,7 @@ export function ChartRenderer({
   }
 
   if (!mounted) {
-    return <div style={{ height }} className="bg-gray-50/40 rounded-xl" />;
+    return <div style={{ height }} className="bg-[#141414] rounded-xl" />;
   }
 
   // Validate configuration completeness
@@ -138,13 +138,13 @@ export function ChartRenderer({
     return (
       <div
         style={{ height }}
-        className="flex flex-col items-center justify-center rounded-xl bg-amber-50/50 border border-amber-200 p-6 text-center"
+        className="flex flex-col items-center justify-center rounded-xl bg-amber-950/20 border border-amber-900/40 p-6 text-center"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-2">
           <AlertCircle className="h-5 w-5" />
         </div>
-        <h5 className="text-xs font-bold text-amber-900">Incomplete Visualization Configuration</h5>
-        <p className="mt-1 text-[11px] text-amber-700 max-w-xs leading-relaxed">
+        <h5 className="text-xs font-semibold text-amber-300">Incomplete Visualization Configuration</h5>
+        <p className="mt-1 text-[11px] text-amber-400/90 max-w-xs leading-relaxed">
           This {!hasDimension && !hasMeasure ? "chart requires both an X-axis dimension and a Y-axis measure" : !hasDimension ? "chart requires a category / X-axis dimension" : "chart requires a metric / Y-axis measure"} to render.
         </p>
       </div>
@@ -264,10 +264,10 @@ export function ChartRenderer({
     <div style={{ height }} className="w-full relative flex flex-col">
       {/* Optional Drill-Down Breadcrumb */}
       {drillDown && drillDown.currentLevel > 0 && (
-        <div className="flex items-center justify-between pb-2 mb-1 border-b border-gray-100 text-xs shrink-0">
-          <div className="flex items-center gap-1.5 text-gray-500 font-medium">
+        <div className="flex items-center justify-between pb-2 mb-1 border-b border-[#242424] text-xs shrink-0">
+          <div className="flex items-center gap-1.5 text-[#888888] font-medium">
             <span>Drill Level:</span>
-            <span className="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded font-mono">
+            <span className="font-semibold text-[#ff6b35] bg-[#ff6b35]/15 border border-[#ff6b35]/30 px-2 py-0.5 rounded font-mono text-[11px]">
               {drillDown.path[drillDown.currentLevel] || "Detailed records"}
             </span>
           </div>
@@ -275,7 +275,7 @@ export function ChartRenderer({
             <button
               type="button"
               onClick={drillDown.onDrillBack}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-[#ff6b35] hover:text-[#ff8a5c] transition cursor-pointer"
             >
               <ArrowLeft className="h-3 w-3" />
               <span>Back to {drillDown.path[drillDown.currentLevel - 1] || "Overview"}</span>
@@ -300,9 +300,9 @@ export function ChartRenderer({
 
         {/* Subtle Non-Blocking Loading Overlay for Subsequent Queries */}
         {isLoading && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-2xs flex items-center justify-center z-20 rounded-lg transition-opacity duration-200">
-            <div className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 shadow-md border border-gray-200 text-xs font-semibold text-gray-700">
-              <div className="h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-2xs flex items-center justify-center z-20 rounded-lg transition-opacity duration-200">
+            <div className="flex items-center gap-2 rounded-lg bg-[#181818] px-3.5 py-1.5 shadow-xl border border-[#2c2c2c] text-xs font-medium text-[#dedede] font-mono">
+              <div className="h-4 w-4 border-2 border-[#ff6b35] border-t-transparent rounded-full animate-spin" />
               <span>Updating query...</span>
             </div>
           </div>

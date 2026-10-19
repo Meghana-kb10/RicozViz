@@ -16,14 +16,14 @@ import type { ChartConfig } from "../../lib/api";
 import { formatNumber, formatCurrency, formatPercent } from "../../lib/formatting";
 
 const PALETTE = [
-  "#147D78", // Editorial Accent
-  "#D9A441", // Subtle Highlight Ochre
-  "#2E5B70", // Deep Slate Cyan
-  "#10B981", // Emerald
-  "#E11D48", // Rose Alert
-  "#596775", // Secondary Text Slate
-  "#0F625D", // Deep Forest Teal
-  "#F59E0B", // Amber Warning
+  "#ff6b35", // Primary Coral Accent
+  "#38bdf8", // Sky Telemetry
+  "#10b981", // Emerald Positive
+  "#f59e0b", // Amber Warning
+  "#8b5cf6", // Violet Signal
+  "#ec4899", // Rose Metric
+  "#06b6d4", // Cyan
+  "#f43f5e", // Crimson Alert
 ];
 
 export interface AreaChartRendererProps {

@@ -6,40 +6,38 @@ import Link from "next/link";
 interface HeroBentoProps {
   selectedConnector: string;
   onSelectConnector: (name: string) => void;
-  onOpenAuthModal: () => void;
+  onOpenAuthModal?: () => void;
 }
 
 const STREAM_TOPICS = [
-  { cmd: "kafka://orders_eu --live" },
-  { cmd: "s3://lake/events.parquet" },
-  { cmd: "snowflake://prod.revenue" },
+  { cmd: "ai: 'Plot monthly ARR growth by acquisition channel'" },
+  { cmd: "sql: SELECT date_trunc('week', created_at), sum(amount) FROM orders GROUP BY 1" },
+  { cmd: "alert: notify webhook when failed_transactions > 15" },
 ];
 
 const CONNECTOR_NAMES = [
   "PostgreSQL",
+  "MySQL",
+  "SQLite",
   "Snowflake",
   "BigQuery",
   "ClickHouse",
-  "Databricks",
   "Amazon Redshift",
-  "S3 Parquet",
-  "Apache Kafka",
-  "MySQL",
+  "REST API",
+  "CSV & Excel",
 ];
 
-type NavItem =
-  | { id: string; label: string; hasMenu: true; href?: undefined }
-  | { id: string; label: string; hasMenu?: false; href: string };
+interface NavItem {
+  id: string;
+  label: string;
+  href: string;
+}
 
 const NAV_ITEMS: NavItem[] = [
-  // { id: "product", label: "Platform", hasMenu: true },
-  // { id: "connectors", label: "Connectors", hasMenu: true },
-  // { id: "security", label: "Security & Trust", hasMenu: true },
-  { id: "workbench", label: "Workbench", href: "#piece-workbench" },
+  { id: "products", label: "Overview", href: "#products" },
+  { id: "workbench", label: "Studio", href: "#piece-workbench" },
+  { id: "capabilities", label: "Capabilities", href: "#capabilities" },
   { id: "workflow", label: "Pipeline", href: "#workflow" },
-  { id: "topology", label: "Topology", href: "#topology" },
-  { id: "audit-trail", label: "Audit Trail", href: "#audit-trail" },
-  { id: "docs", label: "Docs", href: "/docs" },
   { id: "benchmarks", label: "Benchmarks", href: "/benchmarks" },
 ];
 
@@ -128,13 +126,9 @@ export default function HeroBentoSection({
   onSelectConnector,
   onOpenAuthModal,
 }: HeroBentoProps) {
-  const [starred, setStarred] = useState(false);
-  const [starCount, setStarCount] = useState(34.8);
-  const [activeNavMenu, setActiveNavMenu] = useState<string | null>(null);
-
   // Interactive Bento Card States
   const [olapPulse, setOlapPulse] = useState(false);
-  const [rlsUnmasked, setRlsUnmasked] = useState(false);
+  const [aiPromptExpanded, setAiPromptExpanded] = useState(false);
   const [streamIdx, setStreamIdx] = useState(0);
   const [selectedTileIdx, setSelectedTileIdx] = useState<number>(0);
   const [collabPing, setCollabPing] = useState(false);
@@ -166,47 +160,22 @@ export default function HeroBentoSection({
         <div className="mx-auto flex h-full max-w-[1200px] items-center justify-between px-[24px]">
           <div className="flex items-center gap-[32px]">
             <Link href="/" className="flex items-center gap-[9px]">
-              <img className="size-6" src="images/logo.png" alt="RicozViz Logo" />
+              <img className="size-6 rounded-md object-contain" src="/images/logo.png" alt="RicozViz Logo" />
               <span className="text-[18px] font-medium tracking-[-0.02em] text-[#fafafa]">
                 ricozviz
               </span>
             </Link>
 
-            <nav className="hidden items-center gap-[20px] lg:flex">
-              {NAV_ITEMS.map((item) =>
-                item.hasMenu ? (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() =>
-                      setActiveNavMenu((prev) =>
-                        prev === item.id ? null : item.id
-                      )
-                    }
-                    className="inline-flex items-center gap-[4px] text-[13px] font-normal text-[#b4b4b4] transition-colors hover:text-[#fafafa] cursor-pointer"
-                  >
-                    <span>{item.label}</span>
-                    <svg
-                      className={`h-[12px] w-[12px] transition-transform ${activeNavMenu === item.id ? "rotate-180 text-[#fafafa]" : ""
-                        }`}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="m6 9 6 6 6-6" />
-                    </svg>
-                  </button>
-                ) : (
-                  <a
-                    key={item.id}
-                    href={item.href}
-                    className="text-[13px] font-normal text-[#b4b4b4] transition-colors hover:text-[#fafafa]"
-                  >
-                    {item.label}
-                  </a>
-                )
-              )}
+            <nav className="hidden items-center gap-[22px] lg:flex">
+              {NAV_ITEMS.map((item) => (
+                <a
+                  key={item.id}
+                  href={item.href}
+                  className="text-[13px] font-normal text-[#b4b4b4] transition-colors hover:text-[#fafafa]"
+                >
+                  {item.label}
+                </a>
+              ))}
             </nav>
           </div>
 
@@ -226,76 +195,6 @@ export default function HeroBentoSection({
             </Link>
           </div>
         </div>
-
-        {activeNavMenu && (
-          <div className="border-b border-[#2e2e2e] bg-[#171717] py-[14px]">
-            <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-[16px] px-[24px]">
-              {activeNavMenu === "product" && (
-                <div className="flex flex-wrap gap-[24px] text-[13px] text-[#b4b4b4]">
-                  <a href="#products" onClick={() => setActiveNavMenu(null)} className="text-[#fafafa] hover:text-[#ff6b35]">
-                    DuckDB Wasm OLAP
-                  </a>
-                  <a href="#piece-workbench" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
-                    Multi-Canvas Dashboards
-                  </a>
-                  <a href="#workflow" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
-                    Data Pipeline &amp; Vectorizer
-                  </a>
-                  <a href="#topology" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
-                    Infrastructure Topology
-                  </a>
-                </div>
-              )}
-              {activeNavMenu === "connectors" && (
-                <div className="flex flex-wrap items-center gap-[8px]">
-                  <span className="text-[12px] text-[#898989]">Active Source:</span>
-                  {CONNECTOR_NAMES.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => {
-                        onSelectConnector(name);
-                        setActiveNavMenu(null);
-                      }}
-                      className={`rounded-full border px-[10px] py-[3px] text-[12px] cursor-pointer ${selectedConnector === name
-                        ? "border-[#fafafa] bg-[#242424] text-[#fafafa]"
-                        : "border-[#2e2e2e] text-[#b4b4b4] hover:text-[#fafafa]"
-                        }`}
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {activeNavMenu === "security" && (
-                <div className="flex flex-wrap items-center gap-[20px] text-[12px] text-[#b4b4b4]">
-                  <a href="#governance" onClick={() => setActiveNavMenu(null)} className="text-[#fafafa] hover:text-[#ff6b35]">
-                    ✓ SOC 2 &amp; HIPAA Controls
-                  </a>
-                  <a href="#audit-trail" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
-                    ✓ SHA-256 Audit Ledger
-                  </a>
-                  <a href="#audit-trail" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
-                    ✓ Cryptographic Kill-Switch
-                  </a>
-                  <a href="#governance" onClick={() => setActiveNavMenu(null)} className="hover:text-[#fafafa]">
-                    ✓ Row-Level Security (RLS)
-                  </a>
-                  <Link href="/whitepaper" onClick={() => setActiveNavMenu(null)} className="text-[#ff6b35] hover:underline">
-                    Security Whitepaper →
-                  </Link>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => setActiveNavMenu(null)}
-                className="text-[12px] text-[#898989] hover:text-[#fafafa] cursor-pointer"
-              >
-                Close ✕
-              </button>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* HERO SECTION WITH INTERACTIVE BACKGROUND FADED DOTS */}
@@ -356,15 +255,15 @@ export default function HeroBentoSection({
                 className="animate-fade-in-up text-[38px] font-normal leading-[1.06] tracking-[-0.02em] text-[#fafafa] sm:text-[48px] lg:text-[52px] lg:whitespace-nowrap"
               >
                 <span className="block">Query in milliseconds</span>
-                <span className="block text-[#ff6b35]">Scale to every row</span>
+                <span className="block text-[#ff6b35]">Visualize without limits</span>
               </h1>
               <p
                 style={{ animationDelay: "140ms" }}
                 className="animate-fade-in-up max-w-[500px] text-[16px] font-normal leading-[1.55] text-[#898989] lg:pb-[2px]"
               >
-                Start your workspace with an in-memory DuckDB OLAP engine. Add
-                Enterprise Connectors, Interactive Dashboards, Real-Time Kafka
-                Streams, Row-Level Security, and PII Masking.
+                Connect PostgreSQL, MySQL, Snowflake, BigQuery, REST APIs, and
+                spreadsheets. Build real-time interactive dashboards, generate
+                charts using natural language AI, and monitor automated alerts.
               </p>
             </div>
 
@@ -382,7 +281,7 @@ export default function HeroBentoSection({
                 href="/login"
                 className="inline-flex h-[38px] items-center justify-center rounded-full border border-[#393939] bg-[#1c1c1c] px-[18px] text-[14px] font-normal text-[#fafafa] transition-colors hover:border-[#4d4d4d] hover:bg-[#242424]"
               >
-                Request a demo
+                Sign In
               </a>
             </div>
           </div>
@@ -395,7 +294,7 @@ export default function HeroBentoSection({
         className="mx-auto max-w-[1200px] px-[24px] pb-[56px]"
       >
         <div className="grid grid-cols-1 gap-[16px] md:grid-cols-12">
-          {/* CARD 1 (6 Cols): DuckDB Wasm OLAP — Clean 3 Checkmarks Left + Large Multi-Layer Wireframe Right */}
+          {/* CARD 1 (6 Cols): Universal Multi-Source SQL Engine */}
           <BentoSpotlightCard
             onClick={() => setOlapPulse((p) => !p)}
             delay="300ms"
@@ -418,30 +317,30 @@ export default function HeroBentoSection({
                     <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
                   </svg>
                   <h2 className="text-[15px] font-medium whitespace-nowrap text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
-                    DuckDB Wasm Engine
+                    Universal Data Engine
                   </h2>
                 </div>
                 <p className="mt-[12px] text-[14px] font-normal leading-[1.5] text-[#898989]">
-                  Every workspace is{" "}
+                  Every workspace directly unifies{" "}
                   <strong className="font-normal text-[#fafafa]">
-                    a full in-memory OLAP engine
+                    9+ databases and warehouses
                   </strong>
-                  , unifying 9 enterprise databases, lakes, and streams.
+                  , cloud storage, REST APIs, and spreadsheets.
                 </p>
               </div>
 
               <ul className="space-y-[6px] text-[13px] text-[#fafafa]">
                 <li className="flex items-center gap-[8px]">
                   <span className="text-[#ff6b35]">✓</span>
-                  <span>100% in-browser Wasm</span>
+                  <span>PostgreSQL, MySQL, Snowflake, BigQuery</span>
                 </li>
                 <li className="flex items-center gap-[8px]">
                   <span className="text-[#ff6b35]">✓</span>
-                  <span>Built-in RLS with SQLi guard</span>
+                  <span>Automated schema discovery &amp; profiling</span>
                 </li>
                 <li className="flex items-center gap-[8px]">
                   <span className="text-[#ff6b35]">✓</span>
-                  <span>9 zero-ETL connectors</span>
+                  <span>Zero-ETL multi-source SQL queries</span>
                 </li>
               </ul>
             </div>
@@ -602,18 +501,18 @@ export default function HeroBentoSection({
                   />
                 </svg>
 
-                {/* Floating SIMD live throughput tag */}
+                {/* Floating query execution throughput tag */}
                 <div className="absolute -bottom-2 right-0 rounded-full border border-[#2e2e2e] bg-[#121212]/95 backdrop-blur-xs px-[10px] py-[3px] text-[10px] font-mono-code text-[#898989] group-hover:border-[#ff6b35]/60 group-hover:text-[#fafafa] transition-colors flex items-center gap-[6px]">
                   <span className="h-[5px] w-[5px] rounded-full bg-emerald-400 animate-pulse" />
-                  <span>2.4M rows/s (Wasm SIMD)</span>
+                  <span>Sub-Second Query Pushdown</span>
                 </div>
               </div>
             </div>
           </BentoSpotlightCard>
 
-          {/* CARD 2 (3 Cols): Row-Level Security & PII Masking */}
+          {/* CARD 2 (3 Cols): AI Natural Language to Chart */}
           <BentoSpotlightCard
-            onClick={() => setRlsUnmasked((v) => !v)}
+            onClick={() => setAiPromptExpanded((v) => !v)}
             delay="380ms"
             className="md:col-span-6 lg:col-span-3 h-[400px]"
           >
@@ -628,18 +527,17 @@ export default function HeroBentoSection({
                   strokeWidth="1.5"
                   className="group-hover:text-[#ff6b35] group-hover:rotate-6 transition-all duration-300"
                 >
-                  <rect x="4" y="11" width="16" height="10" rx="2" />
-                  <path d="M8 11V7a4 4 0 018 0v4" />
+                  <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z" />
                 </svg>
                 <h2 className="text-[15px] font-medium whitespace-nowrap text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
-                  Row-Level Security
+                  Natural Language AI
                 </h2>
               </div>
               <p className="mt-[12px] text-[14px] font-normal leading-[1.5] text-[#898989]">
                 <strong className="font-normal text-[#fafafa]">
-                  Isolate tenants and mask PII
+                  Ask questions in plain English
                 </strong>
-                , securing every dataset with role and regional policies.
+                . RicozViz auto-generates SQL and renders optimal visuals.
               </p>
             </div>
 
@@ -649,14 +547,14 @@ export default function HeroBentoSection({
               <div className="pointer-events-none absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#ff6b35] to-transparent opacity-0 group-hover:opacity-100 animate-laser-sweep shadow-[0_0_12px_#ff6b35] z-20" />
 
               {[
-                { text: "vp.data@acme.io", clear: true, tag: "EXEC" },
-                { text: "cfo.eu@acme.io", clear: true, tag: "SAML" },
-                { text: "ssn: 940-28-1940", clear: false, tag: "PII" },
-                { text: "arr: $1,420,000", clear: false, tag: "FIN" },
-                { text: "ops.apac@acme.io", clear: true, tag: "ROLE" },
-                { text: "tax: DE-8192041", clear: false, tag: "LEGAL" },
+                { text: "plot monthly ARR growth", clear: true, tag: "SQL" },
+                { text: "cohort churn rate", clear: true, tag: "CHART" },
+                { text: "top 10 customer LTV", clear: true, tag: "VISUAL" },
+                { text: "q3 margin breakdown", clear: false, tag: "AI" },
+                { text: "orders by country", clear: true, tag: "BAR" },
+                { text: "conversion funnel drop", clear: false, tag: "AUTO" },
               ].map((cell, idx) => {
-                const isVisible = cell.clear || rlsUnmasked;
+                const isVisible = cell.clear || aiPromptExpanded;
                 return (
                   <div
                     key={idx}
@@ -671,26 +569,26 @@ export default function HeroBentoSection({
                       {cell.text}
                     </span>
                     <span className="text-[9px] text-[#555555] group-hover:text-[#ff6b35]/70 transition-colors">
-                      {isVisible ? `[VERIFIED ${cell.tag}]` : `[MASKED ${cell.tag}]`}
+                      {isVisible ? `[READY ${cell.tag}]` : `[SYNTH ${cell.tag}]`}
                     </span>
                   </div>
                 );
               })}
             </div>
 
-            {/* RLS Policy Active Telemetry Footer */}
+            {/* AI Assistant Active Telemetry Footer */}
             <div className="mt-[10px] flex items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
               <span className="flex items-center gap-[5px]">
                 <span className="h-[5px] w-[5px] rounded-full bg-[#ff6b35] group-hover:animate-ping" />
-                <span className="group-hover:text-[#fafafa] transition-colors">RLS Policy Active</span>
+                <span className="group-hover:text-[#fafafa] transition-colors">NL-to-Chart AI</span>
               </span>
               <span className="rounded bg-[#1c1c1c] px-[7px] py-[2px] text-[10px] text-[#ff6b35] border border-[#2e2e2e] group-hover:border-[#ff6b35]/40 transition-colors">
-                0.12ms AST
+                Auto-SQL
               </span>
             </div>
           </BentoSpotlightCard>
 
-          {/* CARD 3 (3 Cols): Real-Time Streaming — Terminal pill + wireframe globe */}
+          {/* CARD 3 (3 Cols): Automated Metric Alerts */}
           <BentoSpotlightCard
             onClick={() => setStreamIdx((i) => (i + 1) % STREAM_TOPICS.length)}
             delay="460ms"
@@ -707,17 +605,17 @@ export default function HeroBentoSection({
                   strokeWidth="1.5"
                   className="group-hover:text-[#ff6b35] transition-colors"
                 >
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M3.6 9h16.8M3.6 15h16.8" />
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                 </svg>
                 <h2 className="text-[15px] font-medium whitespace-nowrap text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
-                  Real-Time Streaming
+                  Automated Metric Alerts
                 </h2>
               </div>
               <p className="mt-[12px] text-[14px] font-normal leading-[1.5] text-[#898989]">
-                Ingest continuous event streams{" "}
+                Trigger automated notifications{" "}
                 <strong className="font-normal text-[#fafafa]">
-                  without deploying or scaling batch pipelines.
+                  when KPIs cross critical thresholds.
                 </strong>
               </p>
             </div>
@@ -726,8 +624,8 @@ export default function HeroBentoSection({
               {/* Terminal command pill with live beacon */}
               <div className="z-10 flex items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#121212] px-[14px] py-[6px] font-mono-code text-[11px] group-hover:border-[#ff6b35]/60 group-hover:shadow-[0_0_16px_rgba(255,107,53,0.3)] transition-all">
                 <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] group-hover:animate-ping" />
-                <span className="text-[#898989]">$ viz</span>
-                <span className="text-[#ff6b35] font-semibold">{currentStream.cmd}</span>
+                <span className="text-[#898989]">$ alert</span>
+                <span className="text-[#ff6b35] font-semibold truncate max-w-[170px]">{currentStream.cmd}</span>
               </div>
 
               {/* Wireframe globe with alive hover glow and streaming packet flow */}
@@ -829,13 +727,13 @@ export default function HeroBentoSection({
               </svg>
             </div>
 
-            {/* Real-time telemetry status footer */}
+            {/* Alert status telemetry footer */}
             <div className="mt-auto flex w-full items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
               <span className="flex items-center gap-[6px] text-emerald-400">
                 <span className="h-[6px] w-[6px] rounded-full bg-emerald-400 animate-ping" />
-                <span>240k evt/s</span>
+                <span>Webhooks &amp; Email</span>
               </span>
-              <span className="group-hover:text-[#fafafa] transition-colors">Kafka &amp; S3 Live</span>
+              <span className="group-hover:text-[#fafafa] transition-colors">Scheduled Monitors Active</span>
             </div>
           </BentoSpotlightCard>
 
@@ -1000,12 +898,12 @@ export default function HeroBentoSection({
 
             {/* Micro-Studio Status Footer */}
             <div className="mt-auto flex items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
-              <span className="group-hover:text-[#fafafa] transition-colors">12 Canvas Visualizers</span>
-              <span className="text-[#ff6b35]">0-latency DuckDB</span>
+              <span className="group-hover:text-[#fafafa] transition-colors">10+ Recharts Visualizers</span>
+              <span className="text-[#ff6b35]">Interactive Studio</span>
             </div>
           </BentoSpotlightCard>
 
-          {/* CARD 5 (3 Cols): Realtime Collaboration — Cursors + Wireframe Grid */}
+          {/* CARD 5 (3 Cols): Workspace & RBAC Isolation */}
           <BentoSpotlightCard
             onClick={() => setCollabPing((p) => !p)}
             delay="620ms"
@@ -1022,17 +920,20 @@ export default function HeroBentoSection({
                   strokeWidth="1.5"
                   className="group-hover:text-[#ff6b35] transition-colors"
                 >
-                  <path d="m4 4 7.07 17 2.51-7.39L21 11.07z" />
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
                 <h2 className="text-[15px] font-medium whitespace-nowrap text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
-                  Realtime
+                  Workspace &amp; RBAC
                 </h2>
               </div>
               <p className="mt-[12px] text-[14px] font-normal leading-[1.5] text-[#898989]">
                 <strong className="font-normal text-[#fafafa]">
-                  Build multiplayer experiences
+                  Multi-tenant workspace isolation
                 </strong>{" "}
-                with real-time workspace synchronization.
+                with member invitations and role permissions.
               </p>
             </div>
 
@@ -1092,9 +993,9 @@ export default function HeroBentoSection({
                     stroke="#ff6b35"
                     strokeWidth="1.5"
                   />
-                  <rect x="12" y="8" width="46" height="18" rx="4" fill="#ff6b35" />
-                  <text x="17" y="21" fill="#121212" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
-                    @Sarah
+                  <rect x="12" y="8" width="54" height="18" rx="4" fill="#ff6b35" />
+                  <text x="16" y="21" fill="#121212" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
+                    @Admin
                   </text>
                   <circle cx="0" cy="0" r="10" fill="none" stroke="#ff6b35" strokeWidth="1" className="opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
                 </g>
@@ -1110,9 +1011,9 @@ export default function HeroBentoSection({
                     stroke="#c084fc"
                     strokeWidth="1.5"
                   />
-                  <rect x="11" y="7" width="44" height="18" rx="4" fill="#c084fc" />
-                  <text x="16" y="20" fill="#121212" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
-                    @David
+                  <rect x="11" y="7" width="58" height="18" rx="4" fill="#c084fc" />
+                  <text x="15" y="20" fill="#121212" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
+                    @Member
                   </text>
                 </g>
               </svg>
@@ -1121,9 +1022,9 @@ export default function HeroBentoSection({
               <div className="relative z-10 flex items-center gap-[6px] rounded-full border border-[#4d4d4d] bg-[#242424]/90 backdrop-blur-xs px-[14px] py-[6px] group-hover:border-[#ff6b35]/60 group-hover:shadow-[0_0_16px_rgba(255,107,53,0.3)] transition-all">
                 <span className="h-[5px] w-[5px] rounded-full bg-[#ff6b35] animate-ping" />
                 <span className="text-[11px] font-mono-code text-[#fafafa]">
-                  2 Peers Live
+                  Org Isolated
                 </span>
-                <span className="text-[10px] text-[#ff6b35] font-mono-code font-semibold">(12ms sync)</span>
+                <span className="text-[10px] text-[#ff6b35] font-mono-code font-semibold">(RBAC Enforced)</span>
               </div>
             </div>
 
@@ -1131,13 +1032,13 @@ export default function HeroBentoSection({
             <div className="mt-auto flex items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
               <span className="flex items-center gap-[5px]">
                 <span className="h-[5px] w-[5px] rounded-full bg-emerald-400" />
-                <span className="group-hover:text-[#fafafa] transition-colors">CRDT State Mesh</span>
+                <span className="group-hover:text-[#fafafa] transition-colors">Multi-Tenant Workspaces</span>
               </span>
-              <span className="text-[#898989]">BroadcastChannel</span>
+              <span className="text-[#898989]">Admin &amp; Member Roles</span>
             </div>
           </BentoSpotlightCard>
 
-          {/* CARD 6 (3 Cols): Lineage & Governance — Isometric cube */}
+          {/* CARD 6 (3 Cols): Data Quality & Audit Ledger */}
           <BentoSpotlightCard
             delay="700ms"
             className="md:col-span-6 lg:col-span-3 h-[400px]"
@@ -1158,13 +1059,13 @@ export default function HeroBentoSection({
                   <line x1="12" y1="22.08" x2="12" y2="12" />
                 </svg>
                 <h2 className="text-[15px] font-medium whitespace-nowrap text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
-                  Lineage &amp; Audit
+                  Data Quality &amp; Audit
                 </h2>
               </div>
               <p className="mt-[12px] text-[14px] font-normal leading-[1.5] text-[#898989]">
-                Integrate enterprise governance to{" "}
+                Automate schema health audits to{" "}
                 <strong className="font-normal text-[#fafafa]">
-                  trace lineage, audit SQL, and sync SAML/SCIM.
+                  detect null anomalies and log query activity.
                 </strong>
               </p>
             </div>
@@ -1246,17 +1147,17 @@ export default function HeroBentoSection({
               <div className="mt-[4px] flex flex-col gap-[6px] text-[12px] text-[#fafafa]">
                 <div className="flex items-center gap-[8px]">
                   <span className="h-[6px] w-[6px] rounded-full bg-emerald-400" />
-                  <span>Okta SAML 2.0 Active</span>
+                  <span>Schema Profiling Active</span>
                 </div>
                 <div className="flex items-center gap-[8px]">
                   <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35]" />
-                  <span>SHA-256 Ledger Verified</span>
+                  <span>Activity Audit Logged</span>
                 </div>
               </div>
             </div>
           </BentoSpotlightCard>
 
-          {/* CARD 7 (3 Cols): Embedded SDK & Alerts */}
+          {/* CARD 7 (3 Cols): Signed Embeds & REST APIs */}
           <BentoSpotlightCard
             delay="780ms"
             className="md:col-span-6 lg:col-span-3 h-[400px]"
@@ -1278,13 +1179,13 @@ export default function HeroBentoSection({
                   <path d="M9 6h6M6 9v6a3 3 0 0 0 3 3h6" />
                 </svg>
                 <h2 className="text-[15px] font-medium whitespace-nowrap text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
-                  Data APIs &amp; Embeds
+                  Signed Embeds &amp; APIs
                 </h2>
               </div>
               <p className="mt-[12px] text-[14px] font-normal leading-[1.5] text-[#898989]">
                 Instant ready-to-use{" "}
                 <strong className="font-normal text-[#fafafa]">
-                  signed iframe embeds and alert webhooks.
+                  signed iframe tokens and REST API endpoints.
                 </strong>
               </p>
             </div>
@@ -1292,11 +1193,11 @@ export default function HeroBentoSection({
             {/* Interactive API route rows with alive hover & latency ping */}
             <div className="flex flex-col gap-[10px] pt-[12px]">
               {[
-                { table: "revenues", slug: "revenues", latency: "0.8ms" },
-                { table: "cohorts", slug: "cohorts", latency: "1.2ms" },
-                { table: "streams", slug: "streams", latency: "0.4ms" },
-                { table: "tenants", slug: "tenants", latency: "1.1ms" },
-                { table: "anomalies", slug: "anomalies", latency: "0.6ms" },
+                { table: "ai-nl-to-chart", slug: "ai/nl-to-chart", latency: "0.8s" },
+                { table: "datasets", slug: "datasets/query", latency: "14ms" },
+                { table: "embed-token", slug: "dashboards/embed", latency: "5ms" },
+                { table: "alerts", slug: "alerts/dispatch", latency: "12ms" },
+                { table: "audit", slug: "audit/activity", latency: "6ms" },
               ].map((row, idx) => {
                 const isSelected = activeRouteIdx === idx;
                 return (
@@ -1326,8 +1227,8 @@ export default function HeroBentoSection({
 
             {/* Embedded SDK & Uptime Footer */}
             <div className="mt-auto flex items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
-              <span className="text-[#fafafa]">Signed Iframe &amp; SDK</span>
-              <span className="text-emerald-400 font-semibold">99.99% Uptime</span>
+              <span className="text-[#fafafa]">Signed Iframe Tokens</span>
+              <span className="text-emerald-400 font-semibold">REST API Ready</span>
             </div>
           </BentoSpotlightCard>
         </div>

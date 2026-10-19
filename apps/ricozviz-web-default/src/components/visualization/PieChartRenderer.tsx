@@ -14,14 +14,14 @@ import type { ChartConfig } from "../../lib/api";
 import { formatNumber, formatCurrency, formatPercent } from "../../lib/formatting";
 
 const PALETTE = [
-  "#147D78", // Editorial Accent
-  "#D9A441", // Subtle Highlight Ochre
-  "#2E5B70", // Deep Slate Cyan
-  "#10B981", // Emerald
-  "#E11D48", // Rose Alert
-  "#596775", // Secondary Text Slate
-  "#0F625D", // Deep Forest Teal
-  "#F59E0B", // Amber Warning
+  "#ff6b35", // Primary Coral Accent
+  "#38bdf8", // Sky Telemetry
+  "#10b981", // Emerald Positive
+  "#f59e0b", // Amber Warning
+  "#8b5cf6", // Violet Signal
+  "#ec4899", // Rose Metric
+  "#06b6d4", // Cyan
+  "#f43f5e", // Crimson Alert
 ];
 
 export interface PieChartRendererProps {
@@ -76,11 +76,12 @@ export function PieChartRenderer({
               String(name),
             ]}
             contentStyle={{
-              backgroundColor: "#ffffff",
-              borderColor: "#e5e7eb",
+              backgroundColor: "#161616",
+              borderColor: "#2e2e2e",
               borderRadius: "0.5rem",
-              boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
               fontSize: "12px",
+              color: "#fafafa",
             }}
           />
           {showLegend && <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />}
@@ -127,10 +128,10 @@ export function PieChartRenderer({
       {/* Donut Center Summary */}
       {isDonut && totalValue > 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mb-6">
-          <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+          <span className="text-[10px] text-[#777777] font-semibold uppercase tracking-wider font-mono">
             Total
           </span>
-          <span className="text-sm font-bold text-gray-800">
+          <span className="text-sm font-bold text-white font-mono">
             {formatNumber(totalValue, 0, true)}
           </span>
         </div>

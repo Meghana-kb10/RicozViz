@@ -19,16 +19,14 @@ import { BrandLogo } from "@/components/shell/BrandLogo";
  */
 export function TechnicalFooter() {
   return (
-    <footer className="relative bg-[#172B3A] dark:bg-[#0B0F19] text-white overflow-hidden selection:bg-[#147D78] selection:text-white border-t border-[#DADFD9]/20 dark:border-[#374151] font-sans transition-colors duration-200">
+    <footer className="relative bg-[#121212] text-white overflow-hidden selection:bg-[#ff6b35] selection:text-white border-t border-[#242424] font-sans antialiased transition-colors duration-200">
       <div className="mx-auto max-w-[1200px] px-6 sm:px-8 lg:px-12 py-16">
         {/* Main Editorial Layout: Brand Left + 4 Columns Right */}
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-12 lg:gap-16">
           {/* Brand & Sub-tagline Column */}
           <div className="lg:w-[260px] shrink-0 space-y-4">
             <Link href="/" className="inline-flex items-center gap-2.5 group">
-              <div className="w-6 h-6 rounded-md bg-white flex items-center justify-center p-0.5 overflow-hidden shadow-xs">
-                <BrandLogo size={20} className="rounded-xs" />
-              </div>
+              <BrandLogo size={24} className="rounded-md" />
               <span className="font-bold tracking-wider text-sm sm:text-base text-white uppercase font-sans">
                 RICOZVIZ
               </span>

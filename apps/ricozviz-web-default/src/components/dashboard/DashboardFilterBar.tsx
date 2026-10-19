@@ -175,50 +175,50 @@ export function DashboardFilterBar({
   const selectedCol = availableColumns.find((c) => c.name === selectedField);
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 py-2.5 shadow-2xs">
+    <div className="bg-[#141414] border-b border-[#242424] px-4 py-2.5 shadow-xs">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Left: Active Filter Chips & Add Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700 mr-1">
-            <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-600" />
+          <div className="flex items-center gap-1.5 text-xs font-medium text-[#fafafa] mr-1">
+            <SlidersHorizontal className="h-3.5 w-3.5 text-[#ff6b35]" />
             <span>Filters</span>
             {filters.length > 0 && (
-              <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 px-1.5 py-0.2 text-[10px] font-bold text-indigo-700">
+              <span className="inline-flex items-center justify-center rounded-full bg-[#ff6b35]/15 border border-[#ff6b35]/30 px-1.5 py-0.2 text-[10px] font-mono font-medium text-[#ff8c5a]">
                 {filters.length}
               </span>
             )}
           </div>
 
           {filters.length === 0 ? (
-            <span className="text-xs text-gray-400 italic">No active filters</span>
+            <span className="text-xs text-[#898989] italic">No active filters</span>
           ) : (
             filters.map((f) => (
               <span
                 key={f.id}
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border transition ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-normal border transition ${
                   f.isCrossFilter
-                    ? "bg-indigo-50 border-indigo-200 text-indigo-800"
+                    ? "bg-[#ff6b35]/10 border-[#ff6b35]/35 text-[#ff8c5a]"
                     : f.operator === "in"
-                    ? "bg-purple-50 border-purple-200 text-purple-800"
-                    : "bg-blue-50 border-blue-200 text-blue-800"
+                    ? "bg-[#1c1c1c] border-[#2e2e2e] text-[#dedede]"
+                    : "bg-[#181818] border-[#282828] text-[#dedede]"
                 }`}
               >
-                {f.isCrossFilter && <span className="text-[10px] text-indigo-500 font-bold">⚡</span>}
+                {f.isCrossFilter && <span className="text-[10px] text-[#ff6b35] font-bold">⚡</span>}
                 {f.label ? (
                   <span>{f.label}</span>
                 ) : f.operator === "in" && Array.isArray(f.value) ? (
                   <span>
-                    <strong className="font-semibold">{f.field}</strong> in [{(f.value as unknown[]).join(", ")}]
+                    <strong className="font-medium text-[#fafafa]">{f.field}</strong> in [{(f.value as unknown[]).join(", ")}]
                   </span>
                 ) : (
                   <span>
-                    <strong className="font-semibold">{f.field}</strong> {f.operator} {String(f.value)}
+                    <strong className="font-medium text-[#fafafa]">{f.field}</strong> {f.operator} {String(f.value)}
                   </span>
                 )}
                 <button
                   type="button"
                   onClick={() => onRemoveFilter(f.id)}
-                  className="rounded-full p-0.5 hover:bg-black/10 transition text-gray-500 hover:text-gray-900"
+                  className="rounded-full p-0.5 hover:bg-white/10 transition text-[#898989] hover:text-[#fafafa] cursor-pointer"
                   title="Remove Filter"
                   aria-label={`Remove filter for ${f.field}`}
                 >
@@ -236,25 +236,25 @@ export function DashboardFilterBar({
                 setIsAddOpen(!isAddOpen);
                 setIsDatePresetsOpen(false);
               }}
-              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition"
+              className="inline-flex items-center gap-1 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1 text-xs font-normal text-[#dedede] hover:bg-[#222222] hover:text-[#fafafa] hover:border-[#ff6b35]/40 transition cursor-pointer"
             >
-              <Plus className="h-3 w-3 text-indigo-600" />
+              <Plus className="h-3 w-3 text-[#ff6b35]" />
               <span>Add Filter</span>
-              <ChevronDown className="h-3 w-3 text-gray-400 ml-0.5" />
+              <ChevronDown className="h-3 w-3 text-[#898989] ml-0.5" />
             </button>
 
             {/* Filter Creation Popover */}
             {isAddOpen && (
-              <div className="absolute top-full left-0 mt-2 w-80 rounded-xl border border-gray-200 bg-white p-3.5 shadow-xl z-30">
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
-                  <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                    <Filter className="h-3.5 w-3.5 text-indigo-600" />
+              <div className="absolute top-full left-0 mt-2 w-80 rounded-xl border border-[#2a2a2a] bg-[#171717] p-3.5 shadow-2xl z-30 text-[#fafafa]">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#242424]">
+                  <span className="text-xs font-medium text-[#fafafa] flex items-center gap-1.5">
+                    <Filter className="h-3.5 w-3.5 text-[#ff6b35]" />
                     <span>Apply Filter</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsAddOpen(false)}
-                    className="text-gray-400 hover:text-gray-600 text-xs"
+                    className="text-[#898989] hover:text-[#fafafa] text-xs cursor-pointer"
                   >
                     ×
                   </button>
@@ -262,7 +262,7 @@ export function DashboardFilterBar({
 
                 <form onSubmit={handleCreateFilter} className="space-y-2.5 text-xs">
                   <div>
-                    <label className="text-[10px] font-semibold text-gray-500 block mb-0.5">
+                    <label className="text-[10px] font-medium text-[#898989] block mb-0.5">
                       Field
                     </label>
                     <select
@@ -272,11 +272,11 @@ export function DashboardFilterBar({
                         setSelectedMultiValues([]);
                       }}
                       required
-                      className="w-full rounded-md border border-gray-200 p-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#121212] p-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
-                      <option value="">Select Field...</option>
+                      <option value="" className="bg-[#141414] text-[#898989]">Select Field...</option>
                       {availableColumns.map((col) => (
-                        <option key={col.name} value={col.name}>
+                        <option key={col.name} value={col.name} className="bg-[#141414] text-[#fafafa]">
                           {col.name} ({col.type})
                         </option>
                       ))}
@@ -284,36 +284,36 @@ export function DashboardFilterBar({
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-semibold text-gray-500 block mb-0.5">
+                    <label className="text-[10px] font-medium text-[#898989] block mb-0.5">
                       Operator
                     </label>
                     <select
                       value={operator}
                       onChange={(e) => setOperator(e.target.value as FilterOperator)}
-                      className="w-full rounded-md border border-gray-200 p-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#121212] p-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
-                      <option value="=">= equals</option>
-                      <option value="in">☑ in (multi-select)</option>
-                      <option value="!=">!= not equals</option>
-                      <option value=">">&gt; greater than</option>
-                      <option value=">=">&gt;= greater or equal</option>
-                      <option value="<">&lt; less than</option>
-                      <option value="<=">&lt;= less or equal</option>
-                      <option value="contains">contains</option>
+                      <option value="=" className="bg-[#141414] text-[#fafafa]">= equals</option>
+                      <option value="in" className="bg-[#141414] text-[#fafafa]">☑ in (multi-select)</option>
+                      <option value="!=" className="bg-[#141414] text-[#fafafa]">!= not equals</option>
+                      <option value=">" className="bg-[#141414] text-[#fafafa]">&gt; greater than</option>
+                      <option value=">=" className="bg-[#141414] text-[#fafafa]">&gt;= greater or equal</option>
+                      <option value="<" className="bg-[#141414] text-[#fafafa]">&lt; less than</option>
+                      <option value="<=" className="bg-[#141414] text-[#fafafa]">&lt;= less or equal</option>
+                      <option value="contains" className="bg-[#141414] text-[#fafafa]">contains</option>
                     </select>
                   </div>
 
                   {operator === "in" ? (
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-semibold text-gray-500">
+                        <label className="text-[10px] font-medium text-[#898989]">
                           Select Categories ({selectedMultiValues.length} selected)
                         </label>
                         {selectedMultiValues.length > 0 && (
                           <button
                             type="button"
                             onClick={() => setSelectedMultiValues([])}
-                            className="text-[10px] text-gray-400 hover:text-red-500"
+                            className="text-[10px] text-[#898989] hover:text-[#ef4444]"
                           >
                             Clear
                           </button>
@@ -321,27 +321,27 @@ export function DashboardFilterBar({
                       </div>
 
                       {/* Checkbox Options List */}
-                      <div className="max-h-36 overflow-y-auto rounded-md border border-gray-200 p-2 space-y-1 bg-gray-50/50">
+                      <div className="max-h-36 overflow-y-auto rounded-md border border-[#262626] p-2 space-y-1 bg-[#121212]">
                         {currentFieldOptions.length > 0 ? (
                           currentFieldOptions.map((opt) => {
                             const isChecked = selectedMultiValues.includes(opt);
                             return (
                               <label
                                 key={opt}
-                                className="flex items-center gap-2 cursor-pointer hover:bg-white p-1 rounded transition text-gray-700 text-xs"
+                                className="flex items-center gap-2 cursor-pointer hover:bg-[#1a1a1a] p-1 rounded transition text-[#dedede] text-xs"
                               >
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => handleToggleMultiValue(opt)}
-                                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+                                  className="rounded border-[#333333] accent-[#ff6b35] h-3.5 w-3.5"
                                 />
                                 <span className="truncate">{opt}</span>
                               </label>
                             );
                           })
                         ) : (
-                          <p className="text-[11px] text-gray-400 italic p-1">
+                          <p className="text-[11px] text-[#898989] italic p-1">
                             No cached category values. Type values below:
                           </p>
                         )}
@@ -360,12 +360,12 @@ export function DashboardFilterBar({
                             }
                           }}
                           placeholder="Type option and press Add..."
-                          className="flex-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                          className="flex-1 rounded-md border border-[#2e2e2e] bg-[#121212] px-2 py-1 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={handleAddCustomMultiValue}
-                          className="rounded bg-gray-100 hover:bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition"
+                          className="rounded bg-[#222222] hover:bg-[#2a2a2a] px-2 py-1 text-xs font-normal text-[#fafafa] transition cursor-pointer"
                         >
                           Add
                         </button>
@@ -377,13 +377,13 @@ export function DashboardFilterBar({
                           {selectedMultiValues.map((v) => (
                             <span
                               key={v}
-                              className="inline-flex items-center gap-1 rounded bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 text-[10px] text-indigo-700"
+                              className="inline-flex items-center gap-1 rounded bg-[#ff6b35]/15 border border-[#ff6b35]/30 px-1.5 py-0.5 text-[10px] text-[#ff8c5a]"
                             >
                               <span>{v}</span>
                               <button
                                 type="button"
                                 onClick={() => handleToggleMultiValue(v)}
-                                className="hover:text-red-600"
+                                className="hover:text-red-400 cursor-pointer"
                               >
                                 ×
                               </button>
@@ -394,7 +394,7 @@ export function DashboardFilterBar({
                     </div>
                   ) : (
                     <div>
-                      <label className="text-[10px] font-semibold text-gray-500 block mb-0.5">
+                      <label className="text-[10px] font-medium text-[#898989] block mb-0.5">
                         Value
                       </label>
                       {selectedCol?.type === "boolean" ? (
@@ -402,11 +402,11 @@ export function DashboardFilterBar({
                           value={value}
                           onChange={(e) => setValue(e.target.value)}
                           required
-                          className="w-full rounded-md border border-gray-200 p-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-md border border-[#2e2e2e] bg-[#121212] p-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         >
-                          <option value="">Select...</option>
-                          <option value="true">True</option>
-                          <option value="false">False</option>
+                          <option value="" className="bg-[#141414] text-[#898989]">Select...</option>
+                          <option value="true" className="bg-[#141414] text-[#fafafa]">True</option>
+                          <option value="false" className="bg-[#141414] text-[#fafafa]">False</option>
                         </select>
                       ) : (
                         <input
@@ -427,24 +427,24 @@ export function DashboardFilterBar({
                               : "Filter value..."
                           }
                           required
-                          className="w-full rounded-md border border-gray-200 p-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-md border border-[#2e2e2e] bg-[#121212] p-1.5 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none"
                         />
                       )}
                     </div>
                   )}
 
-                  <div className="pt-2 flex justify-end gap-1.5">
+                  <div className="pt-2 flex justify-end gap-1.5 border-t border-[#242424]">
                     <button
                       type="button"
                       onClick={() => setIsAddOpen(false)}
-                      className="rounded px-2.5 py-1 text-gray-500 hover:bg-gray-100 font-medium"
+                      className="rounded px-2.5 py-1 text-[#898989] hover:bg-white/5 hover:text-white font-normal cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={operator === "in" && selectedMultiValues.length === 0}
-                      className="rounded bg-indigo-600 px-3 py-1 text-white font-semibold hover:bg-indigo-500 shadow-2xs disabled:opacity-50"
+                      className="rounded bg-[#ff6b35] hover:bg-[#c2410c] px-3 py-1 text-white font-medium shadow-xs disabled:opacity-50 cursor-pointer transition"
                     >
                       Apply
                     </button>
@@ -463,24 +463,24 @@ export function DashboardFilterBar({
                   setIsDatePresetsOpen(!isDatePresetsOpen);
                   setIsAddOpen(false);
                 }}
-                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition"
+                className="inline-flex items-center gap-1 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1 text-xs font-normal text-[#dedede] hover:bg-[#222222] hover:text-[#fafafa] hover:border-[#ff6b35]/40 transition cursor-pointer"
               >
-                <Calendar className="h-3 w-3 text-indigo-600" />
+                <Calendar className="h-3 w-3 text-[#ff6b35]" />
                 <span>Date Presets</span>
-                <ChevronDown className="h-3 w-3 text-gray-400 ml-0.5" />
+                <ChevronDown className="h-3 w-3 text-[#898989] ml-0.5" />
               </button>
 
               {isDatePresetsOpen && (
-                <div className="absolute top-full left-0 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-3 shadow-xl z-30">
-                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
-                    <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-indigo-600" />
+                <div className="absolute top-full left-0 mt-2 w-64 rounded-xl border border-[#2a2a2a] bg-[#171717] p-3 shadow-2xl z-30 text-[#fafafa]">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#242424]">
+                    <span className="text-xs font-medium text-[#fafafa] flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-[#ff6b35]" />
                       <span>Relative Date Presets</span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsDatePresetsOpen(false)}
-                      className="text-gray-400 hover:text-gray-600 text-xs"
+                      className="text-[#898989] hover:text-[#fafafa] text-xs cursor-pointer"
                     >
                       ×
                     </button>
@@ -488,16 +488,16 @@ export function DashboardFilterBar({
 
                   {dateColumns.length > 1 && (
                     <div className="mb-2">
-                      <label className="text-[10px] font-semibold text-gray-500 block mb-0.5">
+                      <label className="text-[10px] font-medium text-[#898989] block mb-0.5">
                         Date Field
                       </label>
                       <select
                         value={selectedDateField || dateColumns[0]?.name}
                         onChange={(e) => setSelectedDateField(e.target.value)}
-                        className="w-full rounded-md border border-gray-200 p-1 text-xs text-gray-800 focus:outline-none"
+                        className="w-full rounded-md border border-[#2e2e2e] bg-[#121212] p-1 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       >
                         {dateColumns.map((col) => (
-                          <option key={col.name} value={col.name}>
+                          <option key={col.name} value={col.name} className="bg-[#141414] text-[#fafafa]">
                             {col.name}
                           </option>
                         ))}
@@ -519,10 +519,10 @@ export function DashboardFilterBar({
                         key={preset}
                         type="button"
                         onClick={() => handleApplyDatePreset(preset)}
-                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition flex items-center justify-between"
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-normal text-[#dedede] hover:bg-[#ff6b35]/10 hover:text-[#ff8c5a] transition flex items-center justify-between cursor-pointer"
                       >
                         <span>{preset}</span>
-                        <span className="text-[10px] text-gray-400">preset</span>
+                        <span className="text-[10px] text-[#898989] font-mono">preset</span>
                       </button>
                     ))}
                   </div>
@@ -538,7 +538,7 @@ export function DashboardFilterBar({
             <button
               type="button"
               onClick={onClearAll}
-              className="text-gray-500 hover:text-red-600 font-semibold px-2 py-1 rounded transition hover:bg-red-50"
+              className="text-[#898989] hover:text-[#ef4444] font-normal px-2 py-1 rounded transition hover:bg-white/5 cursor-pointer"
             >
               Clear all ({filters.length})
             </button>
@@ -547,10 +547,10 @@ export function DashboardFilterBar({
           <button
             type="button"
             onClick={onResetDashboard}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1 text-xs font-normal text-[#dedede] hover:text-white hover:bg-[#222222] transition cursor-pointer"
             title="Reset all filters and refresh visualizations"
           >
-            <RotateCcw className="h-3 w-3" />
+            <RotateCcw className="h-3 w-3 text-[#898989]" />
             <span>Reset Dashboard</span>
           </button>
         </div>

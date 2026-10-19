@@ -25,18 +25,18 @@ export function TableRenderer({
   const primaryDim = data.xKey || data.columns[0]?.name;
 
   return (
-    <div style={{ height }} className="w-full h-full overflow-auto rounded-lg border border-gray-200 bg-white">
-      <table className="min-w-full divide-y divide-gray-200 text-left text-xs">
-        <thead className="bg-gray-50/90 sticky top-0 backdrop-blur-xs z-10">
+    <div style={{ height }} className="w-full h-full overflow-auto rounded-lg border border-[#262626] bg-[#141414]">
+      <table className="min-w-full divide-y divide-[#242424] text-left text-xs">
+        <thead className="bg-[#181818] sticky top-0 backdrop-blur-xs z-10 border-b border-[#242424]">
           <tr>
             {data.columns.map((col) => (
               <th
                 key={col.name}
-                className="px-3.5 py-2.5 font-semibold text-gray-700 tracking-wider whitespace-nowrap"
+                className="px-3.5 py-2.5 font-semibold text-[#dedede] tracking-wider whitespace-nowrap"
               >
                 <div className="flex items-center gap-1.5">
                   <span>{col.name}</span>
-                  <span className="text-[10px] text-gray-400 font-mono font-normal">
+                  <span className="text-[10px] text-[#777777] font-mono font-normal">
                     ({col.type})
                   </span>
                 </div>
@@ -44,7 +44,7 @@ export function TableRenderer({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 bg-white">
+        <tbody className="divide-y divide-[#242424] bg-[#141414]">
           {data.rows.slice(0, 100).map((row, rIdx) => {
             const isSelected =
               selectedFilterValue !== undefined &&
@@ -62,14 +62,14 @@ export function TableRenderer({
                 }}
                 className={`transition-colors cursor-pointer ${
                   isSelected
-                    ? "bg-[#147D78]/10 font-semibold"
-                    : "hover:bg-[#147D78]/5"
+                    ? "bg-[#ff6b35]/15 font-semibold text-white"
+                    : "hover:bg-[#1c1c1c] text-[#dedede]"
                 }`}
               >
                 {data.columns.map((col) => (
                   <td
                     key={col.name}
-                    className="px-3.5 py-2 text-gray-800 font-mono text-[11px] whitespace-nowrap"
+                    className="px-3.5 py-2 font-mono text-[11px] whitespace-nowrap"
                   >
                     {row[col.name] !== null && row[col.name] !== undefined
                       ? formatValue(row[col.name], numberFormat)
@@ -82,7 +82,7 @@ export function TableRenderer({
         </tbody>
       </table>
       {data.rows.length > 100 && (
-        <div className="p-2 text-center text-[11px] text-gray-400 bg-gray-50 border-t border-gray-100">
+        <div className="p-2 text-center text-[11px] text-[#777777] font-mono bg-[#161616] border-t border-[#242424]">
           Showing first 100 of {data.rows.length} rows
         </div>
       )}

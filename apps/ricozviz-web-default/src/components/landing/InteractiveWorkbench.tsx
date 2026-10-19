@@ -2,155 +2,167 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 
-type WorkbenchTab = "viz" | "sql" | "security" | "collab";
+type WorkbenchTab = "viz" | "sql" | "ai" | "embed";
 type ChartType = "area" | "bar" | "heatmap" | "donut";
 type RegionFilter = "ALL" | "NA-EAST" | "EMEA" | "APAC";
-type UserRole = "admin" | "regional_emea" | "analyst" | "auditor";
-type TenantId = "acme_corp" | "globex_inc" | "umbra_systems";
 
 interface DataRow {
   id: string;
-  tenant: TenantId;
-  region: "NA-EAST" | "EMEA" | "APAC";
   source: string;
-  customerEmail: string;
-  taxId: string;
+  region: "NA-EAST" | "EMEA" | "APAC";
+  account: string;
   arrUsd: number;
   latencyMs: number;
 }
 
 const CONNECTOR_LOGOS = [
   "PostgreSQL",
+  "MySQL",
+  "SQLite",
   "Snowflake",
   "BigQuery",
   "ClickHouse",
-  "Databricks",
   "Redshift",
-  "S3 Parquet",
-  "Apache Kafka",
-  "MySQL",
-  "DuckDB Wasm",
-  "Okta SAML",
-  "SCIM 2.0",
+  "MongoDB",
+  "Databricks",
+  "REST API",
+  "CSV Upload",
+  "Excel Spreadsheets",
 ];
 
 const INITIAL_ROWS: DataRow[] = [
   {
     id: "row_01",
-    tenant: "acme_corp",
     region: "NA-EAST",
     source: "PostgreSQL",
-    customerEmail: "vp.data@acmecorp.io",
-    taxId: "US-94-2819402",
+    account: "Acme Enterprises",
     arrUsd: 148500,
     latencyMs: 1.2,
   },
   {
     id: "row_02",
-    tenant: "acme_corp",
     region: "EMEA",
     source: "Snowflake",
-    customerEmail: "analytics.eu@acmecorp.io",
-    taxId: "DE-819204119",
+    account: "Globex Europe",
     arrUsd: 212000,
     latencyMs: 1.6,
   },
   {
     id: "row_03",
-    tenant: "acme_corp",
     region: "APAC",
     source: "ClickHouse",
-    customerEmail: "ops.sg@acmecorp.io",
-    taxId: "SG-20249182A",
+    account: "Umbra Tokyo",
     arrUsd: 96400,
     latencyMs: 0.9,
   },
   {
     id: "row_04",
-    tenant: "acme_corp",
     region: "EMEA",
-    source: "Apache Kafka",
-    customerEmail: "treasury.uk@acmecorp.io",
-    taxId: "GB-440192831",
+    source: "MySQL",
+    account: "Starlight Media",
     arrUsd: 310000,
     latencyMs: 1.1,
   },
   {
     id: "row_05",
-    tenant: "globex_inc",
     region: "NA-EAST",
     source: "BigQuery",
-    customerEmail: "bi.lead@globex.com",
-    taxId: "US-11-9048123",
+    account: "Vertex Analytics",
     arrUsd: 184000,
     latencyMs: 1.8,
   },
   {
     id: "row_06",
-    tenant: "globex_inc",
     region: "EMEA",
-    source: "S3 Parquet",
-    customerEmail: "dpo@globex.eu",
-    taxId: "FR-771029384",
+    source: "REST API",
+    account: "Kite Logistics",
     arrUsd: 129000,
     latencyMs: 1.4,
   },
   {
     id: "row_07",
-    tenant: "umbra_systems",
     region: "APAC",
-    source: "Databricks",
-    customerEmail: "chief.arch@umbra.jp",
-    taxId: "JP-501928371",
+    source: "CSV Upload",
+    account: "Pulse Systems",
     arrUsd: 420000,
     latencyMs: 1.3,
   },
 ];
 
-const ROLE_CONFIG: Record<
-  UserRole,
+interface AiPromptPreset {
+  id: string;
+  title: string;
+  prompt: string;
+  chartType: string;
+  sqlQuery: string;
+  metric: string;
+  latency: string;
+}
+
+const AI_PRESETS: AiPromptPreset[] = [
   {
-    label: string;
-    rlsPolicy: string;
-    maskPii: boolean;
-    hideFinancials: boolean;
-    allowedRegions: ("NA-EAST" | "EMEA" | "APAC")[];
-    permissions: string[];
-  }
-> = {
-  admin: {
-    label: "Enterprise Admin",
-    rlsPolicy: "tenant_id = :active_tenant AND 1=1",
-    maskPii: false,
-    hideFinancials: false,
-    allowedRegions: ["NA-EAST", "EMEA", "APAC"],
-    permissions: ["SELECT", "PARAMETERIZED_SQL", "UNMASK_PII", "MANAGE_RLS"],
+    id: "arr_cohort",
+    title: "Monthly ARR by Acquisition Cohort",
+    prompt: "Plot monthly ARR growth by acquisition cohort as an area spline",
+    chartType: "AREA",
+    metric: "SUM(arr_usd)",
+    latency: "380ms",
+    sqlQuery: `SELECT 
+  DATE_TRUNC('month', created_at) AS month,
+  cohort_group,
+  SUM(arr_usd) AS net_arr
+FROM orders_master
+WHERE created_at >= NOW() - INTERVAL '12 months'
+GROUP BY 1, 2
+ORDER BY 1 ASC;`,
   },
-  regional_emea: {
-    label: "Regional Manager (EMEA)",
-    rlsPolicy: "tenant_id = :active_tenant AND region = 'EMEA'",
-    maskPii: true,
-    hideFinancials: false,
-    allowedRegions: ["EMEA"],
-    permissions: ["SELECT", "PARAMETERIZED_SQL", "DASHBOARD_EDIT"],
+  {
+    id: "top_customers",
+    title: "Top 10 Accounts by Contract Value",
+    prompt: "Show top 10 accounts ranked by annual recurring revenue with region",
+    chartType: "BAR",
+    metric: "SUM(arr_usd)",
+    latency: "310ms",
+    sqlQuery: `SELECT 
+  account_name,
+  region,
+  SUM(arr_usd) AS total_arr
+FROM customer_accounts
+GROUP BY 1, 2
+ORDER BY total_arr DESC
+LIMIT 10;`,
   },
-  analyst: {
-    label: "Self-Service Analyst",
-    rlsPolicy: "tenant_id = :active_tenant AND pii_redacted = true",
-    maskPii: true,
-    hideFinancials: false,
-    allowedRegions: ["NA-EAST", "EMEA", "APAC"],
-    permissions: ["SELECT", "PARAMETERIZED_SQL", "CHART_BUILD"],
+  {
+    id: "churn_tier",
+    title: "90-Day Churn Rate by Plan Tier",
+    prompt: "Calculate trailing 90-day churn percentage breakdown by plan tier",
+    chartType: "DONUT",
+    metric: "CHURN_PCT",
+    latency: "420ms",
+    sqlQuery: `SELECT 
+  plan_tier,
+  COUNT(CASE WHEN churned = true THEN 1 END) * 100.0 / COUNT(*) AS churn_rate
+FROM subscriptions
+WHERE renewed_at >= NOW() - INTERVAL '90 days'
+GROUP BY 1;`,
   },
-  auditor: {
-    label: "Compliance Auditor",
-    rlsPolicy: "tenant_id = :active_tenant AND audit_scope = 'GOVERNANCE'",
-    maskPii: true,
-    hideFinancials: true,
-    allowedRegions: ["NA-EAST", "EMEA", "APAC"],
-    permissions: ["SELECT_METADATA", "VERIFY_AUDIT_CHAIN"],
+  {
+    id: "regional_vol",
+    title: "Transaction Volumes by Region",
+    prompt: "Compare weekly processed transaction volumes across APAC and EMEA",
+    chartType: "LINE",
+    metric: "COUNT(orders)",
+    latency: "290ms",
+    sqlQuery: `SELECT 
+  DATE_TRUNC('week', processed_at) AS week,
+  region,
+  COUNT(*) AS total_orders
+FROM transaction_ledger
+WHERE region IN ('APAC', 'EMEA')
+GROUP BY 1, 2
+ORDER BY 1 ASC;`,
   },
-};
+];
 
 export default function InteractiveWorkbench({
   selectedConnector,
@@ -167,19 +179,18 @@ export default function InteractiveWorkbench({
   const [selectedTable, setSelectedTable] = useState<string>("revenue_metrics");
   const [tableSearch, setTableSearch] = useState<string>("");
 
-  // SQL & DuckDB State
+  // SQL & Query Execution State
   const [paramRegion, setParamRegion] = useState<RegionFilter>("ALL");
   const [paramMinArr, setParamMinArr] = useState<number>(50000);
   const [queryRunCount, setQueryRunCount] = useState<number>(1);
   const [lastExecMs, setLastExecMs] = useState<number>(1.38);
   const [isRunningQuery, setIsRunningQuery] = useState<boolean>(false);
 
-  // Security / RLS / RBAC / Multi-tenant State
-  const [activeRole, setActiveRole] = useState<UserRole>("admin");
-  const [activeTenant, setActiveTenant] = useState<TenantId>("acme_corp");
-  const [forceMaskOverride, setForceMaskOverride] = useState<boolean>(false);
+  // AI NL-to-Chart Studio State
+  const [selectedAiPreset, setSelectedAiPreset] = useState<number>(0);
+  const [isSynthesizingAi, setIsSynthesizingAi] = useState<boolean>(false);
 
-  // Collaboration & Embedded Analytics State
+  // Alerts & Signed Embed State
   const [tokenTtl, setTokenTtl] = useState<"15m" | "1h" | "24h">("1h");
   const [tokenNonce, setTokenNonce] = useState<string>("rvz_tok_98f2a41c7e");
   const [copiedEmbed, setCopiedEmbed] = useState<boolean>(false);
@@ -213,41 +224,29 @@ export default function InteractiveWorkbench({
     }, 180);
   };
 
+  const handleSynthesizeAi = () => {
+    setIsSynthesizingAi(true);
+    setTimeout(() => {
+      setIsSynthesizingAi(false);
+    }, 450);
+  };
+
   const regenerateEmbedToken = () => {
     const hex = Math.random().toString(16).substring(2, 10);
     setTokenNonce(`rvz_tok_${hex}`);
   };
 
   const visibleRows = useMemo(() => {
-    const rolePolicy = ROLE_CONFIG[activeRole];
     return INITIAL_ROWS.filter((row) => {
-      if (activeTab === "security") {
-        if (row.tenant !== activeTenant) return false;
-        if (!rolePolicy.allowedRegions.includes(row.region)) return false;
-        return true;
-      }
       if (paramRegion !== "ALL" && row.region !== paramRegion) return false;
       if (row.arrUsd < paramMinArr) return false;
       return true;
     });
-  }, [activeTab, activeRole, activeTenant, paramRegion, paramMinArr]);
-
-  const shouldMaskPii = ROLE_CONFIG[activeRole].maskPii || forceMaskOverride;
-  const shouldHideFinancials = ROLE_CONFIG[activeRole].hideFinancials;
-
-  const maskEmail = (email: string) => {
-    if (!shouldMaskPii) return email;
-    const [, domain] = email.split("@");
-    return `***redacted***@${domain}`;
-  };
-
-  const maskTaxId = (taxId: string) => {
-    if (!shouldMaskPii) return taxId;
-    return `${taxId.slice(0, 3)}-••••-••${taxId.slice(-2)}`;
-  };
+  }, [paramRegion, paramMinArr]);
 
   const svgWidth = 620;
   const svgHeight = 185;
+
   const points = series.map((val, idx) => {
     const x = 28 + (idx * (svgWidth - 56)) / (series.length - 1);
     const y = svgHeight - 28 - ((val - 20) / 120) * (svgHeight - 56);
@@ -260,17 +259,19 @@ export default function InteractiveWorkbench({
 
   const allTables = [
     { name: "revenue_metrics", rows: "14.2M" },
-    { name: "kafka_orders", rows: "live" },
-    { name: "s3_cohorts", rows: "82.0M" },
-    { name: "tenant_policies", rows: "128" },
-    { name: "audit_ledger", rows: "4.1M" },
+    { name: "orders_master", rows: "1.2M" },
+    { name: "customer_accounts", rows: "48.2k" },
+    { name: "subscriptions", rows: "19.4k" },
+    { name: "transaction_ledger", rows: "4.1M" },
   ].filter((t) =>
     t.name.toLowerCase().includes(tableSearch.trim().toLowerCase())
   );
 
+  const activeAi = AI_PRESETS[selectedAiPreset];
+
   return (
     <div id="piece-workbench" className="w-full bg-[#121212] pb-[64px]">
-      {/* HAIRLINE-FRAMED 2x6 MONOCHROME CONNECTOR GRID (Matches top of supabase-mid.png 1:1) */}
+      {/* 2x6 MONOCHROME CONNECTOR GRID */}
       <div className="border-y border-[#2e2e2e] bg-[#121212]">
         <div className="mx-auto max-w-[1200px] border-x border-[#2e2e2e] px-[32px] py-[44px]">
           <div className="grid grid-cols-2 gap-y-[32px] gap-x-[24px] sm:grid-cols-3 lg:grid-cols-6">
@@ -281,7 +282,7 @@ export default function InteractiveWorkbench({
                   key={name}
                   type="button"
                   onClick={() => onSelectConnector?.(name)}
-                  className={`flex items-center justify-center gap-[8px] text-[17px] font-medium tracking-[-0.02em] transition-colors cursor-pointer ${
+                  className={`flex items-center justify-center gap-[8px] text-[16px] font-medium tracking-[-0.02em] transition-colors cursor-pointer ${
                     isSelected
                       ? "text-[#fafafa]"
                       : "text-[#898989] hover:text-[#b4b4b4]"
@@ -319,18 +320,18 @@ export default function InteractiveWorkbench({
               Stay productive and explore your data
             </span>
             <span className="block text-[#898989]">
-              without leaving the analytics workspace
+              without leaving the analytics studio
             </span>
           </h2>
 
-          {/* Pill Tab Switchers (Active pill has crisp #fafafa border, inactive has #2e2e2e border) */}
+          {/* Pill Tab Switchers */}
           <div className="flex flex-wrap items-center gap-[10px]">
             {(
               [
-                { id: "viz", label: "Dashboard Builder" },
-                { id: "sql", label: "SQL Editor" },
-                { id: "security", label: "RLS Policies" },
-                { id: "collab", label: "Realtime & Embeds" },
+                { id: "viz", label: "Dashboard Studio" },
+                { id: "sql", label: "SQL & Datasets" },
+                { id: "ai", label: "NL-to-Chart AI" },
+                { id: "embed", label: "Alerts & Signed Embeds" },
               ] as { id: WorkbenchTab; label: string }[]
             ).map((tab) => {
               const isActive = activeTab === tab.id;
@@ -352,9 +353,9 @@ export default function InteractiveWorkbench({
           </div>
         </div>
 
-        {/* FULL-CHROME DARK IDE APPLICATION WINDOW (>98% calm grayscale, 10-icon rail, full schema sidebar) */}
+        {/* FULL-CHROME DARK IDE APPLICATION WINDOW */}
         <div className="overflow-hidden rounded-[16px] border border-[#2e2e2e] bg-[#141414]">
-          {/* Top Window Bar (3 window dots) */}
+          {/* Top Window Bar */}
           <div className="flex h-[32px] items-center border-b border-[#242424] bg-[#171717] px-[14px]">
             <div className="flex items-center gap-[6px]">
               <span className="h-[8px] w-[8px] rounded-full bg-[#2e2e2e]" />
@@ -364,10 +365,9 @@ export default function InteractiveWorkbench({
           </div>
 
           <div className="flex min-h-[480px]">
-            {/* Left Vertical Icon Rail (48px, 10 monochrome icons running full height) */}
+            {/* Left Vertical Icon Rail */}
             <div className="hidden w-[48px] shrink-0 flex-col items-center justify-between border-r border-[#242424] bg-[#141414] py-[14px] sm:flex">
               <div className="flex flex-col items-center gap-[14px]">
-                {/* Single Brand Bolt Mark */}
                 <svg
                   className="mb-[4px] h-[18px] w-[18px] text-[#ff6b35]"
                   viewBox="0 0 24 24"
@@ -379,27 +379,16 @@ export default function InteractiveWorkbench({
                   />
                 </svg>
 
-                {/* 10 Monochrome Tool Rail Icons */}
                 {[
-                  { tab: "viz" as WorkbenchTab, d: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" },
                   { tab: "viz" as WorkbenchTab, d: "M3 3h18v18H3zM3 9h18M9 21V9" },
                   { tab: "sql" as WorkbenchTab, d: "M4 17l6-6-6-6M12 19h8" },
-                  { tab: "security" as WorkbenchTab, d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
-                  { tab: "security" as WorkbenchTab, d: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
-                  { tab: "collab" as WorkbenchTab, d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" },
-                  { tab: "viz" as WorkbenchTab, d: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 14a4 4 0 1 1 4-4 4 4 0 0 1-4 4z" },
-                  { tab: "collab" as WorkbenchTab, d: "m4 4 7.07 17 2.51-7.39L21 11.07z" },
-                  { tab: "sql" as WorkbenchTab, d: "M18 20V10M12 20V4M6 20v-6" },
-                  { tab: "security" as WorkbenchTab, d: "M4 6h16M4 12h16M4 18h16" },
-                ].map((ic, idx) => {
-                  const isHighlighted =
-                    (activeTab === "viz" && idx === 1) ||
-                    (activeTab === "sql" && idx === 2) ||
-                    (activeTab === "security" && idx === 3) ||
-                    (activeTab === "collab" && idx === 7);
+                  { tab: "ai" as WorkbenchTab, d: "m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z" },
+                  { tab: "embed" as WorkbenchTab, d: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" },
+                ].map((ic) => {
+                  const isHighlighted = activeTab === ic.tab;
                   return (
                     <button
-                      key={idx}
+                      key={ic.tab}
                       type="button"
                       onClick={() => setActiveTab(ic.tab)}
                       className={`flex h-[30px] w-[30px] items-center justify-center rounded-[6px] border transition-colors cursor-pointer ${
@@ -426,14 +415,14 @@ export default function InteractiveWorkbench({
               </div>
             </div>
 
-            {/* Secondary Sidebar (230px — Matches supabase-mid.png Table Editor sidebar) */}
+            {/* Secondary Sidebar */}
             <div className="hidden w-[230px] shrink-0 flex-col justify-between border-r border-[#242424] bg-[#141414] p-[16px] md:flex">
               <div className="space-y-[10px]">
                 <div className="pb-[4px] text-[14px] font-medium text-[#fafafa]">
-                  {activeTab === "viz" && "Dashboard Builder"}
-                  {activeTab === "sql" && "SQL Editor"}
-                  {activeTab === "security" && "RLS Policies"}
-                  {activeTab === "collab" && "Realtime & Embeds"}
+                  {activeTab === "viz" && "Dashboard Studio"}
+                  {activeTab === "sql" && "SQL & Datasets"}
+                  {activeTab === "ai" && "NL-to-Chart AI"}
+                  {activeTab === "embed" && "Alerts & Signed Embeds"}
                 </div>
 
                 {/* Schema Selector */}
@@ -444,17 +433,7 @@ export default function InteractiveWorkbench({
                   <span>⌄</span>
                 </div>
 
-                {/* + New Action Button */}
-                <button
-                  type="button"
-                  onClick={handleRunParameterizedSql}
-                  className="flex w-full items-center gap-[8px] rounded-[6px] border border-[#242424] bg-[#171717] px-[10px] py-[6px] text-[11px] text-[#b4b4b4] hover:border-[#393939] hover:text-[#fafafa] cursor-pointer"
-                >
-                  <span>+</span>
-                  <span>New canvas</span>
-                </button>
-
-                {/* Search Input + Filter Button */}
+                {/* Search Input */}
                 <div className="flex items-center gap-[6px]">
                   <div className="flex flex-1 items-center gap-[6px] rounded-[6px] border border-[#242424] bg-[#121212] px-[8px] py-[5px]">
                     <span className="text-[11px] text-[#4d4d4d]">⌕</span>
@@ -462,17 +441,10 @@ export default function InteractiveWorkbench({
                       type="text"
                       value={tableSearch}
                       onChange={(e) => setTableSearch(e.target.value)}
-                      placeholder="Search tables..."
+                      placeholder="Search datasets..."
                       className="w-full bg-transparent text-[11px] text-[#fafafa] placeholder-[#4d4d4d] focus:outline-none"
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setTableSearch("")}
-                    className="flex h-[26px] w-[26px] items-center justify-center rounded-[6px] border border-[#242424] bg-[#171717] text-[10px] text-[#898989]"
-                  >
-                    ⧩
-                  </button>
                 </div>
 
                 {/* Clean Entity List */}
@@ -502,26 +474,26 @@ export default function InteractiveWorkbench({
 
               <div className="rounded-[8px] border border-[#242424] bg-[#121212] p-[12px] text-[11px] text-[#898989]">
                 <div className="flex justify-between">
-                  <span>DuckDB Scan</span>
+                  <span>Query Latency</span>
                   <span className="font-mono-code text-[#fafafa]">
                     {lastExecMs} ms
                   </span>
                 </div>
                 <div className="mt-[4px] flex justify-between">
-                  <span>Wasm Memory</span>
-                  <span className="font-mono-code text-[#b4b4b4]">41.2 MB</span>
+                  <span>Status</span>
+                  <span className="font-mono-code text-emerald-400">Connected</span>
                 </div>
               </div>
             </div>
 
-            {/* Main IDE Stage: Top Breadcrumb Header + Content */}
+            {/* Main IDE Stage */}
             <div className="flex flex-1 flex-col bg-[#121212]">
-              {/* Top Breadcrumb Bar (Matches supabase-mid.png) */}
+              {/* Top Breadcrumb Bar */}
               <div className="flex h-[44px] items-center justify-between border-b border-[#242424] px-[20px]">
                 <div className="flex items-center gap-[10px] text-[11px] text-[#b4b4b4]">
-                  <span className="text-[#fafafa]">RicozViz Dev</span>
+                  <span className="text-[#fafafa]">RicozViz Studio</span>
                   <span className="rounded-full border border-[#2e2e2e] bg-[#1c1c1c] px-[7px] py-[1px] text-[10px] text-[#898989]">
-                    Pro
+                    Active
                   </span>
                   <span className="text-[#4d4d4d]">/</span>
                   <span>{selectedConnector}</span>
@@ -546,7 +518,7 @@ export default function InteractiveWorkbench({
 
               {/* Stage Content */}
               <div className="flex flex-1 flex-col justify-between p-[20px] sm:p-[24px]">
-                {/* TAB 1: DASHBOARD BUILDER */}
+                {/* TAB 1: DASHBOARD STUDIO */}
                 {activeTab === "viz" && (
                   <div className="flex h-full flex-col justify-between gap-[18px]">
                     <div className="flex flex-wrap items-center justify-between gap-[10px]">
@@ -592,7 +564,6 @@ export default function InteractiveWorkbench({
                       </div>
                     </div>
 
-                    {/* Monochrome Wireframe Chart Stage with Single Primary Action Button */}
                     <div className="flex min-h-[240px] flex-col justify-between rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[18px]">
                       <div className="flex items-center justify-between text-[12px]">
                         <div>
@@ -609,9 +580,7 @@ export default function InteractiveWorkbench({
                           onClick={handleRunParameterizedSql}
                           className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[12px] py-[4px] text-[11px] font-medium text-[#fafafa] hover:bg-[#c2410c] cursor-pointer"
                         >
-                          {isRunningQuery
-                            ? "Refreshing Wasm..."
-                            : "Run in DuckDB Wasm"}
+                          {isRunningQuery ? "Executing SQL..." : "Execute Query"}
                         </button>
                       </div>
 
@@ -813,33 +782,33 @@ export default function InteractiveWorkbench({
                             </svg>
                             <div className="space-y-[6px] text-[12px] text-[#b4b4b4]">
                               <div>● Snowflake &amp; Postgres — 48.5%</div>
-                              <div>● Apache Kafka Streams — 29.2%</div>
-                              <div>● S3 Parquet &amp; ClickHouse — 22.3%</div>
+                              <div>● MySQL &amp; ClickHouse — 29.2%</div>
+                              <div>● REST API &amp; Spreadsheets — 22.3%</div>
                             </div>
                           </div>
                         )}
                       </div>
 
                       <div className="flex items-center justify-between border-t border-[#1c1c1c] pt-[10px] font-mono-code text-[11px] text-[#898989]">
-                        <span>RLS Scope: {activeTenant}</span>
-                        <span>Zero-Copy Arrow Buffer</span>
+                        <span>Connected Sources: {selectedConnector}</span>
+                        <span>Recharts Multi-Widget Canvas</span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* TAB 2: SQL EDITOR */}
+                {/* TAB 2: SQL & DATASETS */}
                 {activeTab === "sql" && (
                   <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-12">
                     <div className="flex flex-col justify-between rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[16px] lg:col-span-5">
                       <div>
                         <div className="flex items-center justify-between border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989]">
                           <span>query.sql</span>
-                          <span>AST Parameterized</span>
+                          <span>Parameterized Query</span>
                         </div>
                         <pre className="mt-[12px] overflow-x-auto font-mono-code text-[12px] text-[#b4b4b4]">
                           <code>
-                            SELECT source, region, customer_email,{"\n"}
+                            SELECT source, region, account,{"\n"}
                             {"       "}SUM(arr_usd) AS net_arr{"\n"}
                             FROM {selectedTable}
                             {"\n"}
@@ -904,7 +873,7 @@ export default function InteractiveWorkbench({
                     <div className="rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[16px] lg:col-span-7">
                       <div className="mb-[10px] flex items-center justify-between border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989]">
                         <span>RESULT_SET ({visibleRows.length} rows)</span>
-                        <span>DUCKDB_WASM</span>
+                        <span>SQL_EXECUTION_SUCCESS</span>
                       </div>
                       <table className="w-full text-left text-[12px]">
                         <thead>
@@ -927,7 +896,7 @@ export default function InteractiveWorkbench({
                                 {r.region}
                               </td>
                               <td className="py-[8px] font-mono-code text-[#b4b4b4]">
-                                {r.customerEmail}
+                                {r.account}
                               </td>
                               <td className="py-[8px] text-right font-mono-code text-[#fafafa]">
                                 ${r.arrUsd.toLocaleString("en-US")}
@@ -940,170 +909,157 @@ export default function InteractiveWorkbench({
                   </div>
                 )}
 
-                {/* TAB 3: RLS POLICIES */}
-                {activeTab === "security" && (
+                {/* TAB 3: NL-TO-CHART AI */}
+                {activeTab === "ai" && (
                   <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-12">
                     <div className="flex flex-col justify-between gap-[14px] rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[16px] lg:col-span-5">
                       <div className="space-y-[12px]">
                         <div>
                           <span className="font-mono-code text-[11px] text-[#898989]">
-                            TENANT ISOLATION
+                            SELECT NATURAL LANGUAGE PROMPT
                           </span>
-                          <div className="mt-[6px] grid grid-cols-3 gap-[6px]">
-                            {(
-                              [
-                                { id: "acme_corp", label: "Acme Corp" },
-                                { id: "globex_inc", label: "Globex Inc" },
-                                { id: "umbra_systems", label: "Umbra Sys" },
-                              ] as { id: TenantId; label: string }[]
-                            ).map((t) => (
-                              <button
-                                key={t.id}
-                                type="button"
-                                onClick={() => setActiveTenant(t.id)}
-                                className={`rounded-full border px-[8px] py-[5px] text-[11px] cursor-pointer ${
-                                  activeTenant === t.id
-                                    ? "border-[#fafafa] bg-[#242424] font-medium text-[#fafafa]"
-                                    : "border-[#242424] text-[#898989]"
-                                }`}
-                              >
-                                {t.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <span className="font-mono-code text-[11px] text-[#898989]">
-                            RBAC ROLE
-                          </span>
-                          <div className="mt-[6px] grid grid-cols-2 gap-[6px]">
-                            {(Object.keys(ROLE_CONFIG) as UserRole[]).map(
-                              (rKey) => (
+                          <div className="mt-[8px] flex flex-col gap-[6px]">
+                            {AI_PRESETS.map((preset, idx) => {
+                              const active = selectedAiPreset === idx;
+                              return (
                                 <button
-                                  key={rKey}
+                                  key={preset.id}
                                   type="button"
-                                  onClick={() => setActiveRole(rKey)}
-                                  className={`rounded-full border px-[10px] py-[6px] text-left text-[11px] cursor-pointer ${
-                                    activeRole === rKey
-                                      ? "border-[#fafafa] bg-[#1c1c1c] font-medium text-[#fafafa]"
-                                      : "border-[#242424] text-[#898989]"
+                                  onClick={() => setSelectedAiPreset(idx)}
+                                  className={`flex flex-col rounded-[8px] border p-[10px] text-left transition-colors cursor-pointer ${
+                                    active
+                                      ? "border-[#ff6b35] bg-[#1c1c1c]"
+                                      : "border-[#242424] bg-[#141414] hover:border-[#333333]"
                                   }`}
                                 >
-                                  {ROLE_CONFIG[rKey].label}
+                                  <span className={`text-[12px] font-medium ${active ? "text-[#fafafa]" : "text-[#b4b4b4]"}`}>
+                                    {preset.title}
+                                  </span>
+                                  <span className="mt-[2px] text-[11px] text-[#898989] truncate">
+                                    &ldquo;{preset.prompt}&rdquo;
+                                  </span>
                                 </button>
-                              )
-                            )}
+                              );
+                            })}
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between rounded-[8px] border border-[#242424] bg-[#121212] px-[10px] py-[8px]">
-                          <span className="text-[12px] text-[#b4b4b4]">
-                            Dynamic PII Masking
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setForceMaskOverride((v) => !v)}
-                            className="rounded-full border border-[#393939] px-[10px] py-[3px] font-mono-code text-[11px] text-[#fafafa] cursor-pointer"
-                          >
-                            {shouldMaskPii ? "REDACTED" : "CLEARTEXT"}
-                          </button>
+                        <div className="rounded-[8px] border border-[#242424] bg-[#121212] p-[10px] text-[11px] font-mono-code text-[#898989]">
+                          <div className="flex justify-between text-[#b4b4b4]">
+                            <span>AI Engine:</span>
+                            <span className="text-[#fafafa]">Schema-Aware Prompt</span>
+                          </div>
+                          <div className="mt-[4px] flex justify-between text-[#b4b4b4]">
+                            <span>Chart Synthesis:</span>
+                            <span className="text-[#ff6b35] font-semibold">{activeAi.chartType}</span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="rounded-[8px] border border-[#242424] bg-[#121212] p-[10px] font-mono-code text-[11px] text-[#b4b4b4]">
-                        WHERE{" "}
-                        {ROLE_CONFIG[activeRole].rlsPolicy.replace(
-                          ":active_tenant",
-                          `'${activeTenant}'`
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSynthesizeAi}
+                        className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[14px] py-[6px] text-[12px] font-medium text-[#fafafa] hover:bg-[#c2410c] cursor-pointer"
+                      >
+                        {isSynthesizingAi ? "Synthesizing SQL & Chart..." : "Synthesize with AI ↵"}
+                      </button>
                     </div>
 
-                    <div className="rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[16px] lg:col-span-7">
-                      <div className="mb-[10px] flex items-center justify-between border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989]">
-                        <span>ISOLATED_ROWS ({visibleRows.length})</span>
-                        <span>PII_GUARD: ACTIVE</span>
+                    <div className="flex flex-col justify-between rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[16px] lg:col-span-7">
+                      <div>
+                        <div className="mb-[10px] flex items-center justify-between border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989]">
+                          <span>SYNTHESIZED_SQL (POST /api/v1/ai/nl-to-chart)</span>
+                          <span className="text-emerald-400 font-semibold">{activeAi.latency}</span>
+                        </div>
+                        <pre className="overflow-x-auto rounded-[8px] border border-[#1f1f1f] bg-[#141414] p-[12px] font-mono-code text-[11px] leading-[1.6] text-[#b4b4b4]">
+                          <code>{activeAi.sqlQuery}</code>
+                        </pre>
+
+                        <div className="mt-[14px] grid grid-cols-3 gap-[8px]">
+                          <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
+                            <span className="block text-[10px] font-mono-code text-[#898989]">Chart Visual</span>
+                            <span className="mt-[2px] block text-[13px] font-medium text-[#fafafa]">{activeAi.chartType}</span>
+                          </div>
+                          <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
+                            <span className="block text-[10px] font-mono-code text-[#898989]">Aggregation</span>
+                            <span className="mt-[2px] block text-[13px] font-medium text-[#ff6b35] font-mono-code">{activeAi.metric}</span>
+                          </div>
+                          <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
+                            <span className="block text-[10px] font-mono-code text-[#898989]">Render Engine</span>
+                            <span className="mt-[2px] block text-[13px] font-medium text-emerald-400">Recharts 2.x</span>
+                          </div>
+                        </div>
                       </div>
-                      <table className="w-full text-left text-[12px]">
-                        <thead>
-                          <tr className="border-b border-[#242424] text-[#898989]">
-                            <th className="pb-[8px] font-normal">Region</th>
-                            <th className="pb-[8px] font-normal">
-                              Email (PII)
-                            </th>
-                            <th className="pb-[8px] font-normal">
-                              Tax ID (PII)
-                            </th>
-                            <th className="pb-[8px] text-right font-normal">
-                              ARR Metric
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#1c1c1c]">
-                          {visibleRows.map((row) => (
-                            <tr key={row.id}>
-                              <td className="py-[8px] font-mono-code text-[#fafafa]">
-                                {row.region}
-                              </td>
-                              <td className="py-[8px] font-mono-code text-[#b4b4b4]">
-                                {maskEmail(row.customerEmail)}
-                              </td>
-                              <td className="py-[8px] font-mono-code text-[#898989]">
-                                {maskTaxId(row.taxId)}
-                              </td>
-                              <td className="py-[8px] text-right font-mono-code text-[#fafafa]">
-                                {shouldHideFinancials
-                                  ? "••••••"
-                                  : `$${row.arrUsd.toLocaleString("en-US")}`}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+
+                      <div className="mt-[16px] flex items-center justify-between border-t border-[#242424] pt-[12px]">
+                        <span className="font-mono-code text-[11px] text-[#898989]">
+                          Natural Language to Chart AI Pipeline
+                        </span>
+                        <a
+                          href="/dashboards"
+                          className="rounded-full border border-[#393939] px-[12px] py-[4px] text-[11px] text-[#fafafa] hover:border-[#ff6b35] transition-colors"
+                        >
+                          Open in Dashboard Studio →
+                        </a>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* TAB 4: REALTIME & EMBEDS */}
-                {activeTab === "collab" && (
+                {/* TAB 4: ALERTS & SIGNED EMBEDS */}
+                {activeTab === "embed" && (
                   <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-12">
                     <div className="flex flex-col justify-between rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[16px] lg:col-span-6">
                       <div>
-                        <div className="border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989]">
-                          MULTIPLAYER CRDT PRESENCE
+                        <div className="border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989] flex justify-between">
+                          <span>THRESHOLD METRIC ALERTS</span>
+                          <span className="text-emerald-400">3 Monitors Active</span>
                         </div>
                         <div className="mt-[12px] space-y-[8px]">
                           {[
                             {
-                              user: "@elena_architect",
-                              state: "Editing SQL AST",
+                              name: "High Churn Alert",
+                              condition: "churn_rate > 4.5%",
+                              channel: "Webhook (Slack #ops)",
+                              status: "HEALTHY",
                             },
                             {
-                              user: "@marcus_emea",
-                              state: "Viewing Cohort KPI",
+                              name: "Failed Transactions Spike",
+                              condition: "failed_count > 15 / min",
+                              channel: "Webhook (PagerDuty)",
+                              status: "HEALTHY",
                             },
                             {
-                              user: "@priya_sec",
-                              state: "Auditing RLS Policy",
+                              name: "Executive ARR Milestone",
+                              condition: "net_arr >= $2.0M",
+                              channel: "Email (exec@acme.io)",
+                              status: "TRIGGERED",
                             },
-                          ].map((u) => (
+                          ].map((a) => (
                             <div
-                              key={u.user}
-                              className="flex items-center justify-between rounded-[8px] border border-[#242424] bg-[#121212] px-[12px] py-[8px]"
+                              key={a.name}
+                              className="rounded-[8px] border border-[#242424] bg-[#121212] p-[10px]"
                             >
-                              <span className="text-[12px] text-[#fafafa]">
-                                ● {u.user}
-                              </span>
-                              <span className="font-mono-code text-[11px] text-[#898989]">
-                                {u.state}
-                              </span>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[12px] font-medium text-[#fafafa]">
+                                  {a.name}
+                                </span>
+                                <span className={`font-mono-code text-[10px] rounded px-[6px] py-[1px] ${
+                                  a.status === "TRIGGERED" ? "bg-[#ff6b35]/20 text-[#ff6b35]" : "bg-emerald-500/10 text-emerald-400"
+                                }`}>
+                                  {a.status}
+                                </span>
+                              </div>
+                              <div className="mt-[4px] flex items-center justify-between text-[11px] font-mono-code text-[#898989]">
+                                <span>{a.condition}</span>
+                                <span>{a.channel}</span>
+                              </div>
                             </div>
                           ))}
                         </div>
                       </div>
                       <div className="mt-[12px] font-mono-code text-[11px] text-[#898989]">
-                        WebSocket sync latency: 14ms
+                        Evaluation loop: Every 60 seconds via Webhooks &amp; Email
                       </div>
                     </div>
 
@@ -1111,7 +1067,7 @@ export default function InteractiveWorkbench({
                       <div>
                         <div className="flex items-center justify-between border-b border-[#242424] pb-[8px]">
                           <span className="font-mono-code text-[11px] text-[#898989]">
-                            SIGNED IFRAME EMBED
+                            HMAC SIGNED IFRAME EMBED
                           </span>
                           <div className="flex gap-[4px]">
                             {(["15m", "1h", "24h"] as const).map((ttl) => (
@@ -1133,7 +1089,7 @@ export default function InteractiveWorkbench({
 
                         <pre className="mt-[12px] overflow-x-auto rounded-[8px] border border-[#242424] bg-[#121212] p-[12px] font-mono-code text-[11px] text-[#b4b4b4]">
                           <code>
-                            {`<iframe\n  src="https://embed.ricozviz.io/v4/${selectedTable}?jwt=${tokenNonce}&ttl=${tokenTtl}"\n  sandbox="allow-scripts allow-same-origin"\n/>`}
+                            {`<iframe\n  src="https://viz.ricoz.in/dashboards/embed/${tokenNonce}?ttl=${tokenTtl}"\n  width="100%"\n  height="600"\n  sandbox="allow-scripts allow-same-origin"\n/>`}
                           </code>
                         </pre>
                       </div>

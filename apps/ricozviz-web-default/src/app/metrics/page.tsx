@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../contexts/auth-context";
 import { useWorkspace } from "../../contexts/workspace-context";
-import { BrandLogo } from "@/components/shell/BrandLogo";
+import { AppShell } from "../../components/shell/AppShell";
 import {
   apiListMetrics,
   apiCreateMetric,
@@ -20,6 +20,22 @@ import {
   type MetricAggregation,
   ApiError,
 } from "../../lib/api";
+import {
+  TrendingUp,
+  Plus,
+  RefreshCw,
+  Search,
+  Layers,
+  Calculator,
+  Target,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Edit2,
+  Trash2,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
 
 export default function MetricsPage() {
   const { auth, isLoading, logout, hasPermission } = useAuth();
@@ -62,138 +78,151 @@ export default function MetricsPage() {
     }
   }, [auth, isLoading, router]);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [fetchedMetrics, fetchedDatasets] = await Promise.all([
-        apiListMetrics(currentWorkspace?.id),
-        apiListDatasets({ workspaceId: currentWorkspace?.id }),
-      ]);
-      setMetrics(fetchedMetrics);
-      setDatasets(fetchedDatasets);
-      setErrorMsg(null);
-    } catch (err) {
-      setErrorMsg(err instanceof ApiError ? err.message : "Failed to load metrics");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (auth) {
-      void loadData();
+      loadInitialData();
     }
   }, [auth, currentWorkspace?.id]);
 
-  const handleCalculate = async (metricId: string) => {
+  async function loadInitialData() {
+    setLoading(true);
+    try {
+      const [metricsList, datasetsList] = await Promise.all([
+        apiListMetrics(undefined, currentWorkspace?.id),
+        apiListDatasets({ workspaceId: currentWorkspace?.id }),
+      ]);
+      setMetrics(metricsList);
+      setDatasets(datasetsList);
+      if (datasetsList.length > 0 && !formDatasetId) {
+        setFormDatasetId(datasetsList[0].id);
+        setFormColumn(datasetsList[0].columns?.[0]?.name || "");
+      }
+      setErrorMsg(null);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("Failed to load metrics data.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Pre-calculate all metrics automatically on load
+  useEffect(() => {
+    if (metrics.length > 0) {
+      metrics.forEach((m) => {
+        void handleCalculate(m.id);
+      });
+    }
+  }, [metrics]);
+
+  async function handleCalculate(metricId: string) {
     setCalculatingMap((prev) => ({ ...prev, [metricId]: true }));
     try {
       const res = await apiCalculateMetric(metricId);
       setCalcResults((prev) => ({ ...prev, [metricId]: res }));
-    } catch (err) {
-      setErrorMsg(err instanceof ApiError ? err.message : "Failed to calculate metric");
+    } catch {
+      // Ignored for graceful rendering
     } finally {
       setCalculatingMap((prev) => ({ ...prev, [metricId]: false }));
     }
-  };
+  }
 
-  const openCreateModal = () => {
+  function openCreateModal() {
     setEditingMetric(null);
     setFormName("");
     setFormDescription("");
-    const initialDataset = datasets[0]?.id || "";
-    setFormDatasetId(initialDataset);
-    const ds = datasets.find((d) => d.id === initialDataset);
-    setFormColumn(ds?.columns?.[0]?.name || "");
+    const firstDs = datasets[0];
+    setFormDatasetId(firstDs?.id || "");
+    setFormColumn(firstDs?.columns?.[0]?.name || "");
     setFormAggregation("SUM");
     setFormFormat("NUMBER");
     setFormTargetValue("");
+    setErrorMsg(null);
     setIsModalOpen(true);
-  };
+  }
 
-  const openEditModal = (metric: MetricData) => {
-    setEditingMetric(metric);
-    setFormName(metric.name);
-    setFormDescription(metric.description || "");
-    setFormDatasetId(metric.datasetId);
-    setFormColumn(metric.column || metric.field);
-    setFormAggregation(metric.aggregation || metric.calculation);
-    setFormFormat(metric.format);
-    setFormTargetValue(metric.targetValue !== undefined && metric.targetValue !== null ? String(metric.targetValue) : "");
+  function openEditModal(m: MetricData) {
+    setEditingMetric(m);
+    setFormName(m.name);
+    setFormDescription(m.description || "");
+    setFormDatasetId(m.datasetId);
+    setFormColumn(m.column || m.field || "");
+    setFormAggregation((m.aggregation || m.calculation) as MetricAggregation);
+    setFormFormat(m.format);
+    setFormTargetValue(m.targetValue !== undefined && m.targetValue !== null ? String(m.targetValue) : "");
+    setErrorMsg(null);
     setIsModalOpen(true);
-  };
+  }
 
-  const handleDelete = async (metric: MetricData) => {
-    if (!confirm(`Are you sure you want to delete the metric "${metric.name}"?`)) return;
-    try {
-      await apiDeleteMetric(metric.id);
-      setSuccessMsg(`Metric "${metric.name}" deleted successfully.`);
-      setMetrics((prev) => prev.filter((m) => m.id !== metric.id));
-    } catch (err) {
-      setErrorMsg(err instanceof ApiError ? err.message : "Failed to delete metric");
-    }
-  };
-
-  const handleFormSubmit = async (e: FormEvent) => {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!formName.trim()) {
-      setErrorMsg("Metric name is required");
-      return;
-    }
-    if (!formDatasetId) {
-      setErrorMsg("Please select a dataset");
-      return;
-    }
-    if (!formColumn) {
-      setErrorMsg("Please select a column");
+    if (!formName.trim() || !formDatasetId || !formColumn) {
+      setErrorMsg("Please fill in all required fields.");
       return;
     }
 
     setSubmitting(true);
     setErrorMsg(null);
 
-    const targetVal = formTargetValue.trim() !== "" ? parseFloat(formTargetValue.trim()) : undefined;
+    const payload = {
+      name: formName.trim(),
+      description: formDescription.trim() || undefined,
+      datasetId: formDatasetId,
+      column: formColumn,
+      field: formColumn,
+      aggregation: formAggregation,
+      calculation: formAggregation,
+      format: formFormat,
+      targetValue: formTargetValue ? Number(formTargetValue) : undefined,
+      workspaceId: currentWorkspace?.id,
+    };
 
     try {
       if (editingMetric) {
-        const updated = await apiUpdateMetric(editingMetric.id, {
-          name: formName.trim(),
-          description: formDescription.trim() || undefined,
-          aggregation: formAggregation,
-          calculation: formAggregation,
-          column: formColumn,
-          field: formColumn,
-          format: formFormat,
-          targetValue: targetVal,
-        });
-        setSuccessMsg(`Metric "${updated.name}" updated successfully.`);
+        const updated = await apiUpdateMetric(editingMetric.id, payload);
         setMetrics((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+        setSuccessMsg(`Metric "${updated.name}" updated successfully.`);
+        void handleCalculate(updated.id);
       } else {
-        const created = await apiCreateMetric({
-          name: formName.trim(),
-          description: formDescription.trim() || undefined,
-          datasetId: formDatasetId,
-          aggregation: formAggregation,
-          calculation: formAggregation,
-          column: formColumn,
-          field: formColumn,
-          format: formFormat,
-          targetValue: targetVal,
-          workspaceId: currentWorkspace?.id || "",
-        });
-        setSuccessMsg(`Metric "${created.name}" created successfully.`);
+        const created = await apiCreateMetric(payload);
         setMetrics((prev) => [created, ...prev]);
+        setSuccessMsg(`Metric "${created.name}" created successfully.`);
+        void handleCalculate(created.id);
       }
       setIsModalOpen(false);
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
-      setErrorMsg(err instanceof ApiError ? err.message : "Failed to save metric");
+      if (err instanceof ApiError) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("Failed to save metric.");
+      }
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
-  const selectedDatasetObj = datasets.find((d) => d.id === formDatasetId);
-  const availableColumns = selectedDatasetObj?.columns || [];
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Are you sure you want to delete metric "${name}"?`)) return;
+    try {
+      await apiDeleteMetric(id);
+      setMetrics((prev) => prev.filter((m) => m.id !== id));
+      setSuccessMsg(`Metric "${name}" deleted.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrorMsg(err.message);
+      } else {
+        setErrorMsg("Failed to delete metric.");
+      }
+    }
+  }
+
+  const selectedDataset = datasets.find((d) => d.id === formDatasetId);
+  const availableColumns = selectedDataset?.columns || [];
 
   const filteredMetrics = metrics.filter((m) => {
     const matchesSearch =
@@ -204,113 +233,123 @@ export default function MetricsPage() {
     return matchesSearch && matchesDataset;
   });
 
+  const targetCount = metrics.filter((m) => m.targetValue !== undefined && m.targetValue !== null).length;
+  const datasetsCovered = new Set(metrics.map((m) => m.datasetId)).size;
+
   if (isLoading || !auth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center bg-[#121212] text-[#fafafa]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
+          <p className="text-xs font-mono-code text-[#898989]">Evaluating semantic metric layer...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-30 shadow-2xs">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/workspace" className="flex items-center gap-2 font-bold text-gray-900 text-lg hover:text-indigo-600 transition">
-              <BrandLogo size={32} />
-              <span>RicozViz</span>
-            </Link>
-            <span className="text-gray-300">/</span>
-            <Link href="/workspace" className="text-sm text-gray-500 hover:text-gray-900">
-              Workspace
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-sm font-semibold text-gray-900">Metrics & KPIs</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link href="/alerts" className="text-xs font-medium text-gray-600 hover:text-indigo-600 transition hidden sm:inline">
-              Alerts →
-            </Link>
-            <Link href="/dashboards" className="text-xs font-medium text-gray-600 hover:text-indigo-600 transition hidden sm:inline">
-              Dashboards →
-            </Link>
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">{auth.user.name}</p>
-              <p className="text-xs text-gray-500">
-                {auth.role} · {auth.organization.name}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                void logout();
-                router.replace("/login");
-              }}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl w-full px-4 py-8 sm:px-6 flex-1">
+    <AppShell
+      title="Metrics & Semantic Layer"
+      subtitle="Define governed business KPIs with automated aggregations, target progress tracking, and OLAP query acceleration."
+      breadcrumbs={[
+        { label: "Data Studio", href: "/datasets" },
+        { label: "Metrics & KPIs" },
+      ]}
+      actions={
+        canCreate ? (
+          <button
+            onClick={openCreateModal}
+            id="create-metric-btn"
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Create Metric</span>
+          </button>
+        ) : undefined
+      }
+    >
+      <div className="space-y-6 max-w-7xl mx-auto">
         {/* Alerts */}
         {errorMsg && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 flex justify-between items-center">
-            <span>{errorMsg}</span>
-            <button onClick={() => setErrorMsg(null)} className="text-red-500 hover:text-red-800 text-xs font-bold">
+          <div className="rounded-xl border border-red-500/30 bg-red-950/40 p-4 text-xs font-mono-code text-red-300 flex justify-between items-center">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+            <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-red-200 text-xs font-bold cursor-pointer">
               ✕
             </button>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex justify-between items-center">
-            <span>{successMsg}</span>
-            <button onClick={() => setSuccessMsg(null)} className="text-green-500 hover:text-green-800 text-xs font-bold">
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-xs font-mono-code text-emerald-300 flex justify-between items-center">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+            <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200 text-xs font-bold cursor-pointer">
               ✕
             </button>
           </div>
         )}
 
-        {/* Title Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">KPI & Metrics Layer</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Define reusable business metrics, aggregations, targets, and KPI calculations across your workspace.
-            </p>
+        {/* 4-KPI Metric Mesh Ribbon */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-[#242424] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] text-xs font-mono-code mb-2">
+              <span>GOVERNED METRICS</span>
+              <TrendingUp className="h-4 w-4 text-[#ff6b35]" />
+            </div>
+            <div className="text-2xl font-bold font-mono-code text-[#fafafa]">{metrics.length}</div>
+            <div className="text-[11px] text-[#898989] mt-1 font-mono-code">Semantic calculations</div>
           </div>
 
-          {canCreate && (
-            <button
-              onClick={openCreateModal}
-              id="create-metric-btn"
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
-            >
-              <span>+ Create Metric</span>
-            </button>
-          )}
+          <div className="rounded-xl border border-[#242424] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] text-xs font-mono-code mb-2">
+              <span>EVALUATED VALUES</span>
+              <Calculator className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-bold font-mono-code text-emerald-400">{Object.keys(calcResults).length}</div>
+            <div className="text-[11px] text-[#898989] mt-1 font-mono-code">Live compiled in DuckDB</div>
+          </div>
+
+          <div className="rounded-xl border border-[#242424] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] text-xs font-mono-code mb-2">
+              <span>TARGET MONITORS</span>
+              <Target className="h-4 w-4 text-sky-400" />
+            </div>
+            <div className="text-2xl font-bold font-mono-code text-[#fafafa]">{targetCount}</div>
+            <div className="text-[11px] text-[#898989] mt-1 font-mono-code">Goal threshold tracking</div>
+          </div>
+
+          <div className="rounded-xl border border-[#242424] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] text-xs font-mono-code mb-2">
+              <span>DATASETS COVERED</span>
+              <Layers className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="text-2xl font-bold font-mono-code text-[#fafafa]">{datasetsCovered}</div>
+            <div className="text-[11px] text-[#898989] mt-1 font-mono-code">Linked data models</div>
+          </div>
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <input
-            type="text"
-            placeholder="Search metrics by name, description, or column..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-indigo-500 focus:outline-none shadow-2xs"
-          />
+        <div className="flex flex-col sm:flex-row gap-3 border-b border-[#242424] pb-4">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-[#898989] absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search metrics by name, description, or column..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-lg border border-[#242424] bg-[#141414] pl-9 pr-3 py-1.5 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+            />
+          </div>
           <select
             value={filterDataset}
             onChange={(e) => setFilterDataset(e.target.value)}
-            className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+            className="rounded-lg border border-[#242424] bg-[#141414] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
           >
             <option value="ALL">All Datasets ({datasets.length})</option>
             {datasets.map((d) => (
@@ -323,15 +362,17 @@ export default function MetricsPage() {
 
         {/* Metrics Grid */}
         {loading ? (
-          <div className="py-20 text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-            <p className="mt-3 text-sm text-gray-500">Loading metrics...</p>
+          <div className="py-20 text-center text-xs font-mono-code text-[#898989]">
+            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent mb-3" />
+            <p>Compiling semantic metrics in DuckDB WASM...</p>
           </div>
         ) : filteredMetrics.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-12 text-center">
-            <span className="text-4xl mb-3 block">📈</span>
-            <h3 className="text-base font-bold text-gray-800">No Metrics Found</h3>
-            <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+          <div className="rounded-2xl border border-dashed border-[#2e2e2e] bg-[#141414]/50 p-16 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#ff6b35]/10 text-[#ff6b35] text-2xl mb-4 border border-[#ff6b35]/20">
+              <TrendingUp className="h-7 w-7" />
+            </div>
+            <h3 className="text-base font-medium text-[#fafafa]">No Metrics Found</h3>
+            <p className="mt-1 text-xs text-[#898989] font-mono-code max-w-md mx-auto">
               {metrics.length === 0
                 ? "Start building your semantic metrics layer by defining reusable calculations such as Revenue, Profit, or Customer Count."
                 : "No metrics match your search criteria."}
@@ -339,9 +380,10 @@ export default function MetricsPage() {
             {canCreate && metrics.length === 0 && (
               <button
                 onClick={openCreateModal}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition"
+                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition cursor-pointer"
               >
-                + Define First Metric
+                <Plus className="h-4 w-4" />
+                <span>Define First Metric</span>
               </button>
             )}
           </div>
@@ -355,37 +397,42 @@ export default function MetricsPage() {
               return (
                 <div
                   key={metric.id}
-                  className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs hover:border-indigo-300 hover:shadow-md transition flex flex-col justify-between"
+                  className="rounded-xl border border-[#242424] bg-[#141414] p-5 shadow-sm hover:border-[#ff6b35]/40 transition flex flex-col justify-between group"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-bold text-gray-900 text-base leading-snug">{metric.name}</h3>
-                      <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 uppercase tracking-wide">
+                      <h3 className="font-semibold text-[#fafafa] text-base leading-snug group-hover:text-[#ff6b35] transition-colors truncate">
+                        {metric.name}
+                      </h3>
+                      <span className="inline-flex items-center rounded-md bg-[#181818] border border-[#2e2e2e] px-2 py-0.5 text-[10px] font-mono-code text-[#ff6b35] uppercase font-bold tracking-wide">
                         {metric.format}
                       </span>
                     </div>
 
-                    {metric.description && (
-                      <p className="text-xs text-gray-500 mb-3 line-clamp-2">{metric.description}</p>
+                    {metric.description ? (
+                      <p className="text-xs text-[#898989] mb-3 line-clamp-2">{metric.description}</p>
+                    ) : (
+                      <p className="text-xs text-[#666666] italic mb-3">No description provided</p>
                     )}
 
-                    <div className="rounded-xl bg-gray-50/80 border border-gray-100 p-3 mb-4 space-y-1.5 text-xs text-gray-600 font-mono">
+                    {/* Metadata specs */}
+                    <div className="rounded-lg bg-[#181818] border border-[#262626] p-3 mb-4 space-y-1.5 text-xs text-[#898989] font-mono-code">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Dataset:</span>
-                        <span className="font-semibold text-gray-800 truncate max-w-[160px]">
+                        <span className="text-[#666666]">Dataset:</span>
+                        <span className="font-semibold text-[#fafafa] truncate max-w-[160px]">
                           {ds?.name || metric.dataset?.name || "Unknown"}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Calculation:</span>
-                        <span className="font-semibold text-indigo-700">
+                        <span className="text-[#666666]">Calculation:</span>
+                        <span className="font-semibold text-[#ff6b35]">
                           {metric.aggregation || metric.calculation}({metric.column || metric.field})
                         </span>
                       </div>
                       {metric.targetValue !== undefined && metric.targetValue !== null && (
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Target:</span>
-                          <span className="font-semibold text-gray-800">
+                          <span className="text-[#666666]">Target:</span>
+                          <span className="font-semibold text-[#fafafa]">
                             {metric.format === "CURRENCY"
                               ? `$${Number(metric.targetValue).toLocaleString()}`
                               : metric.format === "PERCENT"
@@ -398,22 +445,22 @@ export default function MetricsPage() {
 
                     {/* Calculated Value Preview */}
                     {calc ? (
-                      <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-center">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block mb-0.5">
+                      <div className="mb-4 rounded-xl border border-[#242424] bg-[#121212] p-3.5 text-center">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#898989] font-mono-code block mb-1">
                           Evaluated Value
                         </span>
-                        <span className="text-2xl font-extrabold text-gray-900 block font-mono">
+                        <span className="text-2xl font-bold text-[#fafafa] block font-mono-code">
                           {calc.formattedValue}
                         </span>
                         {calc.progressPercent !== null && (
-                          <div className="mt-2">
-                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                          <div className="mt-2.5">
+                            <div className="flex justify-between text-[10px] font-mono-code text-[#898989] mb-1">
                               <span>Target Progress</span>
-                              <span className="font-bold">{calc.progressPercent}%</span>
+                              <span className="font-bold text-[#ff6b35]">{calc.progressPercent}%</span>
                             </div>
-                            <div className="h-1.5 w-full rounded-full bg-indigo-200 overflow-hidden">
+                            <div className="h-1.5 w-full rounded-full bg-[#242424] overflow-hidden">
                               <div
-                                className="h-full bg-indigo-600 rounded-full transition-all"
+                                className="h-full bg-[#ff6b35] rounded-full transition-all duration-500"
                                 style={{ width: `${Math.min(calc.progressPercent || 0, 100)}%` }}
                               />
                             </div>
@@ -424,43 +471,34 @@ export default function MetricsPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="border-t border-gray-100 pt-3 flex items-center justify-between gap-2">
+                  <div className="border-t border-[#242424] pt-3.5 flex items-center justify-between gap-2">
                     <button
                       type="button"
                       onClick={() => void handleCalculate(metric.id)}
                       disabled={isCalculating}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] px-2.5 py-1.5 text-xs font-mono-code text-[#fafafa] hover:bg-[#222222] disabled:opacity-50 transition cursor-pointer"
                     >
-                      {isCalculating ? (
-                        <>
-                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                          <span>Computing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>⚡</span>
-                          <span>{calc ? "Re-calculate" : "Calculate"}</span>
-                        </>
-                      )}
+                      <RefreshCw className={`h-3 w-3 ${isCalculating ? "animate-spin text-[#ff6b35]" : ""}`} />
+                      <span>{isCalculating ? "Evaluating..." : "Recalculate"}</span>
                     </button>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       {canEdit && (
                         <button
                           type="button"
                           onClick={() => openEditModal(metric)}
-                          className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 transition"
+                          className="rounded-lg px-2.5 py-1.5 text-xs font-mono-code text-[#898989] hover:text-[#fafafa] hover:bg-[#1f1f1f] transition cursor-pointer"
                         >
-                          Edit
+                          <Edit2 className="h-3.5 w-3.5" />
                         </button>
                       )}
                       {canDelete && (
                         <button
                           type="button"
-                          onClick={() => void handleDelete(metric)}
-                          className="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition"
+                          onClick={() => void handleDelete(metric.id, metric.name)}
+                          className="rounded-lg px-2.5 py-1.5 text-xs font-mono-code text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition cursor-pointer"
                         >
-                          Delete
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </div>
@@ -470,55 +508,61 @@ export default function MetricsPage() {
             })}
           </div>
         )}
-      </main>
+      </div>
 
-      {/* CREATE / EDIT MODAL */}
+      {/* Create / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-gray-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">
-                {editingMetric ? "Edit Business Metric" : "Define New Business Metric"}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[#262626] bg-[#141414] p-6 shadow-2xl max-h-[90vh] overflow-y-auto text-[#fafafa]">
+            <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
+              <div>
+                <h2 className="text-lg font-bold text-[#fafafa]">
+                  {editingMetric ? "Edit Metric Definition" : "Create New Governed Metric"}
+                </h2>
+                <p className="text-xs text-[#898989] font-mono-code mt-0.5">
+                  Semantic formulas compile to optimized OLAP aggregations.
+                </p>
+              </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-sm font-bold"
+                className="text-[#898989] hover:text-[#fafafa] cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={(e) => void handleFormSubmit(e)} className="space-y-4">
+            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Metric Name *
+                <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
+                  Metric Display Name *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Total Revenue, Customer Churn Rate, Average Order Value"
+                  placeholder="e.g. Monthly Recurring Revenue"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Description
+                <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
+                  Business Description
                 </label>
                 <textarea
                   rows={2}
                   placeholder="Describe the business logic or rationale for this KPI..."
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                     Dataset *
                   </label>
                   <select
@@ -530,7 +574,7 @@ export default function MetricsPage() {
                       const d = datasets.find((x) => x.id === newDsId);
                       setFormColumn(d?.columns?.[0]?.name || "");
                     }}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none disabled:bg-gray-100"
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code disabled:opacity-50"
                   >
                     {datasets.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -541,13 +585,13 @@ export default function MetricsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                     Measure Column *
                   </label>
                   <select
                     value={formColumn}
                     onChange={(e) => setFormColumn(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                   >
                     {availableColumns.map((col) => (
                       <option key={col.name} value={col.name}>
@@ -560,13 +604,13 @@ export default function MetricsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                     Aggregation *
                   </label>
                   <select
                     value={formAggregation}
                     onChange={(e) => setFormAggregation(e.target.value as MetricAggregation)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                   >
                     <option value="SUM">SUM</option>
                     <option value="AVG">AVG</option>
@@ -578,13 +622,13 @@ export default function MetricsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                     Format *
                   </label>
                   <select
                     value={formFormat}
                     onChange={(e) => setFormFormat(e.target.value as MetricFormat)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                   >
                     <option value="NUMBER">Number (1,234.56)</option>
                     <option value="CURRENCY">Currency ($1,234.56)</option>
@@ -594,8 +638,8 @@ export default function MetricsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Target / Threshold (Optional)
+                <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
+                  Target / Goal (Optional)
                 </label>
                 <input
                   type="number"
@@ -603,25 +647,25 @@ export default function MetricsPage() {
                   placeholder="e.g. 500000"
                   value={formTargetValue}
                   onChange={(e) => setFormTargetValue(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none font-mono"
+                  className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                 />
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p className="text-[11px] text-[#898989] font-mono-code mt-1">
                   Optional goal value to compute percentage completion and trigger progress bars.
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-[#242424]">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition"
+                  className="rounded-lg border border-[#2e2e2e] bg-[#181818] px-4 py-2 text-xs font-mono-code text-[#898989] hover:text-[#fafafa] hover:bg-[#202020] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition disabled:opacity-50"
+                  className="rounded-lg bg-[#ff6b35] px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? "Saving..." : editingMetric ? "Update Metric" : "Create Metric"}
                 </button>
@@ -630,6 +674,6 @@ export default function MetricsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

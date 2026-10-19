@@ -129,17 +129,17 @@ export function AiAnalyticsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 overflow-y-auto">
+      <div className="relative w-full max-w-3xl rounded-2xl bg-[#141414] shadow-2xl border border-[#262626] overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="p-4 bg-gradient-to-r from-indigo-700 via-indigo-800 to-purple-800 text-white flex items-center justify-between shrink-0">
+        <div className="p-4 bg-[#171717] border-b border-[#242424] text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md">
-              <Sparkles className="h-5 w-5 text-indigo-200" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35]">
+              <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold tracking-tight">RicozViz AI Analytics</h2>
-              <p className="text-[11px] text-indigo-200">
+              <h2 className="text-sm font-semibold tracking-tight text-white">RicozViz AI Analytics</h2>
+              <p className="text-[11px] text-[#888888]">
                 Grounded Analytical AI & Query Intelligence
               </p>
             </div>
@@ -147,17 +147,17 @@ export function AiAnalyticsModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-indigo-200 hover:bg-white/10 hover:text-white transition"
+            className="rounded-lg p-1.5 text-[#888888] hover:bg-[#242424] hover:text-white transition cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Dataset Selector & Navigation Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="border-b border-[#242424] bg-[#121212] px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2">
-            <Database className="h-3.5 w-3.5 text-gray-500" />
-            <span className="text-xs font-semibold text-gray-600">Dataset:</span>
+            <Database className="h-3.5 w-3.5 text-[#ff6b35]" />
+            <span className="text-xs font-medium text-[#888888]">Dataset:</span>
             <select
               value={selectedDatasetId}
               onChange={(e) => {
@@ -166,7 +166,7 @@ export function AiAnalyticsModal({
                 setNlResult(null);
                 setInsightsList([]);
               }}
-              className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+              className="rounded-lg border border-[#262626] bg-[#171717] px-2.5 py-1 text-xs font-mono text-[#dedede] shadow-2xs focus:border-[#ff6b35] focus:outline-hidden cursor-pointer"
             >
               {datasets.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -180,10 +180,10 @@ export function AiAnalyticsModal({
             <button
               type="button"
               onClick={() => setActiveTab("analyst")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                 activeTab === "analyst"
-                  ? "bg-indigo-600 text-white shadow-2xs"
-                  : "text-gray-600 hover:bg-gray-200/60"
+                  ? "bg-[#ff6b35] text-white shadow-2xs"
+                  : "text-[#888888] hover:bg-[#1a1a1a] hover:text-white"
               }`}
             >
               AI Data Analyst
@@ -191,10 +191,10 @@ export function AiAnalyticsModal({
             <button
               type="button"
               onClick={() => setActiveTab("nl-chart")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                 activeTab === "nl-chart"
-                  ? "bg-indigo-600 text-white shadow-2xs"
-                  : "text-gray-600 hover:bg-gray-200/60"
+                  ? "bg-[#ff6b35] text-white shadow-2xs"
+                  : "text-[#888888] hover:bg-[#1a1a1a] hover:text-white"
               }`}
             >
               Natural Language → Chart
@@ -205,10 +205,10 @@ export function AiAnalyticsModal({
                 setActiveTab("insights");
                 if (insightsList.length === 0) void handleFetchInsights();
               }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${
                 activeTab === "insights"
-                  ? "bg-indigo-600 text-white shadow-2xs"
-                  : "text-gray-600 hover:bg-gray-200/60"
+                  ? "bg-[#ff6b35] text-white shadow-2xs"
+                  : "text-[#888888] hover:bg-[#1a1a1a] hover:text-white"
               }`}
             >
               Insights & Anomalies
@@ -220,7 +220,7 @@ export function AiAnalyticsModal({
         {activeTab === "analyst" && (
           <div className="p-6 flex-1 overflow-y-auto space-y-4">
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-[#dedede] uppercase tracking-wider mb-1.5">
                 Ask an analytical question
               </label>
               <form
@@ -235,12 +235,12 @@ export function AiAnalyticsModal({
                   value={analystQuestion}
                   onChange={(e) => setAnalystQuestion(e.target.value)}
                   placeholder="e.g. 'What is our total revenue?' or 'Which region has the highest revenue?'"
-                  className="flex-1 rounded-xl border border-gray-300 px-3.5 py-2 text-xs text-gray-900 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                  className="flex-1 rounded-xl border border-[#262626] bg-[#121212] px-3.5 py-2 text-xs text-white placeholder-[#555555] shadow-2xs focus:border-[#ff6b35] focus:outline-hidden"
                 />
                 <button
                   type="submit"
                   disabled={analystLoading || !analystQuestion.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#c2410c] disabled:opacity-50 transition cursor-pointer"
                 >
                   <Send className="h-3.5 w-3.5" />
                   <span>{analystLoading ? "Analyzing..." : "Ask"}</span>
@@ -250,7 +250,7 @@ export function AiAnalyticsModal({
 
             {/* Quick Question Suggestions */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-[11px] text-gray-400 font-medium">Try asking:</span>
+              <span className="text-[11px] text-[#777777] font-medium">Try asking:</span>
               {[
                 "What is our total revenue?",
                 "Which region has the highest revenue?",
@@ -264,7 +264,7 @@ export function AiAnalyticsModal({
                     setAnalystQuestion(q);
                     void handleAskAnalyst(q);
                   }}
-                  className="rounded-full bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 border border-gray-200 transition"
+                  className="rounded-full bg-[#171717] hover:bg-[#202020] hover:text-[#ff6b35] px-2.5 py-0.5 text-[11px] font-medium text-[#888888] border border-[#262626] transition cursor-pointer"
                 >
                   {q}
                 </button>
@@ -272,35 +272,35 @@ export function AiAnalyticsModal({
             </div>
 
             {analystError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              <div className="rounded-xl border border-red-900/50 bg-red-950/30 p-3 text-xs text-red-300">
                 {analystError}
               </div>
             )}
 
             {/* Analyst Response Display */}
             {analystResult && (
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
-                <div className="flex items-center justify-between text-[11px] text-gray-500 border-b border-indigo-100 pb-2">
-                  <span className="font-semibold text-indigo-900">
+              <div className="rounded-xl border border-[#262626] bg-[#181818] p-4 space-y-3">
+                <div className="flex items-center justify-between text-[11px] text-[#888888] border-b border-[#242424] pb-2">
+                  <span className="font-semibold text-white">
                     Question: &ldquo;{analystResult.question}&rdquo;
                   </span>
-                  <span className="font-mono text-emerald-600 font-bold flex items-center gap-1">
+                  <span className="font-mono text-emerald-400 font-bold flex items-center gap-1">
                     <CheckCircle className="h-3 w-3" />
                     Verified Grounded ({analystResult.groundingVerification.executionTimeMs}ms)
                   </span>
                 </div>
 
-                <div className="text-xs text-gray-800 leading-relaxed font-medium bg-white p-3 rounded-lg border border-indigo-100/70 shadow-2xs">
+                <div className="text-xs text-[#dedede] leading-relaxed font-normal bg-[#121212] p-3 rounded-lg border border-[#242424] shadow-2xs">
                   {analystResult.answer}
                 </div>
 
                 {analystResult.chartSuggestion && (
-                  <div className="flex items-center justify-between bg-white/80 p-2.5 rounded-lg border border-indigo-100 text-xs">
+                  <div className="flex items-center justify-between bg-[#121212] p-2.5 rounded-lg border border-[#242424] text-xs">
                     <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-indigo-600" />
-                      <span>
-                        Suggested View: <strong>{analystResult.chartSuggestion.title}</strong> (
-                        {analystResult.chartSuggestion.chartType})
+                      <BarChart3 className="h-4 w-4 text-[#ff6b35]" />
+                      <span className="text-[#dedede]">
+                        Suggested View: <strong className="text-white">{analystResult.chartSuggestion.title}</strong> (
+                        <span className="font-mono text-[#888888]">{analystResult.chartSuggestion.chartType}</span>)
                       </span>
                     </div>
                     <button
@@ -314,7 +314,7 @@ export function AiAnalyticsModal({
                           `Show ${analystResult.chartSuggestion?.measure} by ${analystResult.chartSuggestion?.dimension}`
                         );
                       }}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                      className="text-xs font-semibold text-[#ff6b35] hover:text-[#ff8a5c] flex items-center gap-1 cursor-pointer"
                     >
                       <span>Plot Chart</span>
                       <ArrowRight className="h-3 w-3" />
@@ -330,7 +330,7 @@ export function AiAnalyticsModal({
         {activeTab === "nl-chart" && (
           <div className="p-6 flex-1 overflow-y-auto space-y-4">
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-[#dedede] uppercase tracking-wider mb-1.5">
                 Describe the chart you want to see
               </label>
               <form
@@ -345,12 +345,12 @@ export function AiAnalyticsModal({
                   value={nlPrompt}
                   onChange={(e) => setNlPrompt(e.target.value)}
                   placeholder="e.g. 'Show revenue by region' or 'Top 5 products by revenue'"
-                  className="flex-1 rounded-xl border border-gray-300 px-3.5 py-2 text-xs text-gray-900 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                  className="flex-1 rounded-xl border border-[#262626] bg-[#121212] px-3.5 py-2 text-xs text-white placeholder-[#555555] shadow-2xs focus:border-[#ff6b35] focus:outline-hidden"
                 />
                 <button
                   type="submit"
                   disabled={nlLoading || !nlPrompt.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#c2410c] disabled:opacity-50 transition cursor-pointer"
                 >
                   <BarChart3 className="h-3.5 w-3.5" />
                   <span>{nlLoading ? "Generating..." : "Generate Chart"}</span>
@@ -360,7 +360,7 @@ export function AiAnalyticsModal({
 
             {/* Quick Chart Prompts */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="text-[11px] text-gray-400 font-medium">Examples:</span>
+              <span className="text-[11px] text-[#777777] font-medium">Examples:</span>
               {[
                 "Show revenue by region",
                 "Show revenue by product",
@@ -374,7 +374,7 @@ export function AiAnalyticsModal({
                     setNlPrompt(p);
                     void handleGenerateChart(p);
                   }}
-                  className="rounded-full bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 px-2.5 py-0.5 text-[11px] font-medium text-gray-600 border border-gray-200 transition"
+                  className="rounded-full bg-[#171717] hover:bg-[#202020] hover:text-[#ff6b35] px-2.5 py-0.5 text-[11px] font-medium text-[#888888] border border-[#262626] transition cursor-pointer"
                 >
                   {p}
                 </button>
@@ -382,20 +382,20 @@ export function AiAnalyticsModal({
             </div>
 
             {nlError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              <div className="rounded-xl border border-red-900/50 bg-red-950/30 p-3 text-xs text-red-300">
                 {nlError}
               </div>
             )}
 
             {/* Rendered Generated Chart */}
             {nlResult && (
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-xs space-y-3">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+              <div className="rounded-xl border border-[#262626] bg-[#161616] p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-[#242424] pb-2">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900">{nlResult.title}</h3>
-                    <p className="text-[11px] text-gray-400">{nlResult.explanation}</p>
+                    <h3 className="text-sm font-semibold text-white">{nlResult.title}</h3>
+                    <p className="text-[11px] text-[#888888]">{nlResult.explanation}</p>
                   </div>
-                  <span className="rounded bg-indigo-50 px-2 py-0.5 font-mono text-[10px] font-bold text-indigo-700 uppercase">
+                  <span className="rounded bg-[#ff6b35]/15 border border-[#ff6b35]/30 px-2 py-0.5 font-mono text-[10px] font-bold text-[#ff6b35] uppercase">
                     {nlResult.chartType}
                   </span>
                 </div>
@@ -418,11 +418,11 @@ export function AiAnalyticsModal({
                 </div>
 
                 {onAddGeneratedChart && (
-                  <div className="flex justify-end pt-2 border-t border-gray-100">
+                  <div className="flex justify-end pt-2 border-t border-[#242424]">
                     <button
                       type="button"
                       onClick={() => onAddGeneratedChart(nlResult)}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 transition"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#ff6b35] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#c2410c] transition cursor-pointer"
                     >
                       <span>Add to Dashboard</span>
                     </button>
@@ -438,37 +438,37 @@ export function AiAnalyticsModal({
           <div className="p-6 flex-1 overflow-y-auto space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-white">
                   Statistical Insights & Anomaly Detection
                 </h3>
-                <p className="text-[11px] text-gray-500">
-                  Deterministic detection using Z-score (threshold $\ge 2.5$) and IQR 1.5x outlier methods
+                <p className="text-[11px] text-[#888888]">
+                  Deterministic detection using Z-score (threshold &ge; 2.5) and IQR 1.5x outlier methods
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => void handleFetchInsights()}
                 disabled={insightsLoading}
-                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 shadow-2xs hover:bg-gray-50 transition"
+                className="rounded-lg border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1 text-xs font-medium text-[#dedede] shadow-2xs hover:bg-[#222222] hover:text-white transition cursor-pointer"
               >
                 {insightsLoading ? "Scanning..." : "Re-scan"}
               </button>
             </div>
 
             {insightsError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              <div className="rounded-xl border border-red-900/50 bg-red-950/30 p-3 text-xs text-red-300">
                 {insightsError}
               </div>
             )}
 
             {insightsSummary && (
-              <div className="rounded-lg bg-indigo-50/60 p-2.5 text-xs text-indigo-900 font-medium border border-indigo-100">
+              <div className="rounded-lg bg-[#ff6b35]/10 p-2.5 text-xs text-[#dedede] font-medium border border-[#ff6b35]/25">
                 {insightsSummary}
               </div>
             )}
 
             {insightsList.length === 0 && !insightsLoading ? (
-              <div className="text-center py-8 text-xs text-gray-400">
+              <div className="text-center py-8 text-xs text-[#777777]">
                 No insights or anomalies generated yet. Click &ldquo;Re-scan&rdquo; to analyze this dataset.
               </div>
             ) : (
@@ -478,23 +478,23 @@ export function AiAnalyticsModal({
                     key={ins.id}
                     className={`rounded-xl p-3 border text-xs flex flex-col justify-between ${
                       ins.isAnomaly
-                        ? "border-amber-300 bg-amber-50/60 text-amber-950"
-                        : "border-indigo-100 bg-white text-gray-800 shadow-2xs"
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+                        : "border-[#262626] bg-[#161616] text-[#dedede] shadow-2xs"
                     }`}
                   >
                     <div>
                       <div className="flex items-center gap-1.5 font-bold mb-1">
                         {ins.isAnomaly ? (
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                         ) : (
-                          <TrendingUp className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                          <TrendingUp className="h-3.5 w-3.5 text-[#ff6b35] shrink-0" />
                         )}
-                        <span>{ins.title}</span>
+                        <span className="text-white">{ins.title}</span>
                       </div>
-                      <p className="text-gray-600 leading-relaxed text-[11px]">{ins.description}</p>
+                      <p className="text-[#a0a0a0] leading-relaxed text-[11px]">{ins.description}</p>
                     </div>
 
-                    <div className="mt-2.5 pt-2 border-t border-gray-100/60 flex items-center justify-between text-[10px] text-gray-400">
+                    <div className="mt-2.5 pt-2 border-t border-[#242424] flex items-center justify-between text-[10px] text-[#777777] font-mono">
                       <span>Method: {ins.detectionMethod || "STATISTICAL"}</span>
                       {ins.score !== undefined && <span>Score: {ins.score}</span>}
                     </div>

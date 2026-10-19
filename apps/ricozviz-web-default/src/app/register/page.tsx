@@ -99,7 +99,7 @@ export default function RegisterPage() {
       <header className="relative z-10 w-full border-b border-[#2e2e2e]/70 px-6 py-4">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <img className="size-6 object-contain" src="/images/logo.png" alt="RicozViz" />
+            <img className="size-6 rounded-md object-contain" src="/images/logo.png" alt="RicozViz" />
             <span className="text-[17px] font-medium tracking-tight text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
               ricozviz
             </span>
@@ -149,7 +149,7 @@ export default function RegisterPage() {
             )}
 
             {/* Form */}
-            <form onSubmit={(e) => { void handleSubmit(e); }} noValidate className="space-y-4">
+            <form onSubmit={(e) => { void handleSubmit(e); }} noValidate className="space-y-4" suppressHydrationWarning>
               {/* Full Name & Organization Name Grid */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -167,6 +167,7 @@ export default function RegisterPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Elena Rostova"
                     disabled={isLoading}
+                    suppressHydrationWarning
                     className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["name"]
                         ? "border-red-500/60 bg-red-950/20"
                         : "border-[#393939]"
@@ -189,6 +190,7 @@ export default function RegisterPage() {
                     onChange={(e) => setOrganizationName(e.target.value)}
                     placeholder="Acme Enterprise"
                     disabled={isLoading}
+                    suppressHydrationWarning
                     className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["organizationName"]
                         ? "border-red-500/60 bg-red-950/20"
                         : "border-[#393939]"
@@ -214,6 +216,7 @@ export default function RegisterPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="architect@enterprise.io"
                   disabled={isLoading}
+                  suppressHydrationWarning
                   className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["email"]
                       ? "border-red-500/60 bg-red-950/20"
                       : "border-[#393939]"
@@ -238,6 +241,7 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
                   disabled={isLoading}
+                  suppressHydrationWarning
                   className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["password"]
                       ? "border-red-500/60 bg-red-950/20"
                       : "border-[#393939]"
@@ -259,6 +263,7 @@ export default function RegisterPage() {
                 id="register-submit"
                 type="submit"
                 disabled={isLoading}
+                suppressHydrationWarning
                 className="w-full mt-2 flex h-[42px] items-center justify-center gap-2 rounded-full border border-[#ff6b35]/80 bg-[#9a3412] px-4 text-sm font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c] disabled:opacity-60 cursor-pointer shadow-[0_0_20px_rgba(255,107,53,0.18)]"
               >
                 {isLoading ? (

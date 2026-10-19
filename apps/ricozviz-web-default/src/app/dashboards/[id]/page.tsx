@@ -1342,36 +1342,38 @@ export default function DashboardDetailPage({
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col antialiased">
+    <div className="min-h-screen bg-[#121212] text-[#fafafa] flex flex-col antialiased">
       {/* ============================================================ */}
       {/* 1. TOP BAR — Enterprise Dashboard Studio Header */}
       {/* ============================================================ */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-20 no-print">
+      <header className="border-b border-[#242424] bg-[#141414]/95 backdrop-blur-md sticky top-0 z-20 no-print">
         <div className="mx-auto flex h-14 items-center justify-between px-3 sm:px-5 gap-2">
           <div className="flex items-center gap-2 min-w-0 shrink">
-            <Link href="/" className="flex items-center gap-1.5 font-bold text-gray-900 shrink-0">
+            <Link href="/" className="flex items-center gap-1.5 font-medium text-[#fafafa] shrink-0">
               <BrandLogo size={28} />
-              <span className="text-sm tracking-tight hidden sm:inline">RicozViz</span>
+              <span className="text-sm tracking-tight hidden sm:inline">
+                ricoz<span className="text-[#ff6b35]">viz</span>
+              </span>
             </Link>
 
-            <span className="text-gray-300">/</span>
-            <Link href="/dashboards" className="text-xs text-gray-500 hover:text-gray-900 shrink-0 hidden md:inline">
+            <span className="text-[#333333]">/</span>
+            <Link href="/dashboards" className="text-xs text-[#898989] hover:text-[#fafafa] shrink-0 hidden md:inline transition-colors">
               Dashboards
             </Link>
-            <span className="text-gray-300 hidden md:inline">/</span>
+            <span className="text-[#333333] hidden md:inline">/</span>
 
             {/* Dashboard Title & Badge */}
             <div className="flex items-center gap-1.5 min-w-0">
-              <h1 className="text-xs font-bold text-gray-900 truncate max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]" title={dashboard.name}>
+              <h1 className="text-xs font-medium text-[#fafafa] truncate max-w-[120px] sm:max-w-[180px] lg:max-w-[240px]" title={dashboard.name}>
                 {dashboard.name}
               </h1>
               <span
-                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold shrink-0 border ${
                   dashboard.status === "PUBLISHED"
-                    ? "bg-green-50 text-green-700 border border-green-200"
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                     : dashboard.status === "ARCHIVED"
-                      ? "bg-gray-100 text-gray-600"
-                      : "bg-amber-50 text-amber-700 border border-amber-200"
+                      ? "bg-[#1c1c1c] text-[#898989] border-[#333333]"
+                      : "bg-[#ff6b35]/10 text-[#ff6b35] border-[#ff6b35]/30"
                 }`}
               >
                 {dashboard.status}
@@ -1380,7 +1382,7 @@ export default function DashboardDetailPage({
               {/* Active Collaborators Presence */}
               {activeCollaborators.length > 0 && (
                 <div
-                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] shrink-0"
+                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#1c1c1c] border border-[#2e2e2e] text-[#fafafa] text-[10px] shrink-0"
                   title={`${activeCollaborators.length} user(s) currently active on this dashboard`}
                 >
                   <span className="relative flex h-2 w-2">
@@ -1393,7 +1395,7 @@ export default function DashboardDetailPage({
                       <div
                         key={c.userId}
                         title={`${c.name || c.userName || "User"} (${c.email || c.userEmail || ""})`}
-                        className="inline-flex h-4 w-4 rounded-full ring-1 ring-white bg-indigo-600 text-[8px] font-bold text-white items-center justify-center uppercase select-none"
+                        className="inline-flex h-4 w-4 rounded-full ring-1 ring-[#141414] bg-[#9a3412] text-[8px] font-bold text-white items-center justify-center uppercase select-none"
                       >
                         {(c.name || c.userName || "U").slice(0, 1)}
                       </div>
@@ -1407,32 +1409,32 @@ export default function DashboardDetailPage({
           {/* Right Controls: Streamlined Mode Toggle, Sync, Actions, Profile */}
           <div className="flex items-center gap-2">
             {/* View Mode Switch (Studio / Preview) */}
-            <div className="flex rounded-lg bg-gray-100 p-0.5 text-xs font-medium">
+            <div className="flex rounded-full bg-[#191919] border border-[#2a2a2a] p-0.5 text-xs font-medium">
               <button
                 type="button"
                 onClick={() => setPreviewMode(false)}
-                className={`rounded-md px-2.5 py-1 transition ${
+                className={`rounded-full px-2.5 py-1 transition cursor-pointer ${
                   !previewMode
-                    ? "bg-white text-gray-900 shadow-2xs font-semibold"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-[#262626] text-[#fafafa] font-medium"
+                    : "text-[#898989] hover:text-[#fafafa]"
                 }`}
               >
                 <span className="flex items-center gap-1.5">
-                  <Sliders className="h-3.5 w-3.5 text-indigo-600" />
+                  <Sliders className="h-3.5 w-3.5 text-[#ff6b35]" />
                   <span>Studio</span>
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => setPreviewMode(true)}
-                className={`rounded-md px-2.5 py-1 transition ${
+                className={`rounded-full px-2.5 py-1 transition cursor-pointer ${
                   previewMode
-                    ? "bg-white text-gray-900 shadow-2xs font-semibold"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-[#262626] text-[#fafafa] font-medium"
+                    : "text-[#898989] hover:text-[#fafafa]"
                 }`}
               >
                 <span className="flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5 text-emerald-600" />
+                  <Eye className="h-3.5 w-3.5 text-emerald-400" />
                   <span>Preview</span>
                 </span>
               </button>
@@ -1440,7 +1442,7 @@ export default function DashboardDetailPage({
 
             {/* Refresh & Live Sync Controls */}
             <div
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50/80 px-2 py-1 text-xs"
+              className="flex items-center gap-1.5 rounded-full border border-[#2a2a2a] bg-[#191919] px-2.5 py-1 text-xs"
               title={`Last updated: ${lastUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`}
             >
               <button
@@ -1448,60 +1450,59 @@ export default function DashboardDetailPage({
                 onClick={handleManualRefresh}
                 disabled={isRefreshingCharts || reloadingDashboard}
                 title="Refresh visualizations from data source"
-                className="text-gray-500 hover:text-indigo-600 transition disabled:opacity-50"
+                className="text-[#898989] hover:text-[#ff6b35] transition disabled:opacity-50 cursor-pointer"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingCharts || reloadingDashboard ? "animate-spin text-indigo-600" : ""}`} />
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingCharts || reloadingDashboard ? "animate-spin text-[#ff6b35]" : ""}`} />
               </button>
               <select
                 value={autoRefreshInterval}
                 onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
                 title="Auto-refresh interval"
-                className="bg-transparent text-[11px] font-medium text-gray-600 focus:outline-none cursor-pointer"
+                className="bg-transparent text-[11px] font-mono text-[#898989] focus:outline-none cursor-pointer"
               >
-                <option value={0}>Auto: Off</option>
-                <option value={30}>Auto: 30s</option>
-                <option value={60}>Auto: 1m</option>
-                <option value={300}>Auto: 5m</option>
+                <option value={0} className="bg-[#141414] text-[#fafafa]">Auto: Off</option>
+                <option value={30} className="bg-[#141414] text-[#fafafa]">Auto: 30s</option>
+                <option value={60} className="bg-[#141414] text-[#fafafa]">Auto: 1m</option>
+                <option value={300} className="bg-[#141414] text-[#fafafa]">Auto: 5m</option>
               </select>
-              <div className="h-3 w-px bg-gray-300" />
+              <div className="h-3 w-px bg-[#333333]" />
               {savingDashboard ? (
-                <span className="text-[11px] text-blue-600 font-medium animate-pulse">Saving...</span>
+                <span className="text-[11px] text-[#ff6b35] font-medium animate-pulse">Saving...</span>
               ) : (
-                <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-0.5" title="All changes saved">
+                <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-0.5" title="All changes saved">
                   <CheckCircle2 className="h-3 w-3" />
-                  <span className="hidden xl:inline">Saved</span>
+                  <span className="hidden xl:inline font-mono">Saved</span>
                 </span>
               )}
             </div>
 
             {/* Action Group: History, Schedule, Share, Export */}
-            <div className="flex items-center rounded-lg border border-gray-200 bg-white shadow-2xs divide-x divide-gray-100">
+            <div className="flex items-center rounded-full border border-[#2a2a2a] bg-[#191919] divide-x divide-[#262626]">
               <button
                 type="button"
                 onClick={handleOpenVersionModal}
                 title="View Dashboard Version History"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-700 transition"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-normal text-[#b4b4b4] hover:bg-[#222222] hover:text-[#fafafa] transition cursor-pointer"
               >
-                <History className="h-3.5 w-3.5 text-blue-600" />
+                <History className="h-3.5 w-3.5 text-[#3b82f6]" />
                 <span className="hidden md:inline">History</span>
               </button>
               <button
                 type="button"
                 onClick={handleOpenScheduleModal}
                 title="Configure Automated Report Schedule"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-purple-700 transition"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-normal text-[#b4b4b4] hover:bg-[#222222] hover:text-[#fafafa] transition cursor-pointer"
               >
-
-                <Clock className="h-3.5 w-3.5 text-purple-600" />
+                <Clock className="h-3.5 w-3.5 text-[#a855f7]" />
                 <span className="hidden md:inline">Schedule</span>
               </button>
               <button
                 type="button"
                 onClick={handleOpenShareModal}
                 title="Share Dashboard via Link"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-indigo-700 transition"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-normal text-[#b4b4b4] hover:bg-[#222222] hover:text-[#fafafa] transition cursor-pointer"
               >
-                <Share2 className="h-3.5 w-3.5 text-indigo-600" />
+                <Share2 className="h-3.5 w-3.5 text-[#ff6b35]" />
                 <span className="hidden md:inline">Share</span>
               </button>
               <button
@@ -1512,18 +1513,18 @@ export default function DashboardDetailPage({
                   void fetchEmbedStatus();
                 }}
                 title="Embed Dashboard via iframe"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-cyan-700 transition"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-normal text-[#b4b4b4] hover:bg-[#222222] hover:text-[#fafafa] transition cursor-pointer"
               >
-                <Code className="h-3.5 w-3.5 text-cyan-600" />
+                <Code className="h-3.5 w-3.5 text-emerald-400" />
                 <span className="hidden md:inline">Embed</span>
               </button>
               <button
                 type="button"
                 onClick={handlePrintDashboard}
                 title="Export or Print Dashboard as PDF"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-normal text-[#b4b4b4] hover:bg-[#222222] hover:text-[#fafafa] transition cursor-pointer"
               >
-                <Printer className="h-3.5 w-3.5 text-gray-500" />
+                <Printer className="h-3.5 w-3.5 text-[#898989]" />
                 <span className="hidden md:inline">Export</span>
               </button>
             </div>
@@ -1531,31 +1532,20 @@ export default function DashboardDetailPage({
             {/* Editor Primary Actions */}
             {canEdit && (
               <div className="flex items-center gap-1.5">
-                <div className="inline-flex rounded-lg shadow-2xs">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenNewStudio()}
-                    className="inline-flex items-center gap-1.5 rounded-l-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>New Chart</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenAddSavedModal}
-                    title="Add from Saved Charts Library"
-                    className="inline-flex items-center gap-1 rounded-r-lg bg-indigo-700 px-2 py-1.5 text-xs font-semibold text-white hover:bg-indigo-800 border-l border-indigo-500 transition"
-                  >
-                    <FolderPlus className="h-3.5 w-3.5" />
-                    <span className="hidden xl:inline text-[11px]">Library</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenNewStudio()}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-3.5 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] transition shadow-[0_0_16px_rgba(255,107,53,0.18)] cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>New Chart</span>
+                </button>
 
                 <button
                   type="button"
                   onClick={handleSaveDashboard}
                   disabled={savingDashboard}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-500 transition disabled:opacity-70"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 transition cursor-pointer disabled:opacity-70"
                 >
                   <Save className="h-3.5 w-3.5" />
                   <span>{savingDashboard ? "Saving..." : "Save"}</span>
@@ -1565,20 +1555,20 @@ export default function DashboardDetailPage({
                   type="button"
                   onClick={() => setIsAppearanceModalOpen(true)}
                   title="Customize Theme & Branding"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition shadow-2xs"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1.5 text-xs font-normal text-[#dedede] hover:bg-[#222222] hover:text-[#fafafa] hover:border-[#ff6b35]/40 transition cursor-pointer"
                 >
-                  <Palette className="h-3.5 w-3.5 text-indigo-600" />
+                  <Palette className="h-3.5 w-3.5 text-[#ff6b35]" />
                   <span className="hidden md:inline">Appearance</span>
                 </button>
               </div>
             )}
 
-            <div className="h-4 w-px bg-gray-200" />
+            <div className="h-4 w-px bg-[#262626]" />
 
             {/* Profile Avatar */}
             <div className="flex items-center gap-2">
               <div
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-semibold text-indigo-700"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ff6b35]/20 border border-[#ff6b35]/35 text-[11px] font-mono font-medium text-[#ff8c5a]"
                 title={auth?.user?.name || "User"}
               >
                 {userInitials}
@@ -1588,7 +1578,7 @@ export default function DashboardDetailPage({
                   void logout();
                   router.replace("/login");
                 }}
-                className="text-xs text-gray-500 hover:text-gray-900 font-medium hidden sm:inline"
+                className="text-xs text-[#898989] hover:text-[#fafafa] font-normal hidden sm:inline cursor-pointer"
               >
                 Sign out
               </button>
@@ -1610,27 +1600,27 @@ export default function DashboardDetailPage({
 
       {/* Global Alerts */}
       {errorMsg && (
-        <div className="bg-red-50 px-4 py-2 text-xs font-medium text-red-700 border-b border-red-200 flex justify-between items-center">
+        <div className="bg-red-950/40 px-4 py-2 text-xs font-normal text-red-300 border-b border-red-500/30 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-red-500" />
+            <AlertCircle className="h-4 w-4 text-red-400" />
             <span>{errorMsg}</span>
           </div>
-          <button onClick={() => setErrorMsg(null)} className="font-bold text-red-500">×</button>
+          <button onClick={() => setErrorMsg(null)} className="font-bold text-red-400 hover:text-red-200 cursor-pointer">×</button>
         </div>
       )}
       {successMsg && (
-        <div className="bg-green-50 px-4 py-2 text-xs font-medium text-green-700 border-b border-green-200 flex justify-between items-center">
+        <div className="bg-emerald-950/40 px-4 py-2 text-xs font-normal text-emerald-300 border-b border-emerald-500/30 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             <span>{successMsg}</span>
           </div>
-          <button onClick={() => setSuccessMsg(null)} className="font-bold text-green-500">×</button>
+          <button onClick={() => setSuccessMsg(null)} className="font-bold text-emerald-400 hover:text-emerald-200 cursor-pointer">×</button>
         </div>
       )}
       {remoteUpdateNotice && (
-        <div className="bg-amber-50 px-4 py-2.5 text-xs font-medium text-amber-800 border-b border-amber-200 flex justify-between items-center shadow-2xs animate-in fade-in">
+        <div className="bg-[#ff6b35]/15 px-4 py-2.5 text-xs font-normal text-[#ff8c5a] border-b border-[#ff6b35]/30 flex justify-between items-center animate-in fade-in">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+            <AlertCircle className="h-4 w-4 text-[#ff6b35] shrink-0" />
             <span>{remoteUpdateNotice}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -1639,11 +1629,11 @@ export default function DashboardDetailPage({
                 setRemoteUpdateNotice(null);
                 void handleReloadDashboard();
               }}
-              className="rounded-md bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-amber-700 transition"
+              className="rounded-full bg-[#ff6b35] px-2.5 py-1 text-xs font-medium text-white hover:bg-[#c2410c] transition cursor-pointer"
             >
               Reload Now
             </button>
-            <button onClick={() => setRemoteUpdateNotice(null)} className="font-bold text-amber-700 hover:text-amber-900">
+            <button onClick={() => setRemoteUpdateNotice(null)} className="font-bold text-[#ff8c5a] hover:text-white cursor-pointer">
               ×
             </button>
           </div>
@@ -1658,13 +1648,14 @@ export default function DashboardDetailPage({
         style={{ backgroundColor: dashboardTheme.backgroundColor }}
       >
         {/* Left Quick Palette (Hidden in Preview Mode) */}
+        {/* Left Quick Palette (Hidden in Preview Mode) */}
         {!previewMode && (
-          <aside className="w-64 border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto hidden md:flex no-print">
-            <div className="p-4 border-b border-gray-100">
-              <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+          <aside className="w-64 border-r border-[#242424] bg-[#141414] flex flex-col shrink-0 overflow-y-auto hidden md:flex no-print">
+            <div className="p-4 border-b border-[#242424]">
+              <h2 className="text-xs font-medium text-[#fafafa] uppercase tracking-wider">
                 Visualizations
               </h2>
-              <p className="text-[11px] text-gray-500 mt-0.5">
+              <p className="text-[11px] text-[#898989] mt-0.5">
                 Select a chart type to configure
               </p>
             </div>
@@ -1674,13 +1665,13 @@ export default function DashboardDetailPage({
               <button
                 type="button"
                 onClick={() => setIsAiModalOpen(true)}
-                className="w-full flex items-center justify-between rounded-xl p-2.5 text-left text-xs font-bold text-indigo-700 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 transition border border-indigo-200/70 shadow-2xs group"
+                className="w-full flex items-center justify-between rounded-xl p-2.5 text-left text-xs font-medium text-[#ff8c5a] bg-[#ff6b35]/10 hover:bg-[#ff6b35]/20 transition border border-[#ff6b35]/30 shadow-xs group cursor-pointer"
               >
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-indigo-600 animate-pulse" />
+                  <Sparkles className="h-4 w-4 text-[#ff6b35] animate-pulse" />
                   <span>AI Analyst & NL Chart</span>
                 </div>
-                <span className="text-[10px] font-mono bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] font-mono bg-[#ff6b35] text-white px-1.5 py-0.5 rounded-full font-bold">
                   AI
                 </span>
               </button>
@@ -1695,13 +1686,13 @@ export default function DashboardDetailPage({
                     key={type.value}
                     type="button"
                     onClick={() => handleOpenNewStudio(type.value)}
-                    className="w-full flex items-center justify-between rounded-lg p-2 text-left text-xs font-medium text-gray-700 hover:bg-indigo-50/50 hover:text-indigo-600 transition group"
+                    className="w-full flex items-center justify-between rounded-lg p-2 text-left text-xs font-normal text-[#dedede] hover:bg-[#1c1c1c] hover:text-[#ff6b35] transition group cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5">
-                      <Icon className="h-4 w-4 text-gray-500 group-hover:text-indigo-600" />
+                      <Icon className="h-4 w-4 text-[#898989] group-hover:text-[#ff6b35] transition" />
                       <span>{type.label}</span>
                     </div>
-                    <span className="text-gray-300 group-hover:text-indigo-500 text-xs font-bold">
+                    <span className="text-[#555555] group-hover:text-[#ff6b35] text-xs font-bold transition">
                       +
                     </span>
                   </button>
@@ -1710,32 +1701,32 @@ export default function DashboardDetailPage({
             </div>
 
             {/* Saved Visualizations Library Section */}
-            <div className="p-4 border-t border-gray-100">
+            <div className="p-4 border-t border-[#242424]">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <FolderPlus className="h-3.5 w-3.5 text-indigo-600" />
+                <h3 className="text-xs font-medium text-[#fafafa] uppercase tracking-wider flex items-center gap-1.5">
+                  <FolderPlus className="h-3.5 w-3.5 text-[#ff6b35]" />
                   <span>Saved Library</span>
                 </h3>
-                <span className="text-[10px] text-gray-400 font-mono">
+                <span className="text-[10px] text-[#898989] font-mono">
                   {savedVisualizations.length}
                 </span>
               </div>
               <div className="space-y-1.5 mt-2 max-h-44 overflow-y-auto">
                 {savedVisualizations.length === 0 ? (
-                  <p className="text-[11px] text-gray-400 italic">No saved charts.</p>
+                  <p className="text-[11px] text-[#898989] italic">No saved charts.</p>
                 ) : (
                   savedVisualizations.slice(0, 10).map((viz) => (
                     <div
                       key={viz.id}
                       onClick={() => void handleAddSavedVisualization(viz)}
-                      className="rounded-lg border border-gray-100 p-2 hover:border-indigo-300 hover:bg-indigo-50/50 transition cursor-pointer text-xs flex items-center justify-between group"
+                      className="rounded-lg border border-[#242424] bg-[#171717] p-2 hover:border-[#ff6b35]/40 hover:bg-[#1c1c1c] transition cursor-pointer text-xs flex items-center justify-between group"
                       title="Click to add to dashboard"
                     >
                       <div className="min-w-0 pr-2">
-                        <p className="font-semibold text-gray-800 truncate">{viz.title}</p>
-                        <span className="text-[10px] text-indigo-600 font-mono font-bold uppercase">{viz.chartType}</span>
+                        <p className="font-medium text-[#fafafa] truncate">{viz.title}</p>
+                        <span className="text-[10px] text-[#ff8c5a] font-mono font-medium uppercase">{viz.chartType}</span>
                       </div>
-                      <span className="text-indigo-600 text-xs font-bold opacity-0 group-hover:opacity-100 transition">
+                      <span className="text-[#ff6b35] text-xs font-bold opacity-0 group-hover:opacity-100 transition">
                         +
                       </span>
                     </div>
@@ -1745,30 +1736,30 @@ export default function DashboardDetailPage({
             </div>
 
             {/* Available Datasets Section */}
-            <div className="p-4 border-t border-gray-100 flex-1">
+            <div className="p-4 border-t border-[#242424] flex-1">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <Database className="h-3.5 w-3.5 text-indigo-600" />
+                <h3 className="text-xs font-medium text-[#fafafa] uppercase tracking-wider flex items-center gap-1.5">
+                  <Database className="h-3.5 w-3.5 text-[#ff6b35]" />
                   <span>Datasets</span>
                 </h3>
-                <span className="text-[10px] text-gray-400 font-mono">
+                <span className="text-[10px] text-[#898989] font-mono">
                   {datasets.length}
                 </span>
               </div>
               <div className="space-y-1.5 mt-2">
                 {datasets.length === 0 ? (
-                  <p className="text-[11px] text-gray-400 italic">No datasets found.</p>
+                  <p className="text-[11px] text-[#898989] italic">No datasets found.</p>
                 ) : (
                   datasets.map((ds) => (
                     <div
                       key={ds.id}
                       onClick={() => handleOpenNewStudio()}
-                      className="rounded-lg border border-gray-100 p-2 hover:border-indigo-200 hover:bg-indigo-50/30 transition cursor-pointer text-xs"
+                      className="rounded-lg border border-[#242424] bg-[#171717] p-2 hover:border-[#ff6b35]/40 hover:bg-[#1c1c1c] transition cursor-pointer text-xs"
                       title="Open in Visualization Studio"
                     >
-                      <p className="font-semibold text-gray-800 line-clamp-1">{ds.name}</p>
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
-                        <span className="rounded bg-gray-100 px-1.5 py-0.2 uppercase font-mono">
+                      <p className="font-medium text-[#fafafa] line-clamp-1">{ds.name}</p>
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-[#898989]">
+                        <span className="rounded bg-[#222222] px-1.5 py-0.2 uppercase font-mono">
                           {ds.type}
                         </span>
                         {ds.rowCount !== undefined && <span>{ds.rowCount} rows</span>}
@@ -1780,9 +1771,9 @@ export default function DashboardDetailPage({
             </div>
 
             {/* Active Charts Outline */}
-            <div className="p-4 border-t border-gray-100 bg-gray-50/50">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Layers className="h-3 w-3 text-indigo-500" />
+            <div className="p-4 border-t border-[#242424] bg-[#121212]">
+              <span className="text-[10px] font-medium text-[#898989] uppercase tracking-wider flex items-center gap-1.5">
+                <Layers className="h-3 w-3 text-[#ff6b35]" />
                 <span>Active Charts ({charts.length})</span>
               </span>
               <ul className="mt-2 space-y-1">
@@ -1790,7 +1781,7 @@ export default function DashboardDetailPage({
                   <li
                     key={c.id}
                     onClick={() => handleOpenEditStudio(c)}
-                    className="flex items-center justify-between text-xs text-gray-600 hover:text-indigo-600 cursor-pointer py-1 truncate"
+                    className="flex items-center justify-between text-xs text-[#dedede] hover:text-[#ff6b35] cursor-pointer py-1 truncate transition"
                   >
                     <span className="truncate">📊 {c.title}</span>
                   </li>
@@ -1844,35 +1835,35 @@ export default function DashboardDetailPage({
                     required
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="rounded border border-gray-300 px-2 py-1 text-xs font-bold text-gray-900"
+                    className="rounded-lg border border-[#2e2e2e] bg-[#121212] px-2.5 py-1 text-xs font-medium text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                   />
                   <input
                     type="text"
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     placeholder="Description"
-                    className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600"
+                    className="rounded-lg border border-[#2e2e2e] bg-[#121212] px-2.5 py-1 text-xs text-[#dedede] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none"
                   />
                   <select
                     value={editStatus}
                     onChange={(e) => setEditStatus(e.target.value as DashboardStatus)}
-                    className="rounded border border-gray-300 px-2 py-1 text-xs"
+                    className="rounded-lg border border-[#2e2e2e] bg-[#121212] px-2 py-1 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                   >
-                    <option value="DRAFT">Draft</option>
-                    <option value="PUBLISHED">Published</option>
-                    <option value="ARCHIVED">Archived</option>
+                    <option value="DRAFT" className="bg-[#141414] text-[#fafafa]">Draft</option>
+                    <option value="PUBLISHED" className="bg-[#141414] text-[#fafafa]">Published</option>
+                    <option value="ARCHIVED" className="bg-[#141414] text-[#fafafa]">Archived</option>
                   </select>
                   <button
                     type="submit"
                     disabled={savingDashEdit}
-                    className="rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white"
+                    className="rounded-full bg-[#ff6b35] hover:bg-[#c2410c] px-3 py-1 text-xs font-medium text-white transition cursor-pointer"
                   >
                     Save
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditingDash(false)}
-                    className="text-xs text-gray-500"
+                    className="text-xs text-[#898989] hover:text-[#fafafa] cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -1913,7 +1904,7 @@ export default function DashboardDetailPage({
                 <button
                   type="button"
                   onClick={() => setIsEditingDash(true)}
-                  className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-900 font-medium"
+                  className="inline-flex items-center gap-1 text-[#898989] hover:text-[#fafafa] font-normal cursor-pointer transition"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
                   <span>Edit Info</span>
@@ -1923,7 +1914,7 @@ export default function DashboardDetailPage({
                 <button
                   type="button"
                   onClick={() => setShowDeleteDashModal(true)}
-                  className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 font-medium"
+                  className="inline-flex items-center gap-1 text-red-400 hover:text-red-300 font-normal cursor-pointer transition"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   <span>Delete</span>
@@ -1949,14 +1940,14 @@ export default function DashboardDetailPage({
 
           {/* Empty State */}
           {charts.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-white p-12 text-center shadow-xs">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 mb-3">
+            <div className="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#262626] bg-[#141414] p-12 text-center shadow-xs">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35] mb-3">
                 <BarChart3 className="h-7 w-7" />
               </div>
-              <h3 className="text-base font-bold text-gray-900">
+              <h3 className="text-base font-medium text-[#fafafa]">
                 No visualizations on this dashboard
               </h3>
-              <p className="mt-1 text-xs text-gray-500 max-w-sm">
+              <p className="mt-1 text-xs text-[#898989] max-w-sm">
                 Add an existing visualization from your saved library, or create a brand new chart from your datasets.
               </p>
               {canEdit && (
@@ -1964,15 +1955,15 @@ export default function DashboardDetailPage({
                   <button
                     type="button"
                     onClick={handleOpenAddSavedModal}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-700 shadow-2xs hover:bg-indigo-100 transition"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-4 py-2 text-xs font-normal text-[#fafafa] hover:bg-[#222222] hover:border-[#ff6b35]/40 transition cursor-pointer"
                   >
-                    <FolderPlus className="h-4 w-4" />
+                    <FolderPlus className="h-4 w-4 text-[#ff6b35]" />
                     <span>Add Saved Visualization</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleOpenNewStudio()}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#9a3412] border border-[#ff6b35]/70 hover:bg-[#c2410c] hover:border-[#ff6b35] px-4 py-2 text-xs font-medium text-white transition shadow-[0_0_16px_rgba(255,107,53,0.18)] cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Create New Visualization</span>
@@ -2060,12 +2051,12 @@ export default function DashboardDetailPage({
                       {/* Card Actions: Width, Height, Refresh, Edit, Delete */}
                       <div className="flex items-center gap-1 shrink-0 no-print">
                         {canEdit && (
-                          <div className="hidden sm:flex items-center gap-0.5 bg-gray-100 rounded p-0.5 text-[10px] mr-1">
+                          <div className="hidden sm:flex items-center gap-0.5 bg-[#171717] border border-[#262626] rounded-full p-0.5 text-[10px] mr-1">
                             <button
                               type="button"
                               onClick={() => void handleUpdateChartWidth(chart.id, 6)}
                               title="Half Width (6 columns)"
-                              className={`px-1.5 py-0.5 rounded font-mono transition ${width === 6 ? "bg-white font-bold text-indigo-700 shadow-2xs" : "text-gray-500 hover:text-gray-900"}`}
+                              className={`px-2 py-0.5 rounded-full font-mono transition cursor-pointer ${width === 6 ? "bg-[#ff6b35]/20 font-bold text-[#ff8c5a]" : "text-[#898989] hover:text-white"}`}
                             >
                               1/2
                             </button>
@@ -2073,7 +2064,7 @@ export default function DashboardDetailPage({
                               type="button"
                               onClick={() => void handleUpdateChartWidth(chart.id, 12)}
                               title="Full Width (12 columns)"
-                              className={`px-1.5 py-0.5 rounded font-mono transition ${width >= 12 ? "bg-white font-bold text-indigo-700 shadow-2xs" : "text-gray-500 hover:text-gray-900"}`}
+                              className={`px-2 py-0.5 rounded-full font-mono transition cursor-pointer ${width >= 12 ? "bg-[#ff6b35]/20 font-bold text-[#ff8c5a]" : "text-[#898989] hover:text-white"}`}
                             >
                               Full
                             </button>
@@ -2081,7 +2072,7 @@ export default function DashboardDetailPage({
                               type="button"
                               onClick={() => void handleUpdateChartHeight(chart.id, heightUnit === 6 ? 4 : 6)}
                               title={heightUnit === 6 ? "Make Compact Height" : "Make Tall Height"}
-                              className={`px-1.5 py-0.5 rounded font-mono transition ${heightUnit === 6 ? "bg-white font-bold text-indigo-700 shadow-2xs" : "text-gray-500 hover:text-gray-900"}`}
+                              className={`px-2 py-0.5 rounded-full font-mono transition cursor-pointer ${heightUnit === 6 ? "bg-[#ff6b35]/20 font-bold text-[#ff8c5a]" : "text-[#898989] hover:text-white"}`}
                             >
                               {heightUnit === 6 ? "Tall" : "Def"}
                             </button>
@@ -2099,7 +2090,7 @@ export default function DashboardDetailPage({
                           }}
                           title="Export Current Chart Data (CSV)"
                           disabled={!queryState?.data?.rows || queryState?.data?.rows.length === 0}
-                          className="rounded p-1 text-gray-400 hover:text-emerald-600 hover:bg-gray-100 text-xs transition disabled:opacity-30 disabled:hover:text-gray-400"
+                          className="rounded-full p-1 text-[#898989] hover:text-emerald-400 hover:bg-white/5 text-xs transition disabled:opacity-30 disabled:hover:text-[#898989] cursor-pointer"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </button>
@@ -2108,9 +2099,9 @@ export default function DashboardDetailPage({
                           onClick={() => void executeChartQuery(chart, dashboardFilters, activeDrill, true)}
                           title="Refresh Query"
                           disabled={queryState?.loading}
-                          className="rounded p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 text-xs transition"
+                          className="rounded-full p-1 text-[#898989] hover:text-[#ff6b35] hover:bg-white/5 text-xs transition cursor-pointer"
                         >
-                          <RefreshCw className={`h-3.5 w-3.5 ${queryState?.loading ? "animate-spin text-indigo-600" : ""}`} />
+                          <RefreshCw className={`h-3.5 w-3.5 ${queryState?.loading ? "animate-spin text-[#ff6b35]" : ""}`} />
                         </button>
                         {canEdit && (
                           <>
@@ -2118,7 +2109,7 @@ export default function DashboardDetailPage({
                               type="button"
                               onClick={() => handleOpenEditStudio(chart)}
                               title="Edit in Visualization Studio"
-                              className="rounded p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 text-xs transition"
+                              className="rounded-full p-1 text-[#898989] hover:text-[#fafafa] hover:bg-white/5 text-xs transition cursor-pointer"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                             </button>
@@ -2126,7 +2117,7 @@ export default function DashboardDetailPage({
                               type="button"
                               onClick={() => setDeletingChartId(chart.id)}
                               title="Delete Visualization"
-                              className="rounded p-1 text-red-400 hover:text-red-700 hover:bg-red-50 text-xs transition"
+                              className="rounded-full p-1 text-[#898989] hover:text-red-400 hover:bg-white/5 text-xs transition cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -2137,14 +2128,14 @@ export default function DashboardDetailPage({
 
                     {/* Filter / Drill-down Indicators */}
                     {(applicableFilters.length > 0 || isCrossFilterSource || activeDrill) && (
-                      <div className="px-4 py-1.5 bg-indigo-50/40 border-b border-indigo-100 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <div className="px-4 py-1.5 bg-[#121212] border-b border-[#242424] flex flex-wrap items-center gap-1.5 text-[11px]">
                         {isCrossFilterSource && activeSourceFilter && (
-                          <span className="inline-flex items-center gap-1 rounded bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 shadow-2xs">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[#ff6b35]/15 border border-[#ff6b35]/35 text-[#ff8c5a] font-normal px-2.5 py-0.5">
                             <span>⚡ Cross-filtering: {activeSourceFilter.field} = {String(activeSourceFilter.value)}</span>
                             <button
                               type="button"
                               onClick={() => handleRemoveFilter(activeSourceFilter.id)}
-                              className="hover:text-indigo-950 font-bold ml-1"
+                              className="hover:text-white font-bold ml-1 cursor-pointer"
                               title="Clear cross-filter"
                             >
                               ×
@@ -2154,13 +2145,13 @@ export default function DashboardDetailPage({
                         {applicableFilters.map((af) => (
                           <span
                             key={af.id}
-                            className="inline-flex items-center gap-1 rounded bg-white text-gray-700 border border-indigo-200 px-2 py-0.5 shadow-2xs font-medium"
+                            className="inline-flex items-center gap-1 rounded-full bg-[#181818] text-[#dedede] border border-[#2a2a2a] px-2.5 py-0.5 font-normal"
                           >
-                            <span>Filtered by: <strong className="font-semibold text-gray-900">{af.field}</strong> {af.operator} {String(af.value)}</span>
+                            <span>Filtered by: <strong className="font-medium text-[#fafafa]">{af.field}</strong> {af.operator} {String(af.value)}</span>
                             <button
                               type="button"
                               onClick={() => handleRemoveFilter(af.id)}
-                              className="text-gray-400 hover:text-gray-700 font-bold ml-1"
+                              className="text-[#898989] hover:text-white font-bold ml-1 cursor-pointer"
                               title="Remove this filter"
                             >
                               ×
@@ -2309,17 +2300,17 @@ export default function DashboardDetailPage({
 
       {/* Add Saved Visualization Modal */}
       {isAddSavedModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-2xs p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 no-print">
+          <div className="w-full max-w-2xl rounded-2xl bg-[#141414] shadow-2xl border border-[#262626] overflow-hidden flex flex-col max-h-[85vh] text-[#fafafa]">
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div className="p-4 sm:p-5 border-b border-[#242424] flex items-center justify-between bg-[#171717]">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35]">
                   <FolderPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Add Saved Visualization</h3>
-                  <p className="text-xs text-gray-500">
+                  <h3 className="text-sm font-medium text-[#fafafa]">Add Saved Visualization</h3>
+                  <p className="text-xs text-[#898989]">
                     Select a visualization from your library to add to this dashboard.
                   </p>
                 </div>
@@ -2327,45 +2318,45 @@ export default function DashboardDetailPage({
               <button
                 type="button"
                 onClick={() => setIsAddSavedModalOpen(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition font-bold"
+                className="rounded-lg p-1.5 text-[#898989] hover:text-[#fafafa] hover:bg-white/10 transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {/* Search Input */}
-            <div className="p-4 border-b border-gray-100 bg-white">
+            <div className="p-4 border-b border-[#242424] bg-[#141414]">
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#666666]" />
                 <input
                   type="text"
                   placeholder="Filter saved visualizations by title, chart type, or dataset..."
                   value={savedVizSearch}
                   onChange={(e) => setSavedVizSearch(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 pl-9 pr-4 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-indigo-500 focus:bg-white focus:outline-hidden transition"
+                  className="w-full rounded-xl border border-[#2e2e2e] bg-[#121212] pl-9 pr-4 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none transition"
                 />
               </div>
             </div>
 
             {/* Visualizations List */}
-            <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-2.5 bg-gray-50/30">
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-2.5 bg-[#121212]">
               {loadingSavedViz ? (
-                <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs text-gray-500">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs text-[#898989]">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
                   <span>Loading saved visualizations library...</span>
                 </div>
               ) : savedVisualizations.length === 0 ? (
                 <div className="py-12 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 mx-auto mb-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35] mx-auto mb-3">
                     <BarChart3 className="h-6 w-6" />
                   </div>
-                  <h4 className="text-sm font-bold text-gray-900">No saved visualizations yet</h4>
-                  <p className="mt-1 text-xs text-gray-500 max-w-sm mx-auto">
+                  <h4 className="text-sm font-medium text-[#fafafa]">No saved visualizations yet</h4>
+                  <p className="mt-1 text-xs text-[#898989] max-w-sm mx-auto">
                     Create and save charts in the Visualization Studio first, then add them to your dashboards.
                   </p>
                   <Link
                     href="/visualizations"
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#ff6b35] hover:bg-[#c2410c] px-4 py-1.5 text-xs font-medium text-white shadow-xs transition cursor-pointer"
                   >
                     <span>Open Visualization Studio</span>
                     <ExternalLink className="h-3 w-3" />
@@ -2385,7 +2376,7 @@ export default function DashboardDetailPage({
 
                   if (filtered.length === 0) {
                     return (
-                      <div className="py-8 text-center text-xs text-gray-500">
+                      <div className="py-8 text-center text-xs text-[#898989]">
                         No saved visualizations matching &quot;{savedVizSearch}&quot;.
                       </div>
                     );
@@ -2400,32 +2391,32 @@ export default function DashboardDetailPage({
                     return (
                       <div
                         key={viz.id}
-                        className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-2xs hover:border-indigo-300 hover:shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        className="rounded-xl border border-[#262626] bg-[#171717] p-3.5 shadow-xs hover:border-[#ff6b35]/40 hover:bg-[#1c1c1c] transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-xs text-gray-900 truncate">{viz.title}</h4>
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-[10px] font-bold text-indigo-700 uppercase">
+                            <h4 className="font-medium text-xs text-[#fafafa] truncate">{viz.title}</h4>
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#ff6b35]/15 text-[10px] font-mono font-medium text-[#ff8c5a] uppercase">
                               {viz.chartType}
                             </span>
                           </div>
                           {viz.description && (
-                            <p className="text-[11px] text-gray-400 truncate mt-0.5">{viz.description}</p>
+                            <p className="text-[11px] text-[#898989] truncate mt-0.5">{viz.description}</p>
                           )}
-                          <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-gray-500 font-mono">
+                          <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-[#898989] font-mono">
                             {viz.datasetName && (
-                              <span className="flex items-center gap-1 bg-gray-100 rounded px-1.5 py-0.5">
-                                <Database className="h-2.5 w-2.5 text-gray-400" />
+                              <span className="flex items-center gap-1 bg-[#222222] rounded px-1.5 py-0.5">
+                                <Database className="h-2.5 w-2.5 text-[#898989]" />
                                 <span>{viz.datasetName}</span>
                               </span>
                             )}
                             {catField && (
-                              <span className="bg-gray-100 rounded px-1.5 py-0.5">
+                              <span className="bg-[#222222] rounded px-1.5 py-0.5">
                                 X: {String(catField)}
                               </span>
                             )}
                             {valField && (
-                              <span className="bg-gray-100 rounded px-1.5 py-0.5">
+                              <span className="bg-[#222222] rounded px-1.5 py-0.5">
                                 Y: {agg}({String(valField)})
                               </span>
                             )}
@@ -2436,7 +2427,7 @@ export default function DashboardDetailPage({
                           type="button"
                           disabled={isAdding}
                           onClick={() => void handleAddSavedVisualization(viz)}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 transition disabled:opacity-70 shrink-0"
+                          className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#ff6b35] hover:bg-[#c2410c] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs transition disabled:opacity-70 shrink-0 cursor-pointer"
                         >
                           {isAdding ? (
                             <>
@@ -2458,14 +2449,14 @@ export default function DashboardDetailPage({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between text-xs">
-              <span className="text-gray-400 text-[11px]">
+            <div className="p-3.5 border-t border-[#242424] bg-[#171717] flex items-center justify-between text-xs">
+              <span className="text-[#898989] text-[11px]">
                 {savedVisualizations.length} saved visualization{savedVisualizations.length === 1 ? "" : "s"} available
               </span>
               <button
                 type="button"
                 onClick={() => setIsAddSavedModalOpen(false)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                className="rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-normal text-[#dedede] hover:bg-[#222222] hover:text-white cursor-pointer"
               >
                 Close
               </button>
@@ -2477,18 +2468,21 @@ export default function DashboardDetailPage({
       {/* ============================================================ */}
       {/* 5. SHARE & COLLABORATION MODAL */}
       {/* ============================================================ */}
+      {/* ============================================================ */}
+      {/* 5. SHARE & COLLABORATION MODAL */}
+      {/* ============================================================ */}
       {isShareModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 no-print">
-          <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 no-print">
+          <div className="w-full max-w-xl rounded-2xl bg-[#141414] shadow-2xl border border-[#262626] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 text-[#fafafa]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 p-5 bg-gray-50/50">
+            <div className="flex items-center justify-between border-b border-[#242424] p-5 bg-[#171717]">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35]">
                   <Share2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Share & Collaborate</h3>
-                  <p className="text-xs text-gray-500">
+                  <h3 className="text-sm font-medium text-[#fafafa]">Share & Collaborate</h3>
+                  <p className="text-xs text-[#898989]">
                     Manage workspace collaborator permissions and external sharing
                   </p>
                 </div>
@@ -2496,27 +2490,27 @@ export default function DashboardDetailPage({
               <button
                 type="button"
                 onClick={() => setIsShareModalOpen(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+                className="rounded-lg p-1.5 text-[#898989] hover:bg-white/10 hover:text-[#fafafa] transition cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Tab navigation */}
-            <div className="flex border-b border-gray-100 px-6 pt-3 gap-6 bg-gray-50/30 text-xs font-semibold">
+            <div className="flex border-b border-[#242424] px-6 pt-3 gap-6 bg-[#141414] text-xs font-medium">
               <button
                 type="button"
                 onClick={() => setShareModalTab("COLLABORATORS")}
-                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition ${
+                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition cursor-pointer ${
                   shareModalTab === "COLLABORATORS"
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-800"
+                    ? "border-[#ff6b35] text-[#ff6b35]"
+                    : "border-transparent text-[#898989] hover:text-[#fafafa]"
                 }`}
               >
                 <Users className="h-4 w-4" />
                 <span>Workspace Collaborators</span>
                 {collaborators.length > 0 && (
-                  <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] text-indigo-700 font-bold">
+                  <span className="rounded-full bg-[#ff6b35]/15 border border-[#ff6b35]/30 px-2 py-0.5 text-[10px] text-[#ff8c5a] font-mono font-medium">
                     {collaborators.length}
                   </span>
                 )}
@@ -2524,16 +2518,16 @@ export default function DashboardDetailPage({
               <button
                 type="button"
                 onClick={() => setShareModalTab("PUBLIC_LINK")}
-                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition ${
+                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition cursor-pointer ${
                   shareModalTab === "PUBLIC_LINK"
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-800"
+                    ? "border-[#ff6b35] text-[#ff6b35]"
+                    : "border-transparent text-[#898989] hover:text-[#fafafa]"
                 }`}
               >
                 <Globe className="h-4 w-4" />
                 <span>Public Share Link</span>
                 {shareStatus?.active && (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700 font-bold">
+                  <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] text-emerald-400 font-mono font-medium">
                     Active
                   </span>
                 )}
@@ -2544,16 +2538,16 @@ export default function DashboardDetailPage({
                   setShareModalTab("EMBED");
                   if (!embedStatus) void fetchEmbedStatus();
                 }}
-                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition ${
+                className={`pb-3 inline-flex items-center gap-2 border-b-2 transition cursor-pointer ${
                   shareModalTab === "EMBED"
-                    ? "border-indigo-600 text-indigo-600"
-                    : "border-transparent text-gray-500 hover:text-gray-800"
+                    ? "border-[#ff6b35] text-[#ff6b35]"
+                    : "border-transparent text-[#898989] hover:text-[#fafafa]"
                 }`}
               >
                 <Code className="h-4 w-4" />
                 <span>Embedded Analytics</span>
                 {embedStatus?.enabled && (
-                  <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] text-cyan-700 font-bold">
+                  <span className="rounded-full bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 text-[10px] text-cyan-400 font-mono font-medium">
                     Active
                   </span>
                 )}
@@ -2561,13 +2555,13 @@ export default function DashboardDetailPage({
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto bg-[#121212]">
               {shareModalTab === "COLLABORATORS" ? (
                 <div className="space-y-5">
                   {/* Add collaborator control */}
-                  <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-gray-800">
-                      <UserPlus className="h-4 w-4 text-indigo-600" />
+                  <div className="rounded-xl border border-[#262626] bg-[#171717] p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-medium text-[#fafafa]">
+                      <UserPlus className="h-4 w-4 text-[#ff6b35]" />
                       <span>Grant Workspace Member Access</span>
                     </div>
 
@@ -2576,13 +2570,13 @@ export default function DashboardDetailPage({
                         <select
                           value={selectedMemberId}
                           onChange={(e) => setSelectedMemberId(e.target.value)}
-                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                          className="w-full rounded-lg border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         >
                           {workspaceMembers.length === 0 ? (
-                            <option value="">No other workspace members</option>
+                            <option value="" className="bg-[#141414] text-[#898989]">No other workspace members</option>
                           ) : (
                             workspaceMembers.map((m) => (
-                              <option key={m.userId} value={m.userId}>
+                              <option key={m.userId} value={m.userId} className="bg-[#141414] text-[#fafafa]">
                                 {m.user?.name || m.user?.email || m.userId} ({m.roleName})
                               </option>
                             ))
@@ -2594,11 +2588,11 @@ export default function DashboardDetailPage({
                         <select
                           value={selectedAccessLevel}
                           onChange={(e) => setSelectedAccessLevel(e.target.value as "VIEW" | "EDIT" | "ADMIN")}
-                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                          className="w-full rounded-lg border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs font-normal text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         >
-                          <option value="VIEW">VIEW (Viewer)</option>
-                          <option value="EDIT">EDIT (Editor)</option>
-                          <option value="ADMIN">ADMIN (Full Access)</option>
+                          <option value="VIEW" className="bg-[#141414] text-[#fafafa]">VIEW (Viewer)</option>
+                          <option value="EDIT" className="bg-[#141414] text-[#fafafa]">EDIT (Editor)</option>
+                          <option value="ADMIN" className="bg-[#141414] text-[#fafafa]">ADMIN (Full Access)</option>
                         </select>
                       </div>
 
@@ -2607,7 +2601,7 @@ export default function DashboardDetailPage({
                           type="button"
                           disabled={!selectedMemberId || updatingCollaborator}
                           onClick={handleGrantCollaborator}
-                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition disabled:opacity-50"
+                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#ff6b35] hover:bg-[#c2410c] px-3 py-2 text-xs font-medium text-white transition disabled:opacity-50 cursor-pointer shadow-xs"
                         >
                           {updatingCollaborator ? (
                             <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -2622,35 +2616,35 @@ export default function DashboardDetailPage({
 
                   {/* Collaborators List */}
                   <div>
-                    <h4 className="text-xs font-semibold text-gray-700 mb-2.5">Current Collaborators</h4>
+                    <h4 className="text-xs font-medium text-[#fafafa] mb-2.5">Current Collaborators</h4>
                     {loadingCollaborators ? (
-                      <div className="flex items-center justify-center py-6 text-xs text-gray-500 gap-2">
-                        <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
+                      <div className="flex items-center justify-center py-6 text-xs text-[#898989] gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin text-[#ff6b35]" />
                         <span>Loading collaborators...</span>
                       </div>
                     ) : collaborators.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center text-xs text-gray-500">
+                      <div className="rounded-xl border border-dashed border-[#262626] bg-[#141414] p-6 text-center text-xs text-[#898989]">
                         No direct collaborator overrides configured. All workspace members have permissions matching their workspace role.
                       </div>
                     ) : (
-                      <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white overflow-hidden">
+                      <div className="divide-y divide-[#242424] rounded-xl border border-[#262626] bg-[#171717] overflow-hidden">
                         {collaborators.map((c) => (
                           <div key={c.id} className="p-3.5 flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-xs font-semibold text-gray-900 truncate">
+                              <p className="text-xs font-medium text-[#fafafa] truncate">
                                 {c.user?.name || c.user?.email || c.userId}
                               </p>
-                              <p className="text-[11px] text-gray-500 truncate">{c.user?.email}</p>
+                              <p className="text-[11px] text-[#898989] truncate">{c.user?.email}</p>
                             </div>
 
                             <div className="flex items-center gap-3">
                               <span
-                                className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono font-medium ${
                                   c.accessLevel === "ADMIN"
-                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                    ? "bg-[#ff6b35]/15 text-[#ff8c5a] border border-[#ff6b35]/30"
                                     : c.accessLevel === "EDIT"
-                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                    : "bg-blue-500/15 text-blue-400 border border-blue-500/30"
                                 }`}
                               >
                                 {c.accessLevel}
@@ -2660,7 +2654,7 @@ export default function DashboardDetailPage({
                                 type="button"
                                 disabled={updatingCollaborator}
                                 onClick={() => handleRevokeCollaborator(c.userId)}
-                                className="rounded-md p-1.5 text-gray-500 hover:text-red-700 hover:bg-red-50 transition"
+                                className="rounded-full p-1.5 text-[#898989] hover:text-red-400 hover:bg-white/5 transition cursor-pointer"
                                 title="Revoke collaborator access"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -2672,8 +2666,8 @@ export default function DashboardDetailPage({
                     )}
                   </div>
 
-                  <div className="rounded-xl bg-gray-50 p-3 text-[11px] text-gray-500 flex items-start gap-2">
-                    <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="rounded-xl bg-[#171717] border border-[#242424] p-3 text-[11px] text-[#898989] flex items-start gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                     <span>
                       Workspace isolation enforced: only authenticated accounts belonging to this workspace organization can be added as collaborators.
                     </span>
@@ -2683,24 +2677,24 @@ export default function DashboardDetailPage({
                 /* PUBLIC LINK TAB */
                 <div>
                   {loadingShareStatus ? (
-                    <div className="flex items-center justify-center py-8 text-xs text-gray-500 gap-2">
-                      <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
+                    <div className="flex items-center justify-center py-8 text-xs text-[#898989] gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin text-[#ff6b35]" />
                       <span>Loading sharing status...</span>
                     </div>
                   ) : shareStatus?.active && shareStatus.shareUrl ? (
                     <div className="space-y-4">
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                        <div className="text-xs text-emerald-900 space-y-1">
-                          <p className="font-semibold">Public Link is Active</p>
-                          <p className="text-emerald-700 text-[11px]">
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 flex items-start gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                        <div className="text-xs text-emerald-300 space-y-1">
+                          <p className="font-medium text-emerald-200">Public Link is Active</p>
+                          <p className="text-emerald-400/80 text-[11px]">
                             Anyone with this link can view this dashboard in read-only mode without logging in. Your private workspace data and credentials remain strictly isolated.
                           </p>
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        <label className="block text-xs font-medium text-[#898989] mb-1.5">
                           Share Link
                         </label>
                         <div className="flex items-center gap-2">
@@ -2708,12 +2702,12 @@ export default function DashboardDetailPage({
                             type="text"
                             readOnly
                             value={shareStatus.shareUrl}
-                            className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-mono text-gray-800 focus:outline-none select-all"
+                            className="flex-1 rounded-xl border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs font-mono text-[#fafafa] focus:outline-none select-all"
                           />
                           <button
                             type="button"
                             onClick={handleCopyShareLink}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 transition shrink-0"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[#ff6b35] hover:bg-[#c2410c] px-3.5 py-2 text-xs font-medium text-white shadow-xs transition shrink-0 cursor-pointer"
                           >
                             {copiedShareLink ? (
                               <>
@@ -2735,7 +2729,7 @@ export default function DashboardDetailPage({
                           href={shareStatus.shareUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                          className="inline-flex items-center gap-1.5 text-xs font-normal text-[#ff8c5a] hover:underline"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                           <span>Open Shared View in New Tab</span>
@@ -2745,7 +2739,7 @@ export default function DashboardDetailPage({
                           type="button"
                           disabled={updatingShare}
                           onClick={handleDisableShareLink}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-950/20 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-900/30 transition disabled:opacity-50 cursor-pointer"
                         >
                           {updatingShare ? (
                             <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -2757,18 +2751,18 @@ export default function DashboardDetailPage({
                       </div>
                     </div>
                   ) : (
-                      <div className="text-center py-6 space-y-4">
-                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                    <div className="text-center py-6 space-y-4">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35]">
                         <Globe className="h-6 w-6" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-sm font-semibold text-gray-900">No active share link</h4>
-                        <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                        <h4 className="text-sm font-medium text-[#fafafa]">No active share link</h4>
+                        <p className="text-xs text-[#898989] max-w-sm mx-auto">
                           Generate a unique, cryptographically secure share link to allow stakeholders to view this dashboard in read-only mode.
                         </p>
                       </div>
                       <div className="mx-auto max-w-xs text-left">
-                        <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+                        <label className="mb-1.5 block text-xs font-medium text-[#898989]">
                           Expiration (optional)
                         </label>
                         <input
@@ -2776,14 +2770,14 @@ export default function DashboardDetailPage({
                           value={shareExpiresAtInput}
                           onChange={(event) => setShareExpiresAtInput(event.target.value)}
                           min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                          className="w-full rounded-xl border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         />
                       </div>
                       <button
                         type="button"
                         disabled={updatingShare}
                         onClick={handleCreateShareLink}
-                        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition disabled:opacity-70"
+                        className="inline-flex items-center gap-2 rounded-full bg-[#ff6b35] hover:bg-[#c2410c] px-4 py-2.5 text-xs font-medium text-white shadow-xs transition disabled:opacity-70 cursor-pointer"
                       >
                         {updatingShare ? (
                           <RefreshCw className="h-4 w-4 animate-spin" />
@@ -2800,17 +2794,17 @@ export default function DashboardDetailPage({
               {shareModalTab === "EMBED" && (
                 <div className="space-y-5">
                   {loadingEmbedStatus ? (
-                    <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs text-gray-500">
-                      <RefreshCw className="h-5 w-5 animate-spin text-indigo-600" />
+                    <div className="py-12 flex flex-col items-center justify-center gap-2 text-xs text-[#898989]">
+                      <RefreshCw className="h-5 w-5 animate-spin text-[#ff6b35]" />
                       <span>Loading embed configuration...</span>
                     </div>
                   ) : embedStatus?.enabled ? (
                     <div className="space-y-4">
-                      <div className="rounded-xl border border-cyan-200 bg-cyan-50/60 p-3.5 flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-cyan-600 shrink-0 mt-0.5" />
-                        <div className="text-xs text-cyan-900 space-y-1">
-                          <p className="font-semibold">Embedded Analytics is Active</p>
-                          <p className="text-cyan-700 text-[11px]">
+                      <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-3.5 flex items-start gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
+                        <div className="text-xs text-cyan-300 space-y-1">
+                          <p className="font-medium text-cyan-200">Embedded Analytics is Active</p>
+                          <p className="text-cyan-400/80 text-[11px]">
                             This dashboard can be securely embedded inside external web portals and apps via iframe. Access is protected by cryptographic tokens, origin restrictions, and server-side RLS policies.
                           </p>
                         </div>
@@ -2819,18 +2813,18 @@ export default function DashboardDetailPage({
                       {/* Embed Code Snippet */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <label className="block text-xs font-semibold text-gray-700">
+                          <label className="block text-xs font-medium text-[#898989]">
                             HTML Iframe Embed Code
                           </label>
                           <button
                             type="button"
                             onClick={handleCopyEmbedCode}
-                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                            className="text-xs font-medium text-[#ff8c5a] hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             {copiedEmbedCode ? (
                               <>
-                                <Check className="h-3 w-3 text-emerald-600" />
-                                <span className="text-emerald-600">Copied!</span>
+                                <Check className="h-3 w-3 text-emerald-400" />
+                                <span className="text-emerald-400">Copied!</span>
                               </>
                             ) : (
                               <>
@@ -2844,25 +2838,25 @@ export default function DashboardDetailPage({
                           readOnly
                           rows={3}
                           value={embedStatus.embedCode || embedStatus.iframeCode || ""}
-                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-mono text-gray-800 focus:outline-none select-all resize-none"
+                          className="w-full rounded-xl border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs font-mono text-[#fafafa] focus:outline-none select-all resize-none"
                         />
                       </div>
 
                       {/* Embed URL */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <label className="block text-xs font-semibold text-gray-700">
+                          <label className="block text-xs font-medium text-[#898989]">
                             Direct Embed URL
                           </label>
                           <button
                             type="button"
                             onClick={handleCopyEmbedUrl}
-                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                            className="text-xs font-medium text-[#ff8c5a] hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             {copiedEmbedUrl ? (
                               <>
-                                <Check className="h-3 w-3 text-emerald-600" />
-                                <span className="text-emerald-600">Copied!</span>
+                                <Check className="h-3 w-3 text-emerald-400" />
+                                <span className="text-emerald-400">Copied!</span>
                               </>
                             ) : (
                               <>
@@ -2876,28 +2870,28 @@ export default function DashboardDetailPage({
                           type="text"
                           readOnly
                           value={embedStatus.embedUrl || ""}
-                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-mono text-gray-800 focus:outline-none select-all"
+                          className="w-full rounded-xl border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs font-mono text-[#fafafa] focus:outline-none select-all"
                         />
                       </div>
 
                       {/* Config summary */}
-                      <div className="grid grid-cols-2 gap-3 text-xs bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="grid grid-cols-2 gap-3 text-xs bg-[#171717] p-3 rounded-xl border border-[#262626]">
                         <div>
-                          <span className="text-gray-400 block text-[11px]">Allowed Origins:</span>
-                          <span className="font-semibold text-gray-800 font-mono text-[11px] truncate block" title={embedStatus.config?.allowedOrigins?.join(", ") || "*"}>
+                          <span className="text-[#898989] block text-[11px]">Allowed Origins:</span>
+                          <span className="font-medium text-[#fafafa] font-mono text-[11px] truncate block" title={embedStatus.config?.allowedOrigins?.join(", ") || "*"}>
                             {embedStatus.config?.allowedOrigins?.join(", ") || "*"}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-400 block text-[11px]">Theme / Controls:</span>
-                          <span className="font-semibold text-gray-800 capitalize">
+                          <span className="text-[#898989] block text-[11px]">Theme / Controls:</span>
+                          <span className="font-medium text-[#fafafa] capitalize">
                             {embedStatus.config?.theme || "light"} • {embedStatus.config?.showControls ? "Controls On" : "Controls Off"}
                           </span>
                         </div>
                         {(embedStatus.expiresAt || embedStatus.config?.expiresAt) && (
                           <div className="col-span-2">
-                            <span className="text-gray-400 block text-[11px]">Expires At:</span>
-                            <span className="font-semibold text-gray-800">
+                            <span className="text-[#898989] block text-[11px]">Expires At:</span>
+                            <span className="font-medium text-[#fafafa]">
                               {new Date(embedStatus.expiresAt || embedStatus.config?.expiresAt!).toLocaleString()}
                             </span>
                           </div>
@@ -2909,7 +2903,7 @@ export default function DashboardDetailPage({
                           href={embedStatus.embedUrl || "#"}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                          className="inline-flex items-center gap-1.5 text-xs font-normal text-[#ff8c5a] hover:underline"
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                           <span>Preview Embed in New Tab</span>
@@ -2919,7 +2913,7 @@ export default function DashboardDetailPage({
                           type="button"
                           disabled={updatingEmbed}
                           onClick={handleRevokeEmbed}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-950/20 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-900/30 transition disabled:opacity-50 cursor-pointer"
                         >
                           {updatingEmbed ? (
                             <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -2932,16 +2926,16 @@ export default function DashboardDetailPage({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-3.5 text-xs text-gray-700">
-                        <p className="font-semibold mb-1">Secure Enterprise Embedding</p>
-                        <p className="text-gray-500 text-[11px]">
+                      <div className="rounded-xl border border-[#262626] bg-[#171717] p-3.5 text-xs text-[#dedede]">
+                        <p className="font-medium mb-1 text-[#fafafa]">Secure Enterprise Embedding</p>
+                        <p className="text-[#898989] text-[11px]">
                           Generate an isolated, token-authenticated embed iframe. Embedded views reuse the RicozViz chart canvas, responsive layouts, and cross-filters while strictly isolating backend credentials and enforcing Row-Level Security (RLS).
                         </p>
                       </div>
 
                       {/* Origin Restrictions */}
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-[#898989] mb-1">
                           Allowed Origins (Hostnames)
                         </label>
                         <input
@@ -2949,9 +2943,9 @@ export default function DashboardDetailPage({
                           value={embedAllowedOrigins}
                           onChange={(e) => setEmbedAllowedOrigins(e.target.value)}
                           placeholder="* or https://portal.example.com, https://app.company.io"
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-indigo-500 focus:outline-none font-mono"
+                          className="w-full rounded-xl border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono"
                         />
-                        <p className="text-[11px] text-gray-400 mt-1">
+                        <p className="text-[11px] text-[#898989] mt-1">
                           Comma-separated origin domains allowed to embed via iframe. Use * to allow all origins.
                         </p>
                       </div>
@@ -2959,32 +2953,32 @@ export default function DashboardDetailPage({
                       {/* Theme & Controls */}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          <label className="block text-xs font-medium text-[#898989] mb-1">
                             Embed Theme
                           </label>
                           <select
                             value={embedTheme}
                             onChange={(e) => setEmbedTheme(e.target.value as "light" | "dark")}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                            className="w-full rounded-xl border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                           >
-                            <option value="light">Light Mode</option>
-                            <option value="dark">Dark Mode</option>
+                            <option value="dark" className="bg-[#141414] text-[#fafafa]">Dark Mode</option>
+                            <option value="light" className="bg-[#141414] text-[#fafafa]">Light Mode</option>
                           </select>
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          <label className="block text-xs font-medium text-[#898989] mb-1">
                             Expiration (Days)
                           </label>
                           <select
                             value={embedExpiresInDays}
                             onChange={(e) => setEmbedExpiresInDays(e.target.value)}
-                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                            className="w-full rounded-xl border border-[#2e2e2e] bg-[#121212] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                           >
-                            <option value="">Never Expires</option>
-                            <option value="7">7 Days</option>
-                            <option value="30">30 Days</option>
-                            <option value="90">90 Days</option>
-                            <option value="365">1 Year</option>
+                            <option value="" className="bg-[#141414] text-[#fafafa]">Never Expires</option>
+                            <option value="7" className="bg-[#141414] text-[#fafafa]">7 Days</option>
+                            <option value="30" className="bg-[#141414] text-[#fafafa]">30 Days</option>
+                            <option value="90" className="bg-[#141414] text-[#fafafa]">90 Days</option>
+                            <option value="365" className="bg-[#141414] text-[#fafafa]">1 Year</option>
                           </select>
                         </div>
                       </div>
@@ -2995,9 +2989,9 @@ export default function DashboardDetailPage({
                           id="showControlsToggle"
                           checked={embedShowControls}
                           onChange={(e) => setEmbedShowControls(e.target.checked)}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          className="rounded border-[#2e2e2e] accent-[#ff6b35]"
                         />
-                        <label htmlFor="showControlsToggle" className="text-xs text-gray-700 font-medium">
+                        <label htmlFor="showControlsToggle" className="text-xs text-[#dedede] font-normal cursor-pointer">
                           Show interactive filter bar & refresh controls in embed view
                         </label>
                       </div>
@@ -3007,7 +3001,7 @@ export default function DashboardDetailPage({
                           type="button"
                           disabled={updatingEmbed}
                           onClick={handleCreateOrUpdateEmbed}
-                          className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-5 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-cyan-500 transition disabled:opacity-70"
+                          className="inline-flex items-center gap-2 rounded-full bg-[#ff6b35] hover:bg-[#c2410c] px-5 py-2.5 text-xs font-medium text-white shadow-xs transition disabled:opacity-70 cursor-pointer"
                         >
                           {updatingEmbed ? (
                             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -3024,8 +3018,8 @@ export default function DashboardDetailPage({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3.5 border-t border-gray-100 bg-gray-50 flex items-center justify-between text-xs">
-              <span className="text-gray-400 text-[11px]">
+            <div className="p-3.5 border-t border-[#242424] bg-[#171717] flex items-center justify-between text-xs">
+              <span className="text-[#898989] text-[11px]">
                 {shareStatus?.sharedAt
                   ? `Public link active since ${new Date(shareStatus.sharedAt).toLocaleDateString()}`
                   : "Private to Workspace"}
@@ -3033,7 +3027,7 @@ export default function DashboardDetailPage({
               <button
                 type="button"
                 onClick={() => setIsShareModalOpen(false)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                className="rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-normal text-[#dedede] hover:bg-[#222222] hover:text-white cursor-pointer"
               >
                 Close
               </button>
@@ -3046,17 +3040,17 @@ export default function DashboardDetailPage({
       {/* 6. SCHEDULE REPORT MODAL */}
       {/* ============================================================ */}
       {isScheduleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 no-print">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 no-print">
+          <div className="w-full max-w-lg rounded-2xl bg-[#141414] shadow-2xl border border-[#262626] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 max-h-[90vh]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 p-5 bg-gray-50/50">
+            <div className="flex items-center justify-between border-b border-[#242424] p-5 bg-[#171717]">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35]">
                   <Clock className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Dashboard Report Schedule & Exports</h3>
-                  <p className="text-xs text-gray-500">
+                  <h3 className="text-sm font-semibold text-white">Dashboard Report Schedule & Exports</h3>
+                  <p className="text-xs text-[#888888]">
                     Automated snapshots, periodic delivery, and format exports
                   </p>
                 </div>
@@ -3064,21 +3058,21 @@ export default function DashboardDetailPage({
               <button
                 type="button"
                 onClick={() => setIsScheduleModalOpen(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
+                className="rounded-lg p-1.5 text-[#888888] hover:bg-[#242424] hover:text-white transition cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Modal Navigation Tabs */}
-            <div className="flex border-b border-gray-200 bg-gray-50/70 text-xs font-semibold">
+            <div className="flex border-b border-[#242424] bg-[#121212] text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setScheduleModalTab("CONFIG")}
-                className={`flex-1 py-2.5 text-center border-b-2 transition ${
+                className={`flex-1 py-2.5 text-center border-b-2 transition cursor-pointer ${
                   scheduleModalTab === "CONFIG"
-                    ? "border-purple-600 text-purple-700 bg-white"
-                    : "border-transparent text-gray-500 hover:text-gray-900"
+                    ? "border-[#ff6b35] text-[#ff6b35] bg-[#171717]"
+                    : "border-transparent text-[#888888] hover:text-white hover:bg-[#141414]"
                 }`}
               >
                 Schedule & Format
@@ -3086,10 +3080,10 @@ export default function DashboardDetailPage({
               <button
                 type="button"
                 onClick={() => setScheduleModalTab("HISTORY")}
-                className={`flex-1 py-2.5 text-center border-b-2 transition ${
+                className={`flex-1 py-2.5 text-center border-b-2 transition cursor-pointer ${
                   scheduleModalTab === "HISTORY"
-                    ? "border-purple-600 text-purple-700 bg-white"
-                    : "border-transparent text-gray-500 hover:text-gray-900"
+                    ? "border-[#ff6b35] text-[#ff6b35] bg-[#171717]"
+                    : "border-transparent text-[#888888] hover:text-white hover:bg-[#141414]"
                 }`}
               >
                 Execution History ({reportExecutions.length})
@@ -3099,52 +3093,52 @@ export default function DashboardDetailPage({
             {/* Modal Content */}
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
               {loadingSchedule ? (
-                <div className="flex items-center justify-center py-8 text-xs text-gray-500 gap-2">
-                  <RefreshCw className="h-4 w-4 animate-spin text-purple-600" />
+                <div className="flex items-center justify-center py-8 text-xs text-[#888888] gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin text-[#ff6b35]" />
                   <span>Loading schedule...</span>
                 </div>
               ) : scheduleModalTab === "CONFIG" ? (
                 <>
                   {/* Current Schedule Summary */}
-                  <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-3.5 text-xs">
+                  <div className="rounded-xl border border-[#262626] bg-[#171717] p-3.5 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 font-medium">Schedule Status</span>
+                      <span className="text-[#888888] font-medium">Schedule Status</span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                           scheduleData?.enabled
-                            ? "bg-green-100 text-green-800"
+                            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
                             : scheduleData
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-gray-200 text-gray-600"
+                            ? "bg-amber-500/15 border-amber-500/30 text-amber-400"
+                            : "bg-[#242424] border-[#2e2e2e] text-[#888888]"
                         }`}
                       >
                         {scheduleData?.enabled ? "Active" : scheduleData ? "Paused" : "Not Scheduled"}
                       </span>
                     </div>
                     {scheduleData?.nextRunAt && (
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200/60 text-[11px]">
-                        <span className="text-gray-400">Next scheduled run:</span>
-                        <span className="text-gray-700 font-medium">
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#242424] text-[11px]">
+                        <span className="text-[#777777]">Next scheduled run:</span>
+                        <span className="text-[#fafafa] font-mono font-medium">
                           {new Date(scheduleData.nextRunAt).toLocaleString()}
                         </span>
                       </div>
                     )}
                     {scheduleData?.lastRunAt && (
                       <div className="flex items-center justify-between mt-1 text-[11px]">
-                        <span className="text-gray-400">Last run:</span>
-                        <span className="text-gray-700 font-medium">
+                        <span className="text-[#777777]">Last run:</span>
+                        <span className="text-[#fafafa] font-mono font-medium">
                           {new Date(scheduleData.lastRunAt).toLocaleString()}
                         </span>
                       </div>
                     )}
                     {scheduleData?.lastDeliveryStatus && (
-                      <div className="flex items-center justify-between mt-1 pt-2 border-t border-gray-200/60 text-[11px]">
-                        <span className="text-gray-400">Last delivery:</span>
+                      <div className="flex items-center justify-between mt-1 pt-2 border-t border-[#242424] text-[11px]">
+                        <span className="text-[#777777]">Last delivery:</span>
                         <span
-                          className={`font-semibold px-1.5 py-0.5 rounded text-[10px] ${
+                          className={`font-semibold px-2 py-0.5 rounded text-[10px] border ${
                             scheduleData.lastDeliveryStatus === "SUCCESS"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
+                              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                              : "bg-red-500/15 border-red-500/30 text-red-400"
                           }`}
                         >
                           {scheduleData.lastDeliveryStatus === "SUCCESS"
@@ -3158,52 +3152,52 @@ export default function DashboardDetailPage({
                   {/* Frequency Selection */}
                   <div className="space-y-3">
                     <div>
-                      <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      <label className="text-xs font-semibold text-[#dedede] block mb-1.5">
                         Report Frequency
                       </label>
                       <div className="grid grid-cols-3 gap-2">
                         <button
                           type="button"
                           onClick={() => setScheduleFrequency("DAILY")}
-                          className={`p-2 rounded-xl border text-xs font-medium text-center transition ${
+                          className={`p-2.5 rounded-xl border text-xs font-medium text-center transition cursor-pointer ${
                             scheduleFrequency === "DAILY"
-                              ? "border-purple-600 bg-purple-50 text-purple-700 font-bold"
-                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                              ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-bold"
+                              : "border-[#262626] bg-[#171717] text-[#888888] hover:bg-[#1f1f1f] hover:text-white"
                           }`}
                         >
                           <p>Daily</p>
-                          <span className="text-[10px] text-gray-400 font-normal">Every 24h</span>
+                          <span className="text-[10px] text-[#777777] font-mono font-normal">Every 24h</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setScheduleFrequency("WEEKLY")}
-                          className={`p-2 rounded-xl border text-xs font-medium text-center transition ${
+                          className={`p-2.5 rounded-xl border text-xs font-medium text-center transition cursor-pointer ${
                             scheduleFrequency === "WEEKLY"
-                              ? "border-purple-600 bg-purple-50 text-purple-700 font-bold"
-                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                              ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-bold"
+                              : "border-[#262626] bg-[#171717] text-[#888888] hover:bg-[#1f1f1f] hover:text-white"
                           }`}
                         >
                           <p>Weekly</p>
-                          <span className="text-[10px] text-gray-400 font-normal">Every 7d</span>
+                          <span className="text-[10px] text-[#777777] font-mono font-normal">Every 7d</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setScheduleFrequency("MONTHLY")}
-                          className={`p-2 rounded-xl border text-xs font-medium text-center transition ${
+                          className={`p-2.5 rounded-xl border text-xs font-medium text-center transition cursor-pointer ${
                             scheduleFrequency === "MONTHLY"
-                              ? "border-purple-600 bg-purple-50 text-purple-700 font-bold"
-                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                              ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-bold"
+                              : "border-[#262626] bg-[#171717] text-[#888888] hover:bg-[#1f1f1f] hover:text-white"
                           }`}
                         >
                           <p>Monthly</p>
-                          <span className="text-[10px] text-gray-400 font-normal">Every 30d</span>
+                          <span className="text-[10px] text-[#777777] font-mono font-normal">Every 30d</span>
                         </button>
                       </div>
                     </div>
 
                     {/* Report Format Selection */}
                     <div>
-                      <label className="text-xs font-semibold text-gray-700 block mb-1">
+                      <label className="text-xs font-semibold text-[#dedede] block mb-1.5">
                         Export Format
                       </label>
                       <div className="grid grid-cols-4 gap-2">
@@ -3212,10 +3206,10 @@ export default function DashboardDetailPage({
                             key={fmt}
                             type="button"
                             onClick={() => setReportFormat(fmt)}
-                            className={`py-1.5 px-2 rounded-lg border text-xs font-semibold text-center transition ${
+                            className={`py-1.5 px-2 rounded-lg border text-xs font-semibold text-center transition cursor-pointer font-mono ${
                               reportFormat === fmt
-                                ? "border-purple-600 bg-purple-50 text-purple-700"
-                                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                                ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35]"
+                                : "border-[#262626] bg-[#171717] text-[#888888] hover:bg-[#1f1f1f] hover:text-white"
                             }`}
                           >
                             {fmt}
@@ -3225,9 +3219,9 @@ export default function DashboardDetailPage({
                     </div>
 
                     {/* Delivery Destination Inputs */}
-                    <div className="space-y-2 pt-1 border-t border-gray-100">
+                    <div className="space-y-2 pt-2 border-t border-[#242424]">
                       <div>
-                        <label className="text-[11px] font-semibold text-gray-700 block mb-0.5">
+                        <label className="text-[11px] font-semibold text-[#dedede] block mb-1">
                           Email Recipients (Optional)
                         </label>
                         <input
@@ -3235,13 +3229,13 @@ export default function DashboardDetailPage({
                           value={scheduleRecipients}
                           onChange={(e) => setScheduleRecipients(e.target.value)}
                           placeholder="reports@acme.com, exec@acme.com"
-                          className="w-full text-xs px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-hidden focus:ring-1 focus:ring-purple-500 font-mono"
+                          className="w-full text-xs px-3 py-2 rounded-lg border border-[#262626] bg-[#121212] text-white placeholder-[#555555] focus:outline-hidden focus:border-[#ff6b35] focus:ring-1 focus:ring-[#ff6b35] font-mono"
                         />
-                        <span className="text-[10px] text-gray-400">Comma-separated email addresses</span>
+                        <span className="text-[10px] text-[#777777] mt-0.5 block">Comma-separated email addresses</span>
                       </div>
 
                       <div>
-                        <label className="text-[11px] font-semibold text-gray-700 block mb-0.5">
+                        <label className="text-[11px] font-semibold text-[#dedede] block mb-1">
                           Webhook URL (Optional)
                         </label>
                         <input
@@ -3249,14 +3243,14 @@ export default function DashboardDetailPage({
                           value={scheduleWebhookUrl}
                           onChange={(e) => setScheduleWebhookUrl(e.target.value)}
                           placeholder="https://api.example.com/webhooks/reports"
-                          className="w-full text-xs px-3 py-1.5 rounded-lg border border-gray-200 focus:outline-hidden focus:ring-1 focus:ring-purple-500 font-mono"
+                          className="w-full text-xs px-3 py-2 rounded-lg border border-[#262626] bg-[#121212] text-white placeholder-[#555555] focus:outline-hidden focus:border-[#ff6b35] focus:ring-1 focus:ring-[#ff6b35] font-mono"
                         />
-                        <span className="text-[10px] text-gray-400">Receives report snapshot JSON event payload</span>
+                        <span className="text-[10px] text-[#777777] mt-0.5 block">Receives report snapshot JSON event payload</span>
                       </div>
                     </div>
 
                     {/* Delivery notice */}
-                    <div className="rounded-lg bg-gray-50 p-2.5 text-[11px] text-gray-500 border border-gray-100">
+                    <div className="rounded-lg bg-[#171717] p-2.5 text-[11px] text-[#888888] border border-[#242424]">
                       ℹ️ Snapshots & queries are automatically executed on schedule and recorded in Execution History. External SMTP email delivery requires organization email provider credentials.
                     </div>
 
@@ -3265,9 +3259,9 @@ export default function DashboardDetailPage({
                         type="checkbox"
                         checked={scheduleEnabled}
                         onChange={(e) => setScheduleEnabled(e.target.checked)}
-                        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        className="h-4 w-4 rounded border-[#2e2e2e] bg-[#171717] text-[#ff6b35] focus:ring-[#ff6b35] accent-[#ff6b35]"
                       />
-                      <span className="text-xs font-medium text-gray-700">
+                      <span className="text-xs font-medium text-[#dedede]">
                         Enable automated report generation on schedule
                       </span>
                     </label>
@@ -3275,28 +3269,28 @@ export default function DashboardDetailPage({
 
                   {/* Snapshot Preview */}
                   {lastGeneratedReport && (
-                    <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-xs space-y-1">
-                      <div className="flex items-center justify-between font-semibold text-indigo-900">
+                    <div className="rounded-xl border border-[#ff6b35]/30 bg-[#ff6b35]/10 p-3 text-xs space-y-1">
+                      <div className="flex items-center justify-between font-semibold text-white">
                         <span>Latest Report Snapshot ({reportFormat})</span>
-                        <span className="text-[10px] text-indigo-500">
+                        <span className="text-[10px] text-[#ff6b35] font-mono">
                           {lastGeneratedReport.summary.executionTimeMs}ms
                         </span>
                       </div>
-                      <p className="text-[11px] text-indigo-700">
+                      <p className="text-[11px] text-[#dedede]">
                         Queried {lastGeneratedReport.chartCount} charts with {lastGeneratedReport.summary.totalRecords} total records.
                       </p>
                     </div>
                   )}
 
                   {/* Actions */}
-                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                  <div className="pt-3 border-t border-[#242424] flex items-center justify-between gap-2">
                     <div>
                       {scheduleData && (
                         <button
                           type="button"
                           onClick={handleDeleteSchedule}
                           disabled={deletingSchedule}
-                          className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-50"
+                          className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-950/40 border border-transparent hover:border-red-900/50 transition disabled:opacity-50 cursor-pointer"
                         >
                           {deletingSchedule ? "Deleting..." : "Delete Schedule"}
                         </button>
@@ -3308,7 +3302,7 @@ export default function DashboardDetailPage({
                         type="button"
                         onClick={handleGenerateReportNow}
                         disabled={generatingReport}
-                        className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 shadow-2xs"
+                        className="rounded-lg border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1.5 text-xs font-medium text-[#dedede] hover:bg-[#222222] hover:text-white transition disabled:opacity-50 cursor-pointer"
                       >
                         {generatingReport ? "Generating..." : "Generate Now"}
                       </button>
@@ -3316,7 +3310,7 @@ export default function DashboardDetailPage({
                         type="button"
                         onClick={handleSaveSchedule}
                         disabled={savingSchedule}
-                        className="rounded-lg bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-purple-500 transition shadow-xs disabled:opacity-50"
+                        className="rounded-lg bg-[#ff6b35] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#c2410c] transition disabled:opacity-50 cursor-pointer"
                       >
                         {savingSchedule ? "Saving..." : "Save Schedule"}
                       </button>
@@ -3327,7 +3321,7 @@ export default function DashboardDetailPage({
                 /* Execution History Tab */
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-700">
+                    <span className="text-xs font-semibold text-[#dedede]">
                       Report Execution Log ({reportExecutions.length} runs)
                     </span>
                     <button
@@ -3336,42 +3330,42 @@ export default function DashboardDetailPage({
                         const h = await apiGetDashboardReportHistory(id).catch(() => []);
                         setReportExecutions(h);
                       }}
-                      className="text-[11px] text-purple-600 hover:text-purple-800 font-medium"
+                      className="text-[11px] text-[#ff6b35] hover:text-[#ff8a5c] font-medium cursor-pointer"
                     >
                       Refresh
                     </button>
                   </div>
 
                   {reportExecutions.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center text-xs text-gray-400">
+                    <div className="rounded-xl border border-dashed border-[#262626] bg-[#161616] p-8 text-center text-xs text-[#777777]">
                       No report executions logged yet. Click &quot;Generate Now&quot; to run an immediate snapshot.
                     </div>
                   ) : (
-                    <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white overflow-hidden text-xs">
+                    <div className="divide-y divide-[#242424] rounded-xl border border-[#262626] bg-[#141414] overflow-hidden text-xs">
                       {reportExecutions.map((exec) => (
-                        <div key={exec.id} className="p-3 flex items-center justify-between hover:bg-gray-50">
+                        <div key={exec.id} className="p-3 flex items-center justify-between hover:bg-[#1a1a1a] transition">
                           <div>
                             <div className="flex items-center gap-2 mb-0.5">
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                                   exec.status === "SUCCESS"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
+                                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                                    : "bg-red-500/15 border-red-500/30 text-red-400"
                                 }`}
                               >
                                 {exec.status}
                               </span>
-                              <span className="font-semibold text-gray-900">{exec.format}</span>
-                              <span className="text-gray-400 text-[10px]">
+                              <span className="font-semibold text-white font-mono">{exec.format}</span>
+                              <span className="text-[#777777] text-[10px] font-mono">
                                 {exec.triggeredBy || "SCHEDULED"}
                               </span>
                             </div>
-                            <p className="text-[11px] text-gray-500">
+                            <p className="text-[11px] text-[#888888] font-mono">
                               {new Date(exec.executedAt).toLocaleString()}
                               {exec.durationMs ? ` · ${exec.durationMs}ms` : ""}
                             </p>
                             {exec.errorMessage && (
-                              <p className="text-[10px] text-red-600 mt-1">{exec.errorMessage}</p>
+                              <p className="text-[10px] text-red-400 mt-1">{exec.errorMessage}</p>
                             )}
                           </div>
                           <div className="text-right">
@@ -3380,12 +3374,12 @@ export default function DashboardDetailPage({
                                 href={exec.snapshotUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-purple-600 hover:underline text-xs font-semibold"
+                                className="text-[#ff6b35] hover:underline text-xs font-semibold cursor-pointer"
                               >
                                 View Snapshot
                               </a>
                             ) : (
-                              <span className="text-gray-400 text-[11px]">Archived</span>
+                              <span className="text-[#666666] text-[11px]">Archived</span>
                             )}
                           </div>
                         </div>
@@ -3403,17 +3397,17 @@ export default function DashboardDetailPage({
       {/* PHASE 5: DASHBOARD VERSION HISTORY MODAL */}
       {/* ============================================================ */}
       {isVersionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="flex w-full max-w-3xl flex-col max-h-[85vh] rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
+          <div className="flex w-full max-w-3xl flex-col max-h-[85vh] rounded-2xl bg-[#141414] shadow-2xl border border-[#262626] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gradient-to-r from-blue-50/70 to-indigo-50/70">
+            <div className="flex items-center justify-between border-b border-[#242424] px-6 py-4 bg-[#171717]">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35]">
                   <History className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">Dashboard Version History</h2>
-                  <p className="text-xs text-gray-500">
+                  <h2 className="text-base font-semibold text-white">Dashboard Version History</h2>
+                  <p className="text-xs text-[#888888]">
                     Track configuration changes, inspect snapshot differences, and restore past versions.
                   </p>
                 </div>
@@ -3421,7 +3415,7 @@ export default function DashboardDetailPage({
               <button
                 type="button"
                 onClick={() => setIsVersionModalOpen(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200/60 hover:text-gray-700 transition"
+                className="rounded-lg p-1.5 text-[#888888] hover:bg-[#242424] hover:text-white transition cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -3430,63 +3424,63 @@ export default function DashboardDetailPage({
             {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {loadingVersions ? (
-                <div className="py-12 text-center text-sm text-gray-400">
-                  <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
+                <div className="py-12 text-center text-sm text-[#888888]">
+                  <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-[#ff6b35]" />
                   Loading version timeline...
                 </div>
               ) : dashboardVersions.length === 0 ? (
-                <div className="py-12 text-center text-sm text-gray-400">
-                  <History className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <div className="py-12 text-center text-sm text-[#777777]">
+                  <History className="h-8 w-8 mx-auto mb-2 text-[#555555]" />
                   No version history found for this dashboard yet.
                 </div>
               ) : (
                 <div className="space-y-4">
                   {/* Active Comparison Card if Open */}
                   {versionComparison && (
-                    <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-3">
+                    <div className="rounded-xl border border-[#2a2a2a] bg-[#181818] p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <GitCompare className="h-4 w-4 text-blue-600" />
-                          <h4 className="text-xs font-bold text-blue-900">
+                          <GitCompare className="h-4 w-4 text-[#ff6b35]" />
+                          <h4 className="text-xs font-semibold text-white">
                             Diff: Version {versionComparison.baseVersion} → Version {versionComparison.targetVersion}
                           </h4>
                         </div>
                         <button
                           type="button"
                           onClick={() => setVersionComparison(null)}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                          className="text-xs text-[#ff6b35] hover:text-[#ff8a5c] font-semibold cursor-pointer"
                         >
                           Close Diff
                         </button>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                        <div className="rounded-lg bg-white p-2 border border-blue-100 shadow-2xs">
-                          <span className="text-[10px] uppercase font-bold text-gray-400">Total Changes</span>
-                          <p className="text-base font-bold text-blue-700">{versionComparison.totalChanges}</p>
+                        <div className="rounded-lg bg-[#121212] p-2.5 border border-[#262626]">
+                          <span className="text-[10px] uppercase font-bold text-[#888888]">Total Changes</span>
+                          <p className="text-base font-bold text-[#ff6b35] font-mono mt-0.5">{versionComparison.totalChanges}</p>
                         </div>
-                        <div className="rounded-lg bg-white p-2 border border-blue-100 shadow-2xs">
-                          <span className="text-[10px] uppercase font-bold text-gray-400">Layout Modified</span>
-                          <p className="text-xs font-semibold text-gray-700 mt-1">
+                        <div className="rounded-lg bg-[#121212] p-2.5 border border-[#262626]">
+                          <span className="text-[10px] uppercase font-bold text-[#888888]">Layout Modified</span>
+                          <p className="text-xs font-semibold text-[#fafafa] font-mono mt-1">
                             {versionComparison.layoutChanged ? "Yes" : "No"}
                           </p>
                         </div>
-                        <div className="rounded-lg bg-white p-2 border border-blue-100 shadow-2xs">
-                          <span className="text-[10px] uppercase font-bold text-gray-400">Charts Added</span>
-                          <p className="text-base font-bold text-emerald-600">+{versionComparison.addedCharts.length}</p>
+                        <div className="rounded-lg bg-[#121212] p-2.5 border border-[#262626]">
+                          <span className="text-[10px] uppercase font-bold text-[#888888]">Charts Added</span>
+                          <p className="text-base font-bold text-emerald-400 font-mono mt-0.5">+{versionComparison.addedCharts.length}</p>
                         </div>
-                        <div className="rounded-lg bg-white p-2 border border-blue-100 shadow-2xs">
-                          <span className="text-[10px] uppercase font-bold text-gray-400">Charts Removed</span>
-                          <p className="text-base font-bold text-red-600">-{versionComparison.removedCharts.length}</p>
+                        <div className="rounded-lg bg-[#121212] p-2.5 border border-[#262626]">
+                          <span className="text-[10px] uppercase font-bold text-[#888888]">Charts Removed</span>
+                          <p className="text-base font-bold text-red-400 font-mono mt-0.5">-{versionComparison.removedCharts.length}</p>
                         </div>
                       </div>
 
                       {versionComparison.modifiedCharts.length > 0 && (
                         <div className="space-y-1 text-xs">
-                          <p className="font-semibold text-gray-700">Modified Charts:</p>
+                          <p className="font-semibold text-[#dedede]">Modified Charts:</p>
                           {versionComparison.modifiedCharts.map((mc) => (
-                            <div key={mc.id} className="rounded bg-white p-2 border border-blue-100 text-[11px] text-gray-600">
-                              <span className="font-bold text-gray-800">{mc.title}: </span>
+                            <div key={mc.id} className="rounded bg-[#121212] p-2 border border-[#242424] text-[11px] text-[#a0a0a0]">
+                              <span className="font-bold text-white">{mc.title}: </span>
                               {mc.changes.join(", ")}
                             </div>
                           ))}
@@ -3504,36 +3498,36 @@ export default function DashboardDetailPage({
                           key={ver.id}
                           className={`rounded-xl border p-4 transition ${
                             isCurrent
-                              ? "border-blue-300 bg-blue-50/20 shadow-2xs"
-                              : "border-gray-200 bg-white hover:border-gray-300"
+                              ? "border-[#ff6b35]/40 bg-[#ff6b35]/5 shadow-2xs"
+                              : "border-[#262626] bg-[#161616] hover:border-[#383838]"
                           }`}
                         >
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <span
-                                className={`inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold ${
+                                className={`inline-flex items-center justify-center rounded-lg px-2.5 py-1 text-xs font-bold font-mono ${
                                   isCurrent
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-gray-100 text-gray-700 border border-gray-200"
+                                    ? "bg-[#ff6b35] text-white"
+                                    : "bg-[#222222] text-[#dedede] border border-[#2c2c2c]"
                                 }`}
                               >
                                 v{ver.versionNumber}
                               </span>
                               <div>
-                                <h3 className="text-xs font-bold text-gray-900">
+                                <h3 className="text-xs font-semibold text-white">
                                   {ver.changeSummary || `Version ${ver.versionNumber}`}
                                   {isCurrent && (
-                                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                                    <span className="ml-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
                                       Current
                                     </span>
                                   )}
                                 </h3>
-                                <p className="text-[11px] text-gray-500">
-                                  {new Date(ver.createdAt).toLocaleString()} · by{" "}
-                                  <span className="font-medium text-gray-700">
+                                <p className="text-[11px] text-[#888888]">
+                                  <span className="font-mono">{new Date(ver.createdAt).toLocaleString()}</span> · by{" "}
+                                  <span className="font-medium text-[#dedede]">
                                     {ver.createdBy?.name || "System"}
                                   </span>{" "}
-                                  · {ver.chartsSnapshot?.length ?? 0} charts
+                                  · <span className="font-mono">{ver.chartsSnapshot?.length ?? 0}</span> charts
                                 </p>
                               </div>
                             </div>
@@ -3545,9 +3539,9 @@ export default function DashboardDetailPage({
                                   type="button"
                                   onClick={() => void handleCompareWithPrevious(ver)}
                                   disabled={loadingComparison && comparingVersionNum === ver.versionNumber}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-[#2c2c2c] bg-[#1a1a1a] px-2.5 py-1.5 text-xs font-medium text-[#dedede] hover:bg-[#242424] hover:text-white transition cursor-pointer"
                                 >
-                                  <GitCompare className="h-3.5 w-3.5 text-blue-600" />
+                                  <GitCompare className="h-3.5 w-3.5 text-[#ff6b35]" />
                                   <span>
                                     {loadingComparison && comparingVersionNum === ver.versionNumber
                                       ? "Comparing..."
@@ -3563,7 +3557,7 @@ export default function DashboardDetailPage({
                                   onClick={() => void handleRestoreVersion(ver.versionNumber)}
                                   disabled={!canEdit || restoringVersionNum === ver.versionNumber}
                                   title={!canEdit ? "Only Editors and Admins can restore versions" : "Restore this version"}
-                                  className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition disabled:opacity-50"
+                                  className="inline-flex items-center gap-1 rounded-lg bg-[#ff6b35] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#c2410c] transition disabled:opacity-50 cursor-pointer"
                                 >
                                   <RotateCcw className="h-3.5 w-3.5" />
                                   <span>
@@ -3582,14 +3576,14 @@ export default function DashboardDetailPage({
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3 bg-gray-50">
-              <span className="text-[11px] text-gray-500">
+            <div className="flex items-center justify-between border-t border-[#242424] px-6 py-3 bg-[#171717]">
+              <span className="text-[11px] text-[#777777]">
                 Restoring a version creates a new snapshot state without overwriting past history.
               </span>
               <button
                 type="button"
                 onClick={() => setIsVersionModalOpen(false)}
-                className="rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                className="rounded-lg border border-[#2c2c2c] bg-[#1a1a1a] px-4 py-1.5 text-xs font-medium text-[#dedede] hover:bg-[#222222] hover:text-white transition cursor-pointer"
               >
                 Done
               </button>

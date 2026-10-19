@@ -211,15 +211,15 @@ export default function EmbeddedDashboardPage({
   if (loading) {
     return (
       <div
-        className={`flex min-h-screen items-center justify-center p-6 ${isDark ? "bg-gray-950 text-white" : "bg-gray-50 text-gray-900"}`}
+        className={`flex min-h-screen items-center justify-center p-6 bg-[#121212] text-[#dedede]`}
         style={{
-          backgroundColor: dashboardTheme.backgroundColor || undefined,
-          color: dashboardTheme.textColor || undefined,
+          backgroundColor: dashboardTheme.backgroundColor || "#121212",
+          color: dashboardTheme.textColor || "#fafafa",
         }}
       >
-        <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="h-7 w-7 animate-spin text-indigo-600" />
-          <p className="text-sm font-medium opacity-70">Loading embedded analytics...</p>
+        <div className="flex flex-col items-center gap-3 font-mono text-xs text-[#888888]">
+          <RefreshCw className="h-6 w-6 animate-spin text-[#ff6b35]" />
+          <p className="text-xs">Loading embedded analytics...</p>
         </div>
       </div>
     );
@@ -228,18 +228,18 @@ export default function EmbeddedDashboardPage({
   if (errorMsg) {
     return (
       <div
-        className={`flex min-h-screen items-center justify-center p-6 ${isDark ? "bg-gray-950 text-white" : "bg-gray-50 text-gray-900"}`}
+        className={`flex min-h-screen items-center justify-center p-6 bg-[#121212] text-[#dedede]`}
         style={{
-          backgroundColor: dashboardTheme.backgroundColor || undefined,
-          color: dashboardTheme.textColor || undefined,
+          backgroundColor: dashboardTheme.backgroundColor || "#121212",
+          color: dashboardTheme.textColor || "#fafafa",
         }}
       >
-        <div className="max-w-md w-full rounded-2xl border border-red-200 bg-red-50/50 p-6 text-center shadow-sm">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 text-red-600">
+        <div className="max-w-md w-full rounded-2xl border border-red-900/40 bg-[#161616] p-6 text-center shadow-xl">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20">
             <Lock className="h-6 w-6" />
           </div>
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Embedded Access Restricted</h2>
-          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{errorMsg}</p>
+          <h2 className="text-base font-semibold text-white">Embedded Access Restricted</h2>
+          <p className="mt-2 text-xs text-[#888888] leading-relaxed">{errorMsg}</p>
         </div>
       </div>
     );
@@ -251,18 +251,16 @@ export default function EmbeddedDashboardPage({
 
   return (
     <div
-      className={`min-h-screen p-4 sm:p-6 transition-colors antialiased ${getFontFamilyClass(dashboardTheme.fontFamily)} ${
-        isDark ? "dark bg-gray-950 text-gray-100" : "bg-gray-50 text-gray-900"
-      }`}
+      className={`min-h-screen p-4 sm:p-6 transition-colors antialiased ${getFontFamilyClass(dashboardTheme.fontFamily)} bg-[#121212] text-[#fafafa]`}
       style={{
-        backgroundColor: dashboardTheme.backgroundColor || undefined,
-        color: dashboardTheme.textColor || undefined,
+        backgroundColor: dashboardTheme.backgroundColor || "#121212",
+        color: dashboardTheme.textColor || "#fafafa",
       }}
     >
       {/* Header bar (if title or refresh enabled) */}
       {(showTitle || showRefresh) && (
         <header
-          className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-4"
+          className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#242424] pb-4"
           style={{ borderColor: dashboardTheme.borderColor || undefined }}
         >
           <div>
@@ -278,14 +276,14 @@ export default function EmbeddedDashboardPage({
                 )}
                 <div>
                   <h1
-                    className="text-xl font-bold tracking-tight"
+                    className="text-xl font-semibold tracking-tight text-white"
                     style={{ color: dashboardTheme.textColor || undefined }}
                   >
                     {dashboardBranding.title || dashboard?.name}
                   </h1>
                   {(dashboardBranding.description || dashboard?.description) && (
                     <p
-                      className="text-xs mt-0.5"
+                      className="text-xs mt-0.5 text-[#888888]"
                       style={{ color: dashboardTheme.textMutedColor || undefined }}
                     >
                       {dashboardBranding.description || dashboard.description}
@@ -302,9 +300,9 @@ export default function EmbeddedDashboardPage({
                 type="button"
                 onClick={handleRefreshAll}
                 disabled={isRefreshingCharts}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 transition disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#2c2c2c] bg-[#1a1a1a] px-3 py-1.5 text-xs font-medium text-[#dedede] shadow-2xs hover:bg-[#222222] hover:text-white transition disabled:opacity-50 cursor-pointer"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingCharts ? "animate-spin text-blue-600" : ""}`} />
+                <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingCharts ? "animate-spin text-[#ff6b35]" : "text-[#888888]"}`} />
                 <span>{isRefreshingCharts ? "Refreshing..." : "Refresh"}</span>
               </button>
             )}
@@ -328,7 +326,7 @@ export default function EmbeddedDashboardPage({
 
       {/* Chart Grid */}
       {(!dashboard?.charts || dashboard.charts.length === 0) ? (
-        <div className="rounded-2xl border border-dashed border-gray-300 p-12 text-center text-sm text-gray-400 dark:border-gray-800">
+        <div className="rounded-2xl border border-dashed border-[#262626] bg-[#141414] p-12 text-center text-sm text-[#777777]">
           <BarChart3 className="mx-auto h-10 w-10 opacity-30 mb-2" />
           No charts configured on this dashboard.
         </div>
@@ -343,12 +341,12 @@ export default function EmbeddedDashboardPage({
             return (
               <div
                 key={chart.id}
-                className="flex flex-col border p-5 transition hover:shadow-md"
+                className="flex flex-col border border-[#262626] bg-[#141414] p-5 transition hover:border-[#383838]"
                 style={{
-                  backgroundColor: dashboardTheme.cardBackground || (isDark ? "#111827" : "#ffffff"),
-                  borderColor: dashboardTheme.borderColor || (isDark ? "#1f2937" : "#e2e8f0"),
+                  backgroundColor: dashboardTheme.cardBackground || "#141414",
+                  borderColor: dashboardTheme.borderColor || "#262626",
                   borderRadius: getRadiusStyle(dashboardTheme.cardRadius),
-                  boxShadow: getShadowStyle(dashboardTheme.cardShadow, isDark),
+                  boxShadow: getShadowStyle(dashboardTheme.cardShadow, true),
                   color: dashboardTheme.textColor || undefined,
                 }}
               >

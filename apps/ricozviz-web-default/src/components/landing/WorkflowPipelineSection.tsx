@@ -19,6 +19,10 @@ import {
   Lock,
   Radio,
   Eye,
+  Bell,
+  Code2,
+  FileSpreadsheet,
+  Share2,
 } from "lucide-react";
 
 interface PipelineStep {
@@ -30,171 +34,171 @@ interface PipelineStep {
   icon: React.ComponentType<{ className?: string }>;
   features: { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }[];
   visualStats: { label: string; value: string; change: string }[];
-  visualType: "connectors" | "vector" | "compute" | "security" | "canvas";
+  visualType: "connectors" | "quality" | "analytics" | "canvas" | "embeds";
 }
 
 const PIPELINE_STEPS: PipelineStep[] = [
   {
     id: "sources",
     stepNumber: "01",
-    name: "Enterprise Ingest",
-    tagline: "Connect warehouses, lakehouses & live streams in one click",
-    metricBadge: "9+ Zero-Config Connectors",
+    name: "Universal Ingest",
+    tagline: "Connect cloud warehouses, relational DBs, REST APIs & spreadsheets",
+    metricBadge: "9+ Production Connectors",
     icon: Database,
     features: [
       {
-        title: "Direct Warehouse Pushdown",
-        desc: "Executes natively inside Snowflake, BigQuery, Databricks, and ClickHouse without data movement.",
-        icon: Zap,
+        title: "Relational DBs & Warehouses",
+        desc: "Native query pushdown for PostgreSQL, MySQL, SQLite, Snowflake, BigQuery, ClickHouse, and Redshift.",
+        icon: Database,
       },
       {
-        title: "Real-Time Event Streaming",
-        desc: "Live ingestion from Apache Kafka, Amazon Kinesis, and Postgres CDC with sub-second lag.",
-        icon: Radio,
+        title: "REST Endpoints & Spreadsheets",
+        desc: "Ingest third-party JSON REST APIs or upload CSV and Excel workbooks directly into queryable datasets.",
+        icon: FileSpreadsheet,
       },
       {
-        title: "TLS 1.3 Hardware Handshake",
-        desc: "End-to-end encrypted pipelines with automated 90-day credential rotation and zero key leakage.",
+        title: "Encrypted Credential Security",
+        desc: "AES-256 encrypted connection strings with proactive health probes and connection pool caching.",
         icon: Lock,
       },
     ],
     visualStats: [
-      { label: "Supported Warehouses", value: "9 Enterprise", change: "+ Snowflake & Kafka" },
-      { label: "Connection Latency", value: "1.4 ms", change: "Warm pool cached" },
-      { label: "Data Egress Cost", value: "$0.00", change: "100% zero-egress pushdown" },
+      { label: "Supported Sources", value: "9 Enterprise", change: "+ Snowflake, BigQuery & REST" },
+      { label: "Connection Handshake", value: "2.4 ms", change: "Connection pool warm" },
+      { label: "Data Egress Cost", value: "$0.00", change: "100% direct query pushdown" },
     ],
     visualType: "connectors",
   },
   {
-    id: "vectorize",
+    id: "quality",
     stepNumber: "02",
-    name: "Zero-Copy Vectorize",
-    tagline: "Transform datasets into ultra-fast Apache Arrow memory buffers",
-    metricBadge: "Apache Arrow SIMD-128",
+    name: "Schema & Quality",
+    tagline: "Automated schema profiling, null checks & data health scoring",
+    metricBadge: "Autonomous Profiling",
     icon: Layers,
     features: [
       {
-        title: "Columnar Memory Layout",
-        desc: "Arrow IPC formats eliminate serialization overhead, slicing across 10M rows in milliseconds.",
-        icon: Layers,
-      },
-      {
-        title: "Hardware SIMD Registers",
-        desc: "Leverages modern CPU vector instructions (AVX-512 & NEON) directly inside the browser and edge.",
-        icon: Cpu,
-      },
-      {
-        title: "Automatic Schema Inference",
-        desc: "Instant type detection and schema drift protection across heterogenous Parquet and JSON files.",
+        title: "Instant Schema Discovery",
+        desc: "Automatic column type inference, primary key indexing, and table relationship mapping across datasets.",
         icon: Sparkles,
       },
-    ],
-    visualStats: [
-      { label: "Vector Scan Rate", value: "240k rows/s", change: "SIMD hardware accelerated" },
-      { label: "Memory Footprint", value: "0 B Spill", change: "Snappy compressed in-RAM" },
-      { label: "Serialization Delay", value: "0.0 ms", change: "Zero copy transfer" },
-    ],
-    visualType: "vector",
-  },
-  {
-    id: "compute",
-    stepNumber: "03",
-    name: "DuckDB Wasm OLAP",
-    tagline: "Blazing fast in-memory analytics engine with sub-12ms queries",
-    metricBadge: "< 12ms P95 Execution",
-    icon: Cpu,
-    features: [
       {
-        title: "Compiled Analytical Speed",
-        desc: "Runs compiled C++ vector kernels directly inside WebAssembly, eliminating warehouse roundtrips.",
-        icon: Zap,
-      },
-      {
-        title: "Full SQL-2016 Analytical Power",
-        desc: "Complex joins, window functions, and time-series aggregation without writing custom code.",
+        title: "Data Quality Profiling",
+        desc: "Calculates null percentages, value distributions, distinct counts, and format validity in real time.",
         icon: Activity,
       },
       {
-        title: "80% Cloud Warehouse Cost Savings",
-        desc: "Offloads repetitive exploratory queries from costly cloud compute nodes to local client cores.",
-        icon: TrendingUp,
-      },
-    ],
-    visualStats: [
-      { label: "P95 Query Latency", value: "8.4 ms", change: "Sub-12ms verified across 1M rows" },
-      { label: "Query Throughput", value: "119,048 rps", change: "> 100k+ rps sustained" },
-      { label: "Warehouse Offload", value: "84.2%", change: "Local in-memory cached" },
-    ],
-    visualType: "compute",
-  },
-  {
-    id: "security",
-    stepNumber: "04",
-    name: "Cryptographic Guard",
-    tagline: "Kernel Row-Level Security, PII masking & immutable audit trails",
-    metricBadge: "RFC 6962 SHA-256 Ledger",
-    icon: ShieldCheck,
-    features: [
-      {
-        title: "Deterministic Tenant Isolation",
-        desc: "Cryptographic AST filters guarantee zero cross-tenant leakage, even on custom user SQL.",
-        icon: Lock,
-      },
-      {
-        title: "Real-Time PII Masking",
-        desc: "Automatically obscures emails, financial accounts, and health identifiers for non-admin roles.",
-        icon: Eye,
-      },
-      {
-        title: "Hardware Kill-Switch",
-        desc: "Instantly revoke compromised session tokens and terminate active queries across all tenants.",
+        title: "Anomaly & Drift Detection",
+        desc: "Flags unexpected column alterations, missing fields, or data skew before it impacts dashboards.",
         icon: ShieldCheck,
       },
     ],
     visualStats: [
-      { label: "Tenant Isolation", value: "100% Strict", change: "Kernel AST parsed" },
-      { label: "Audit Hash Chain", value: "SHA-256", change: "Tamper-evident Merkle tree" },
-      { label: "Compliance Standards", value: "SOC 2 & HIPAA", change: "Audited & BAA certified" },
+      { label: "Data Completeness", value: "99.8%", change: "Zero critical null fields" },
+      { label: "Schema Introspection", value: "38 ms", change: "Instant cataloging" },
+      { label: "Health Score", value: "98.4 / 100", change: "Production ready" },
     ],
-    visualType: "security",
+    visualType: "quality",
   },
   {
-    id: "canvas",
-    stepNumber: "05",
-    name: "Executive Canvases",
-    tagline: "Assemble interactive dashboards with live multiplayer collaboration",
-    metricBadge: "60 FPS Visual Studio",
-    icon: LayoutDashboard,
+    id: "analytics",
+    stepNumber: "03",
+    name: "SQL & AI Studio",
+    tagline: "Ask questions in plain English or write SQL with instant visual feedback",
+    metricBadge: "NL-to-Chart AI Engine",
+    icon: Cpu,
     features: [
       {
-        title: "Multi-Canvas Studio",
-        desc: "Drag, drop, and link 18+ visual charts with sub-frame point-and-click data filtering.",
-        icon: BarChart3,
-      },
-      {
-        title: "Live Multiplayer Presence",
-        desc: "See teammates' live cursors, active bookmarks, and shared exploration sessions in real time.",
-        icon: Users,
-      },
-      {
-        title: "Secure Expiring Embeds",
-        desc: "Embed governed canvases into your own customer-facing apps with HMAC-signed expiring tokens.",
+        title: "Natural Language to Chart",
+        desc: "Say 'Show monthly revenue by tier as an area chart' — AI synthesizes SQL and configures Recharts instantly.",
         icon: Sparkles,
+      },
+      {
+        title: "High-Performance SQL Runner",
+        desc: "Write parameterized SQL queries with instant tabular previews, row-level stats, and JSON exports.",
+        icon: Zap,
+      },
+      {
+        title: "Dataset Result Caching",
+        desc: "Cache query results to power multi-widget dashboards without running duplicate warehouse queries.",
+        icon: TrendingUp,
       },
     ],
     visualStats: [
-      { label: "Visual Chart Types", value: "18+ Built-in", change: "Area, Sankey, Geo, Treemap" },
-      { label: "Sync Protocol", value: "WebSockets", change: "Sub-5ms cursor presence" },
-      { label: "Frame Rate", value: "60 FPS", change: "GPU accelerated canvas" },
+      { label: "AI Synthesis Speed", value: "< 420 ms", change: "Schema-aware prompt pipeline" },
+      { label: "Query Execution", value: "11.2 ms", change: "Pushdown optimized" },
+      { label: "Warehouse Offload", value: "85.4%", change: "Smart dataset caching" },
+    ],
+    visualType: "analytics",
+  },
+  {
+    id: "canvas",
+    stepNumber: "04",
+    name: "Dashboard Studio",
+    tagline: "Assemble multi-widget interactive dashboards with Recharts",
+    metricBadge: "10+ Visual Chart Types",
+    icon: LayoutDashboard,
+    features: [
+      {
+        title: "10+ Visual Chart Types",
+        desc: "Area, Bar, Line, Pie, Radar, Scatter, Composed, and KPI Single-Value Cards with sleek animations.",
+        icon: BarChart3,
+      },
+      {
+        title: "Fluid 12-Column Responsive Grid",
+        desc: "Freely resize, arrange, and stack widgets to build executive summaries and operational dashboards.",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Global Time & Filter Sync",
+        desc: "Synchronize date ranges and dimension filters across every widget on the canvas simultaneously.",
+        icon: Layers,
+      },
+    ],
+    visualStats: [
+      { label: "Visual Chart Types", value: "10+ Built-in", change: "Area, Bar, Line, Radar, Cards" },
+      { label: "Render Framerate", value: "60 FPS", change: "Hardware-accelerated DOM" },
+      { label: "Canvas Layout", value: "12-Col Fluid", change: "Responsive desktop & mobile" },
     ],
     visualType: "canvas",
+  },
+  {
+    id: "embeds",
+    stepNumber: "05",
+    name: "Alerts & Signed Embeds",
+    tagline: "Automate threshold webhooks & embed secure dashboards in your product",
+    metricBadge: "HMAC Signed Embeds",
+    icon: ShieldCheck,
+    features: [
+      {
+        title: "Automated Metric Alerts",
+        desc: "Set threshold alerts on revenue or error spikes with automated Webhook and Email triggers.",
+        icon: Bell,
+      },
+      {
+        title: "Expiring Signed Iframe Embeds",
+        desc: "Embed governed canvases into your own customer portals with HMAC-signed expiring tokens.",
+        icon: Share2,
+      },
+      {
+        title: "Workspace RBAC & Audit Trails",
+        desc: "Strict Admin and Member role permissions with complete immutable audit logs for all query actions.",
+        icon: Lock,
+      },
+    ],
+    visualStats: [
+      { label: "Embed Token Security", value: "HMAC SHA-256", change: "Time-limited expiring tokens" },
+      { label: "Alert Latency", value: "< 120 ms", change: "Webhooks & Email dispatch" },
+      { label: "Audit Traceability", value: "100% Logged", change: "Every query & export recorded" },
+    ],
+    visualType: "embeds",
   },
 ];
 
 export default function WorkflowPipelineSection() {
-  const [activeStepId, setActiveStepId] = useState<string>("compute");
+  const [activeStepId, setActiveStepId] = useState<string>("analytics");
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
-  const [metricPulse, setMetricPulse] = useState<number>(8.4);
+  const [metricPulse, setMetricPulse] = useState<number>(11.2);
   const [selectedChartType, setSelectedChartType] = useState<"area" | "bar" | "donut">("area");
 
   const currentStep =
@@ -392,12 +396,12 @@ export default function WorkflowPipelineSection() {
                 /* Step 1 Visual: Connectors Grid with Live Status */
                 <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-3">
                   {[
-                    { name: "Snowflake", proto: "Flight SQL", status: "Sub-12ms", active: true },
-                    { name: "ClickHouse", proto: "Native TCP", status: "Sub-10ms", active: true },
-                    { name: "Apache Kafka", proto: "Wire Event", status: "Sub-1ms", active: true },
+                    { name: "PostgreSQL", proto: "Direct Pool", status: "Sub-5ms", active: true },
+                    { name: "Snowflake", proto: "Cloud SQL", status: "Sub-12ms", active: true },
+                    { name: "ClickHouse", proto: "Native TCP", status: "Sub-8ms", active: true },
                     { name: "BigQuery", proto: "Storage API", status: "Direct", active: true },
-                    { name: "S3 Parquet", proto: "Snappy Arrow", status: "Zero-Copy", active: true },
-                    { name: "PostgreSQL", proto: "CDC Replication", status: "Real-Time", active: true },
+                    { name: "REST API", proto: "JSON Ingest", status: "Live Feed", active: true },
+                    { name: "Excel / CSV", proto: "Workbook Ingest", status: "Instant", active: true },
                   ].map((item, idx) => (
                     <div
                       key={idx}
@@ -418,19 +422,19 @@ export default function WorkflowPipelineSection() {
                 </div>
               )}
 
-              {currentStep.visualType === "vector" && (
-                /* Step 2 Visual: Arrow Columnar Memory Projection */
+              {currentStep.visualType === "quality" && (
+                /* Step 2 Visual: Automated Data Quality Profiling & Schema Health */
                 <div className="flex flex-col gap-[10px]">
                   <div className="flex items-center justify-between text-[11px] font-mono-code text-[#898989]">
-                    <span>SIMD-128 Column Buffers</span>
-                    <span className="text-[#ff6b35]">Zero Intermediate Copy</span>
+                    <span>Automated Column Health Profiling</span>
+                    <span className="text-emerald-400 font-semibold">98.4% Quality Score</span>
                   </div>
                   <div className="flex flex-col gap-[8px]">
                     {[
-                      { col: "tenant_id", type: "Utf8 Dictionary", fill: "95%", bytes: "4.2 MB" },
-                      { col: "event_timestamp", type: "TimestampMicrosecond", fill: "80%", bytes: "8.4 MB" },
-                      { col: "revenue_metric", type: "Decimal128(18,2)", fill: "100%", bytes: "16.8 MB" },
-                      { col: "region_code", type: "FixedSizeBinary(2)", fill: "60%", bytes: "2.1 MB" },
+                      { col: "customer_id", type: "UUID Primary Key", validity: "100% Unique", fill: "100%", nulls: "0% Null" },
+                      { col: "total_amount", type: "DECIMAL(12,2)", validity: "Valid Range", fill: "99.8%", nulls: "0.2% Null" },
+                      { col: "fulfillment_status", type: "VARCHAR Enum", validity: "4 Cardinalities", fill: "95%", nulls: "0% Null" },
+                      { col: "created_at", type: "TIMESTAMPTZ", validity: "ISO 8601", fill: "100%", nulls: "0% Null" },
                     ].map((col, idx) => (
                       <div
                         key={idx}
@@ -439,11 +443,11 @@ export default function WorkflowPipelineSection() {
                         <div className="flex items-center justify-between text-[11px] font-mono-code mb-[6px]">
                           <span className="text-[#fafafa] font-semibold">{col.col}</span>
                           <span className="text-[#898989]">{col.type}</span>
-                          <span className="text-[#ff6b35]">{col.bytes}</span>
+                          <span className="text-emerald-400">{col.nulls}</span>
                         </div>
                         <div className="h-[4px] w-full rounded-full bg-[#242424] overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-linear-to-r from-[#9a3412] to-[#ff6b35]"
+                            className="h-full rounded-full bg-linear-to-r from-[#9a3412] to-emerald-400"
                             style={{ width: col.fill }}
                           />
                         </div>
@@ -453,47 +457,59 @@ export default function WorkflowPipelineSection() {
                 </div>
               )}
 
-              {currentStep.visualType === "compute" && (
-                /* Step 3 Visual: Real-Time Vector Speed Gauge & Offload */
-                <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2">
-                  <div className="flex flex-col justify-between rounded-[14px] border border-[#2e2e2e] bg-[#171717] p-[16px] text-center hover:border-[#ff6b35]/50 transition-colors">
-                    <span className="text-[11px] font-mono-code uppercase text-[#898989]">
-                      Measured Execution Latency
-                    </span>
-                    <div className="my-[12px]">
-                      <span className="text-[40px] font-bold font-mono-code text-emerald-400">
-                        {metricPulse}
+              {currentStep.visualType === "analytics" && (
+                /* Step 3 Visual: Natural Language to Chart AI & SQL Runner */
+                <div className="flex flex-col gap-[12px]">
+                  {/* NL Prompt Bubble */}
+                  <div className="rounded-[12px] border border-[#ff6b35]/30 bg-[#ff6b35]/5 p-[12px]">
+                    <div className="flex items-center justify-between text-[10px] font-mono-code text-[#ff6b35] mb-[4px]">
+                      <span className="flex items-center gap-[4px]">
+                        <Sparkles className="h-[10px] w-[10px]" />
+                        NL-TO-CHART AI QUERY
                       </span>
-                      <span className="text-[18px] font-mono-code text-emerald-400 ml-1">
-                        ms
-                      </span>
+                      <span>Confidence 99.1%</span>
                     </div>
-                    <span className="text-[11px] text-[#898989]">
-                      Sub-12ms SLA Guarantee (1,000,000 Rows)
-                    </span>
+                    <div className="text-[12px] text-[#fafafa] font-sans">
+                      &quot;Show quarterly revenue growth by subscription tier as a stacked area chart&quot;
+                    </div>
                   </div>
 
-                  <div className="flex flex-col justify-between rounded-[14px] border border-[#2e2e2e] bg-[#171717] p-[16px] hover:border-[#ff6b35]/50 transition-colors">
-                    <span className="text-[11px] font-mono-code uppercase text-[#898989]">
-                      Warehouse Query Offload
-                    </span>
-                    <div className="my-[10px] flex items-center justify-between">
-                      <span className="text-[32px] font-bold font-mono-code text-[#fafafa]">
-                        84.2%
+                  {/* Generated SQL & Speed */}
+                  <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+                    <div className="flex flex-col justify-between rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[12px]">
+                      <span className="text-[10px] font-mono-code uppercase text-[#898989]">
+                        Synthesized SQL Query
                       </span>
-                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-[10px] py-[3px] font-mono-code text-[11px] text-emerald-400">
-                        -$14.8k / mo
+                      <pre className="my-[6px] text-[10px] font-mono-code text-amber-300 overflow-x-auto whitespace-pre">
+                        SELECT DATE_TRUNC(&apos;quarter&apos;, created_at), tier, SUM(amount) FROM subscriptions GROUP BY 1, 2
+                      </pre>
+                      <span className="text-[10px] text-emerald-400 font-mono-code">
+                        Auto-assigned to Recharts Area
                       </span>
                     </div>
-                    <div className="h-[6px] w-full rounded-full bg-[#242424] overflow-hidden">
-                      <div className="h-full rounded-full bg-linear-to-r from-emerald-600 to-emerald-400 w-[84%]" />
+
+                    <div className="flex flex-col justify-between rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[12px] text-center">
+                      <span className="text-[10px] font-mono-code uppercase text-[#898989]">
+                        Pushdown Execution Speed
+                      </span>
+                      <div className="my-[4px]">
+                        <span className="text-[32px] font-bold font-mono-code text-emerald-400">
+                          {metricPulse}
+                        </span>
+                        <span className="text-[14px] font-mono-code text-emerald-400 ml-1">
+                          ms
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-[#898989]">
+                        Zero warehouse roundtrip penalty
+                      </span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {currentStep.visualType === "security" && (
-                /* Step 4 Visual: Cryptographic Shield & Dynamic Masking */
+              {currentStep.visualType === "embeds" && (
+                /* Step 5 Visual: Signed Expiring Embeds & Automated Webhook Alerts */
                 <div className="flex flex-col gap-[10px]">
                   <div className="rounded-[12px] border border-[#2e2e2e] bg-[#171717] p-[14px] flex items-center justify-between">
                     <div className="flex items-center gap-[10px]">
@@ -502,33 +518,33 @@ export default function WorkflowPipelineSection() {
                       </div>
                       <div>
                         <div className="text-[13px] font-medium text-[#fafafa]">
-                          Tenant Boundary Enforced
+                          Signed Embed Token Active
                         </div>
-                        <div className="text-[11px] text-[#898989]">
-                          AST rewritten: WHERE tenant_id = &apos;org_enterprise&apos;
+                        <div className="text-[11px] font-mono-code text-[#898989] truncate max-w-[280px]">
+                          /dashboards/embed/exp_9f82ab4c...
                         </div>
                       </div>
                     </div>
                     <span className="font-mono-code text-[10px] rounded border border-emerald-500/30 bg-emerald-500/10 px-[8px] py-[2px] text-emerald-400">
-                      Zero Leakage
+                      HMAC Valid
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-[10px]">
                     <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[10px]">
                       <span className="text-[10px] font-mono-code uppercase text-[#898989] block">
-                        Dynamic PII Obfuscation
+                        Metric Alert Triggered
                       </span>
                       <span className="text-[12px] font-mono-code text-[#ff6b35] block mt-1">
-                        j***@company.com
+                        Revenue &gt; $50k &#8594; Webhook dispatched
                       </span>
                     </div>
                     <div className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[10px]">
                       <span className="text-[10px] font-mono-code uppercase text-[#898989] block">
-                        SHA-256 Ledger Block
+                        Workspace RBAC Policy
                       </span>
-                      <span className="text-[12px] font-mono-code text-[#fafafa] block mt-1 truncate">
-                        0x7a89fbc00192ea44…
+                      <span className="text-[12px] font-mono-code text-emerald-400 block mt-1 truncate">
+                        Role: ADMIN (Full Control)
                       </span>
                     </div>
                   </div>

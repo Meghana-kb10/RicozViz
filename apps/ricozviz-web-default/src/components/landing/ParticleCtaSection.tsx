@@ -13,27 +13,14 @@ interface Particle {
   color: string;
 }
 
-export default function ParticleCtaSection({
-  onOpenAuthModal,
-}: {
-  onOpenAuthModal?: () => void;
-}) {
+export default function ParticleCtaSection() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [copiedCli, setCopiedCli] = useState(false);
   const mouseRef = useRef<{ x: number; y: number; active: boolean }>({
     x: -9999,
     y: -9999,
     active: false,
   });
-
-  const cliCommand = "npx ricozviz@latest init";
-
-  const handleCopyCli = () => {
-    navigator.clipboard?.writeText(cliCommand);
-    setCopiedCli(true);
-    setTimeout(() => setCopiedCli(false), 1600);
-  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -285,58 +272,53 @@ export default function ParticleCtaSection({
           <div className="mb-[20px] inline-flex items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#171717]/90 px-[14px] py-[5px] backdrop-blur-xs">
             <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35]" />
             <span className="font-mono-code text-[11px] text-[#898989]">
-              ENTERPRISE_ANALYTICS // WASM_OLAP
+              ENTERPRISE_ANALYTICS // MULTI_SOURCE_AI
             </span>
           </div>
 
           {/* Main Headline */}
           <h2 className="max-w-[760px] text-[36px] font-normal leading-[1.14] tracking-[-0.02em] text-[#fafafa] sm:text-[46px] md:text-[50px]">
             <span>Build fast. Query in milliseconds.</span>{" "}
-            <span className="block text-[#ff6b35]">Govern across every tenant.</span>
+            <span className="block text-[#ff6b35]">Govern across every workspace.</span>
           </h2>
 
           {/* Subtitle */}
           <p className="mt-[16px] max-w-[580px] text-[15px] font-normal leading-[1.55] text-[#898989] sm:text-[16px]">
-            Deploy in-memory DuckDB WebAssembly analytics with 9 zero-ETL data
-            connectors, live Kafka streams, and cryptographic row-level security.
+            Connect PostgreSQL, MySQL, Snowflake, BigQuery, REST APIs, and spreadsheets.
+            Synthesize charts with Natural Language AI and embed expiring canvases securely.
           </p>
 
           {/* Action CTAs */}
           <div className="mt-[32px] flex flex-wrap items-center justify-center gap-[12px]">
             <a
-              href="#provision"
+              href="/register"
               className="inline-flex h-[42px] items-center justify-center rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[24px] text-[14px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c]"
             >
-              Start your project
+              Start free in 60s
             </a>
-            <button
-              type="button"
-              onClick={onOpenAuthModal}
+            <a
+              href="/login"
               className="inline-flex h-[42px] items-center justify-center rounded-full border border-[#393939] bg-[#1c1c1c] px-[22px] text-[14px] font-normal text-[#fafafa] transition-colors hover:border-[#4d4d4d] hover:bg-[#242424] cursor-pointer"
             >
-              Sign in with SAML SSO
-            </button>
-            <button
-              type="button"
-              onClick={handleCopyCli}
-              className="inline-flex h-[42px] items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#161616] px-[18px] font-mono-code text-[12px] text-[#b4b4b4] transition-colors hover:border-[#393939] hover:text-[#fafafa] cursor-pointer"
+              Sign In to Workspace
+            </a>
+            <a
+              href="/dashboards"
+              className="inline-flex h-[42px] items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#161616] px-[20px] text-[13px] text-[#b4b4b4] transition-colors hover:border-[#393939] hover:text-[#fafafa] cursor-pointer"
             >
-              <span className="text-[#898989]">$</span>
-              <span>{cliCommand}</span>
-              <span className="ml-[4px] text-[11px] text-[#ff6b35]">
-                {copiedCli ? "✓" : "⧉"}
-              </span>
-            </button>
+              <span>Explore Demo Dashboards</span>
+              <span className="text-[#ff6b35]">→</span>
+            </a>
           </div>
 
           {/* 3 Hairline Proof Metrics */}
           <div className="mt-[48px] grid w-full max-w-[680px] grid-cols-1 gap-[12px] border-t border-[#2e2e2e]/60 pt-[24px] sm:grid-cols-3">
             <div className="flex flex-col items-center">
               <span className="font-mono-code text-[14px] font-medium text-[#fafafa]">
-                1.2ms
+                &lt; 12ms
               </span>
               <span className="text-[12px] text-[#898989]">
-                P99 Vectorized Scan
+                SQL Query Pushdown
               </span>
             </div>
             <div className="flex flex-col items-center">
@@ -349,10 +331,10 @@ export default function ParticleCtaSection({
             </div>
             <div className="flex flex-col items-center">
               <span className="font-mono-code text-[14px] font-medium text-[#fafafa]">
-                SHA-256
+                HMAC SHA-256
               </span>
               <span className="text-[12px] text-[#898989]">
-                Tamper-Evident Ledger
+                Signed Expiring Embeds
               </span>
             </div>
           </div>

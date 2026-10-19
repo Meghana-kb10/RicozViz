@@ -780,10 +780,10 @@ function VisualizationsStudioContent() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#121212]">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-          <p className="text-sm text-gray-500">Loading visualization engine…</p>
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
+          <p className="text-xs font-mono-code text-[#898989]">Loading visualization engine…</p>
         </div>
       </div>
     );
@@ -803,23 +803,23 @@ function VisualizationsStudioContent() {
       actions={
         <div className="flex items-center gap-2.5">
           {/* Tab switcher */}
-          <div className="flex items-center bg-[hsl(var(--surface-subtle))] p-0.5 rounded-lg border border-[hsl(var(--surface-border))] text-xs font-semibold">
+          <div className="flex items-center bg-[#181818] p-1 rounded-full border border-[#262626] text-xs">
             <button
               onClick={() => setActiveTab("builder")}
-              className={`px-3 py-1 rounded-md transition ${
+              className={`px-3 py-1 rounded-full transition font-mono-code ${
                 activeTab === "builder"
-                  ? "bg-[hsl(var(--surface))] text-indigo-600 dark:text-indigo-400 shadow-2xs font-bold"
-                  : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  ? "bg-[#ff6b35]/15 text-[#ff6b35] border border-[#ff6b35]/30 font-semibold"
+                  : "text-[#898989] hover:text-[#fafafa] border border-transparent"
               }`}
             >
               Studio Builder
             </button>
             <button
               onClick={() => setActiveTab("saved")}
-              className={`px-3 py-1 rounded-md transition flex items-center gap-1.5 ${
+              className={`px-3 py-1 rounded-full transition flex items-center gap-1.5 font-mono-code ${
                 activeTab === "saved"
-                  ? "bg-[hsl(var(--surface))] text-indigo-600 dark:text-indigo-400 shadow-2xs font-bold"
-                  : "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  ? "bg-[#ff6b35]/15 text-[#ff6b35] border border-[#ff6b35]/30 font-semibold"
+                  : "text-[#898989] hover:text-[#fafafa] border border-transparent"
               }`}
             >
               <FolderOpen className="h-3.5 w-3.5" />
@@ -832,16 +832,16 @@ function VisualizationsStudioContent() {
               <button
                 type="button"
                 onClick={() => openAddToDashboard()}
-                className="btn-tactile btn-secondary text-xs py-1.5 px-3 inline-flex items-center gap-1.5 font-semibold"
+                className="rounded-full border border-[#262626] bg-[#1a1a1a] text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-medium text-[#fafafa] hover:bg-[#242424] transition-all cursor-pointer"
               >
-                <LayoutDashboard className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                <LayoutDashboard className="h-3.5 w-3.5 text-[#ff6b35]" />
                 <span>Add to Dashboard</span>
               </button>
               <button
                 type="button"
                 onClick={handleSaveVisualization}
                 disabled={isSaving}
-                className="btn-tactile btn-primary text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-semibold"
+                className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] text-xs py-1.5 px-4 inline-flex items-center gap-1.5 font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />
                 <span>{isSaving ? "Saving…" : editingVizId ? "Update" : "Save Visualization"}</span>
@@ -855,16 +855,16 @@ function VisualizationsStudioContent() {
       {/* FEEDBACK TOAST */}
       {feedbackMessage && (
         <div
-          className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold shadow-lg transition animate-in fade-in slide-in-from-bottom-2 ${
+          className={`fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-mono-code shadow-2xl transition animate-in fade-in slide-in-from-bottom-2 ${
             feedbackMessage.type === "success"
-              ? "bg-emerald-600 text-white"
-              : "bg-red-600 text-white"
+              ? "bg-emerald-950/90 text-emerald-300 border border-emerald-500/30"
+              : "bg-rose-950/90 text-rose-300 border border-rose-500/30"
           }`}
         >
           {feedbackMessage.type === "success" ? (
-            <Check className="h-4 w-4 shrink-0" />
+            <Check className="h-4 w-4 shrink-0 text-emerald-400" />
           ) : (
-            <AlertCircle className="h-4 w-4 shrink-0" />
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
           )}
           <span>{feedbackMessage.text}</span>
         </div>
@@ -874,13 +874,13 @@ function VisualizationsStudioContent() {
       {activeTab === "builder" && (
         <div className="flex-1 flex overflow-hidden">
           {/* LEFT CONFIGURATION SIDEBAR */}
-          <aside className="w-96 border-r border-gray-200 bg-white flex flex-col h-[calc(100vh-57px)] overflow-y-auto">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <aside className="w-96 border-r border-[#262626] bg-[#141414] flex flex-col h-[calc(100vh-57px)] overflow-y-auto">
+            <div className="p-5 border-b border-[#262626] flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                <h2 className="text-sm font-semibold text-[#fafafa] uppercase tracking-wider font-mono-code">
                   Visualization Settings
                 </h2>
-                <p className="text-xs text-gray-500 mt-0.5">Configure chart axes & aggregations</p>
+                <p className="text-xs text-[#898989] mt-0.5">Configure chart axes & aggregations</p>
               </div>
               {editingVizId && (
                 <button
@@ -889,7 +889,7 @@ function VisualizationsStudioContent() {
                     setTitle("New Visualization");
                     setDescription("");
                   }}
-                  className="text-2xs text-indigo-600 hover:underline font-medium"
+                  className="text-xs font-mono-code text-[#ff6b35] hover:underline"
                 >
                   New Chart
                 </button>
@@ -897,14 +897,14 @@ function VisualizationsStudioContent() {
             </div>
 
             {/* Sub-tab switcher: Data Fields vs. Customization */}
-            <div className="flex border-b border-gray-100 bg-gray-50/70 text-xs font-semibold">
+            <div className="flex border-b border-[#262626] bg-[#181818] text-xs">
               <button
                 type="button"
                 onClick={() => setActiveBuilderSubTab("fields")}
-                className={`flex-1 py-2.5 text-center border-b-2 transition flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-2.5 text-center border-b-2 transition flex items-center justify-center gap-1.5 font-mono-code ${
                   activeBuilderSubTab === "fields"
-                    ? "border-indigo-600 text-indigo-700 bg-white"
-                    : "border-transparent text-gray-500 hover:text-gray-900"
+                    ? "border-[#ff6b35] text-[#ff6b35] bg-[#141414] font-semibold"
+                    : "border-transparent text-[#898989] hover:text-[#fafafa]"
                 }`}
               >
                 <Database className="h-3.5 w-3.5" />
@@ -913,10 +913,10 @@ function VisualizationsStudioContent() {
               <button
                 type="button"
                 onClick={() => setActiveBuilderSubTab("customization")}
-                className={`flex-1 py-2.5 text-center border-b-2 transition flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-2.5 text-center border-b-2 transition flex items-center justify-center gap-1.5 font-mono-code ${
                   activeBuilderSubTab === "customization"
-                    ? "border-indigo-600 text-indigo-700 bg-white"
-                    : "border-transparent text-gray-500 hover:text-gray-900"
+                    ? "border-[#ff6b35] text-[#ff6b35] bg-[#141414] font-semibold"
+                    : "border-transparent text-[#898989] hover:text-[#fafafa]"
                 }`}
               >
                 <Sliders className="h-3.5 w-3.5" />
@@ -928,21 +928,21 @@ function VisualizationsStudioContent() {
             <div className="p-5 space-y-5">
               {/* 1. DATASET SELECTOR */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Database className="h-3.5 w-3.5 text-indigo-600" />
+                <label className="block text-xs font-medium text-[#898989] mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-[#fafafa]">
+                    <Database className="h-3.5 w-3.5 text-[#ff6b35]" />
                     Select Dataset
                   </span>
-                  <Link href="/datasets" className="text-2xs text-indigo-600 hover:underline">
+                  <Link href="/datasets" className="text-xs font-mono-code text-[#ff6b35] hover:underline">
                     Manage Datasets
                   </Link>
                 </label>
                 {isLoadingDatasets ? (
-                  <div className="h-9 w-full bg-gray-100 animate-pulse rounded-lg" />
+                  <div className="h-9 w-full bg-[#181818] animate-pulse rounded-xl" />
                 ) : datasets.length === 0 ? (
-                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-xs text-amber-800">
+                  <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/30 text-xs text-amber-300">
                     No datasets available.{" "}
-                    <Link href="/datasets" className="font-semibold underline">
+                    <Link href="/datasets" className="font-semibold underline text-[#ff6b35]">
                       Upload a dataset first
                     </Link>
                     .
@@ -951,10 +951,10 @@ function VisualizationsStudioContent() {
                   <select
                     value={selectedDatasetId}
                     onChange={(e) => setSelectedDatasetId(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                    className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                   >
                     {datasets.map((d) => (
-                      <option key={d.id} value={d.id}>
+                      <option key={d.id} value={d.id} className="bg-[#141414] text-[#fafafa]">
                         {d.name} ({d.rowCount} rows, {d.columnCount} cols)
                       </option>
                     ))}
@@ -964,13 +964,13 @@ function VisualizationsStudioContent() {
 
               {/* 2. DYNAMIC RECOMMENDATIONS */}
               {recommendations.length > 0 && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                <div className="rounded-xl border border-[#ff6b35]/30 bg-[#ff6b35]/5 p-3.5">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="flex items-center gap-1.5 text-2xs font-bold text-amber-900 uppercase tracking-wider">
-                      <Sparkles className="h-3 w-3 text-amber-600" />
+                    <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[#ff6b35] uppercase tracking-wider font-mono-code">
+                      <Sparkles className="h-3.5 w-3.5 text-[#ff6b35]" />
                       Recommended Charts
                     </span>
-                    <span className="text-3xs text-amber-700">Auto-detected from columns</span>
+                    <span className="text-[10px] text-[#898989] font-mono-code">AI Heuristics</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {recommendations.slice(0, 4).map((rec) => (
@@ -979,11 +979,11 @@ function VisualizationsStudioContent() {
                         type="button"
                         onClick={() => applyRecommendation(rec)}
                         title={rec.description}
-                        className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2 py-1 text-2xs font-medium text-amber-900 hover:bg-amber-100 transition shadow-2xs"
+                        className="inline-flex items-center gap-1 rounded-full border border-[#ff6b35]/40 bg-[#181818] px-2.5 py-1 text-[11px] font-mono-code text-[#ff6b35] hover:bg-[#ff6b35]/15 transition cursor-pointer"
                       >
                         <span className="font-semibold">{rec.chartType}</span>
-                        <span className="text-gray-400">·</span>
-                        <span className="truncate max-w-[120px]">{rec.valueCol}</span>
+                        <span className="text-[#898989]">·</span>
+                        <span className="truncate max-w-[120px] text-[#fafafa]">{rec.valueCol}</span>
                       </button>
                     ))}
                   </div>
@@ -992,8 +992,8 @@ function VisualizationsStudioContent() {
 
               {/* 3. CHART TYPE SELECTOR */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Chart Type ({CHART_TYPES.length})
+                <label className="block text-xs font-semibold text-[#fafafa] mb-1.5 uppercase tracking-wider font-mono-code">
+                  Chart Architecture ({CHART_TYPES.length})
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {CHART_TYPES.map((t) => {
@@ -1004,14 +1004,14 @@ function VisualizationsStudioContent() {
                         key={t.id}
                         type="button"
                         onClick={() => setChartType(t.id)}
-                        className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs transition ${
+                        className={`flex items-center gap-2 p-2 rounded-xl border text-left text-xs transition cursor-pointer ${
                           isSelected
-                            ? "border-indigo-600 bg-indigo-50/70 text-indigo-900 font-semibold shadow-2xs"
-                            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                            ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-semibold shadow-[0_0_15px_rgba(255,107,53,0.15)]"
+                            : "border-[#262626] bg-[#181818] text-[#898989] hover:border-[#383838] hover:text-[#fafafa]"
                         }`}
                       >
-                        <Icon className={`h-4 w-4 ${isSelected ? "text-indigo-600" : "text-gray-400"}`} />
-                        <span>{t.label}</span>
+                        <Icon className={`h-4 w-4 shrink-0 ${isSelected ? "text-[#ff6b35]" : "text-[#898989]"}`} />
+                        <span className="truncate">{t.label}</span>
                       </button>
                     );
                   })}
@@ -1021,37 +1021,37 @@ function VisualizationsStudioContent() {
               {/* 4. COMPATIBILITY ALERT */}
               {compatibility.severity !== "none" && (
                 <div
-                  className={`rounded-lg p-3 text-2xs flex items-start gap-2 ${
+                  className={`rounded-xl p-3 text-xs flex items-start gap-2 ${
                     compatibility.severity === "error"
-                      ? "bg-red-50 text-red-800 border border-red-200"
-                      : "bg-amber-50 text-amber-800 border border-amber-200"
+                      ? "bg-rose-500/10 text-rose-300 border border-rose-500/30"
+                      : "bg-amber-500/10 text-amber-300 border border-amber-500/30"
                   }`}
                 >
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-[#ff6b35]" />
                   <div>
-                    <span className="font-bold block">Chart Configuration Note</span>
-                    <span>{compatibility.message}</span>
+                    <span className="font-semibold block font-mono-code">Configuration Advisory</span>
+                    <span className="text-[11px]">{compatibility.message}</span>
                   </div>
                 </div>
               )}
 
               {/* 5. DIMENSIONS & MEASURES */}
-              <div className="space-y-3 pt-2 border-t border-gray-100">
+              <div className="space-y-3 pt-2 border-t border-[#262626]">
                 {/* Category / X-Axis */}
                 {chartType !== "KPI" && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                      <span>Category / X-Axis</span>
-                      <span className="text-2xs text-gray-400 font-normal">Primary Dimension</span>
+                    <label className="block text-xs font-medium text-[#898989] mb-1 flex items-center justify-between">
+                      <span className="text-[#fafafa]">Category / X-Axis</span>
+                      <span className="text-[10px] text-[#898989] font-mono-code">Primary Dimension</span>
                     </label>
                     <select
                       value={categoryCol}
                       onChange={(e) => setCategoryCol(e.target.value)}
-                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
-                      <option value="">— Select Category Column —</option>
+                      <option value="" className="bg-[#141414] text-[#fafafa]">— Select Category Column —</option>
                       {columns.map((c) => (
-                        <option key={c.name} value={c.name}>
+                        <option key={c.name} value={c.name} className="bg-[#141414] text-[#fafafa]">
                           {c.name} ({c.type})
                         </option>
                       ))}
@@ -1061,18 +1061,18 @@ function VisualizationsStudioContent() {
 
                 {/* Value / Measure 1 */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                    <span>Value / Y-Axis</span>
-                    <span className="text-2xs text-gray-400 font-normal">Primary Metric</span>
+                  <label className="block text-xs font-medium text-[#898989] mb-1 flex items-center justify-between">
+                    <span className="text-[#fafafa]">Value / Y-Axis</span>
+                    <span className="text-[10px] text-[#898989] font-mono-code">Primary Metric</span>
                   </label>
                   <select
                     value={valueCol}
                     onChange={(e) => setValueCol(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                   >
-                    <option value="">— Select Measure Column —</option>
+                    <option value="" className="bg-[#141414] text-[#fafafa]">— Select Measure Column —</option>
                     {columns.map((c) => (
-                      <option key={c.name} value={c.name}>
+                      <option key={c.name} value={c.name} className="bg-[#141414] text-[#fafafa]">
                         {c.name} ({c.type})
                       </option>
                     ))}
@@ -1085,20 +1085,20 @@ function VisualizationsStudioContent() {
                   chartType === "AREA" ||
                   chartType === "RADAR") && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                      <span>Secondary Series (Optional)</span>
-                      <span className="text-2xs text-gray-400 font-normal">Multi-Metric</span>
+                    <label className="block text-xs font-medium text-[#898989] mb-1 flex items-center justify-between">
+                      <span className="text-[#fafafa]">Secondary Series (Optional)</span>
+                      <span className="text-[10px] text-[#898989] font-mono-code">Multi-Metric</span>
                     </label>
                     <select
                       value={secondaryValueCol}
                       onChange={(e) => setSecondaryValueCol(e.target.value)}
-                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
-                      <option value="">— None (Single Series) —</option>
+                      <option value="" className="bg-[#141414] text-[#fafafa]">— None (Single Series) —</option>
                       {columns
                         .filter((c) => c.name !== valueCol)
                         .map((c) => (
-                          <option key={c.name} value={c.name}>
+                          <option key={c.name} value={c.name} className="bg-[#141414] text-[#fafafa]">
                             {c.name} ({c.type})
                           </option>
                         ))}
@@ -1109,20 +1109,20 @@ function VisualizationsStudioContent() {
                 {/* Optional Grouping / Matrix Column (Heatmap) */}
                 {chartType === "HEATMAP" && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                      <span>Matrix Y-Axis (Category 2)</span>
-                      <span className="text-2xs text-indigo-600 font-bold">Required for Matrix</span>
+                    <label className="block text-xs font-medium text-[#898989] mb-1 flex items-center justify-between">
+                      <span className="text-[#fafafa]">Matrix Y-Axis (Category 2)</span>
+                      <span className="text-[10px] text-[#ff6b35] font-mono-code font-bold">Required for Matrix</span>
                     </label>
                     <select
                       value={groupCol}
                       onChange={(e) => setGroupCol(e.target.value)}
-                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
-                      <option value="">— Select Second Category —</option>
+                      <option value="" className="bg-[#141414] text-[#fafafa]">— Select Second Category —</option>
                       {columns
                         .filter((c) => c.name !== categoryCol)
                         .map((c) => (
-                          <option key={c.name} value={c.name}>
+                          <option key={c.name} value={c.name} className="bg-[#141414] text-[#fafafa]">
                             {c.name} ({c.type})
                           </option>
                         ))}
@@ -1133,16 +1133,16 @@ function VisualizationsStudioContent() {
                 {/* Aggregation Function */}
                 {chartType !== "SCATTER" && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-[#898989] mb-1">
                       Aggregation Method
                     </label>
                     <select
                       value={aggregation}
                       onChange={(e) => setAggregation(e.target.value as AggregationFunction)}
-                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 shadow-2xs focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
                       {AGGREGATIONS.map((agg) => (
-                        <option key={agg.id} value={agg.id}>
+                        <option key={agg.id} value={agg.id} className="bg-[#141414] text-[#fafafa]">
                           {agg.label}
                         </option>
                       ))}
@@ -1152,20 +1152,20 @@ function VisualizationsStudioContent() {
               </div>
 
               {/* 6. SORTING */}
-              <div className="pt-2 border-t border-gray-100">
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                  <ArrowUpDown className="h-3.5 w-3.5 text-gray-400" />
+              <div className="pt-2 border-t border-[#262626]">
+                <label className="block text-xs font-semibold text-[#fafafa] mb-1.5 flex items-center gap-1.5 uppercase tracking-wider font-mono-code">
+                  <ArrowUpDown className="h-3.5 w-3.5 text-[#ff6b35]" />
                   Sorting
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     value={sortCol}
                     onChange={(e) => setSortCol(e.target.value)}
-                    className="text-xs rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-gray-800 shadow-2xs"
+                    className="text-xs rounded-xl border border-[#262626] bg-[#121212] px-2.5 py-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                   >
-                    <option value="">— Default Sort —</option>
+                    <option value="" className="bg-[#141414] text-[#fafafa]">— Default Sort —</option>
                     {columns.map((c) => (
-                      <option key={c.name} value={c.name}>
+                      <option key={c.name} value={c.name} className="bg-[#141414] text-[#fafafa]">
                         {c.name}
                       </option>
                     ))}
@@ -1173,43 +1173,43 @@ function VisualizationsStudioContent() {
                   <select
                     value={sortDir}
                     onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-                    className="text-xs rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-gray-800 shadow-2xs"
+                    className="text-xs rounded-xl border border-[#262626] bg-[#121212] px-2.5 py-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                   >
-                    <option value="asc">Ascending (A→Z, 0→9)</option>
-                    <option value="desc">Descending (Z→A, 9→0)</option>
+                    <option value="asc" className="bg-[#141414] text-[#fafafa]">Ascending (A→Z, 0→9)</option>
+                    <option value="desc" className="bg-[#141414] text-[#fafafa]">Descending (Z→A, 9→0)</option>
                   </select>
                 </div>
               </div>
 
               {/* 7. FILTERS */}
-              <div className="pt-2 border-t border-gray-100">
+              <div className="pt-2 border-t border-[#262626]">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                    <FunnelIcon className="h-3.5 w-3.5 text-gray-400" />
+                  <label className="text-xs font-semibold text-[#fafafa] flex items-center gap-1.5 uppercase tracking-wider font-mono-code">
+                    <FunnelIcon className="h-3.5 w-3.5 text-[#ff6b35]" />
                     Query Filters ({filters.length})
                   </label>
                   <button
                     type="button"
                     onClick={addFilterRow}
-                    className="text-2xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5"
+                    className="text-xs font-mono-code text-[#ff6b35] hover:underline flex items-center gap-0.5 cursor-pointer"
                   >
                     <Plus className="h-3 w-3" /> Add Filter
                   </button>
                 </div>
 
                 {filters.length === 0 ? (
-                  <p className="text-2xs text-gray-400">No active filters applied.</p>
+                  <p className="text-xs text-[#898989] font-mono-code italic">No active filters applied.</p>
                 ) : (
                   <div className="space-y-2">
                     {filters.map((f, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                      <div key={idx} className="flex items-center gap-1.5 bg-[#181818] p-2.5 rounded-xl border border-[#262626]">
                         <select
                           value={f.column}
                           onChange={(e) => updateFilterRow(idx, "column", e.target.value)}
-                          className="w-1/3 text-3xs rounded border border-gray-300 bg-white p-1"
+                          className="w-1/3 text-xs rounded-lg border border-[#262626] bg-[#121212] p-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         >
                           {columns.map((c) => (
-                            <option key={c.name} value={c.name}>
+                            <option key={c.name} value={c.name} className="bg-[#141414] text-[#fafafa]">
                               {c.name}
                             </option>
                           ))}
@@ -1217,10 +1217,10 @@ function VisualizationsStudioContent() {
                         <select
                           value={f.operator}
                           onChange={(e) => updateFilterRow(idx, "operator", e.target.value)}
-                          className="w-1/3 text-3xs rounded border border-gray-300 bg-white p-1"
+                          className="w-1/3 text-xs rounded-lg border border-[#262626] bg-[#121212] p-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         >
                           {FILTER_OPERATORS.map((op) => (
-                            <option key={op.id} value={op.id}>
+                            <option key={op.id} value={op.id} className="bg-[#141414] text-[#fafafa]">
                               {op.label}
                             </option>
                           ))}
@@ -1231,15 +1231,15 @@ function VisualizationsStudioContent() {
                             placeholder="Value"
                             value={f.value}
                             onChange={(e) => updateFilterRow(idx, "value", e.target.value)}
-                            className="w-1/3 text-3xs rounded border border-gray-300 bg-white p-1"
+                            className="w-1/3 text-xs rounded-lg border border-[#262626] bg-[#121212] p-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                           />
                         )}
                         <button
                           type="button"
                           onClick={() => removeFilterRow(idx)}
-                          className="text-red-500 hover:text-red-700 p-0.5"
+                          className="text-[#898989] hover:text-rose-400 p-1 cursor-pointer"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     ))}
@@ -1251,7 +1251,7 @@ function VisualizationsStudioContent() {
               <div className="p-5 space-y-5">
                 {/* 1. COLOR PALETTE */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#fafafa] mb-1.5 uppercase tracking-wider font-mono-code">
                     Color Palette
                   </label>
                   <div className="space-y-1.5">
@@ -1260,13 +1260,13 @@ function VisualizationsStudioContent() {
                         key={key}
                         type="button"
                         onClick={() => setColorPalette(key)}
-                        className={`w-full flex items-center justify-between p-2 rounded-lg border text-left text-xs transition ${
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left text-xs transition cursor-pointer ${
                           colorPalette === key
-                            ? "border-indigo-600 bg-indigo-50/50 shadow-2xs font-semibold"
-                            : "border-gray-200 bg-white hover:bg-gray-50"
+                            ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#fafafa] font-semibold shadow-[0_0_15px_rgba(255,107,53,0.15)]"
+                            : "border-[#262626] bg-[#181818] text-[#898989] hover:border-[#383838] hover:text-[#fafafa]"
                         }`}
                       >
-                        <span className="capitalize text-gray-800">{key}</span>
+                        <span className="capitalize">{key}</span>
                         <div className="flex items-center gap-1">
                           {colors.slice(0, 5).map((c, i) => (
                             <span
@@ -1282,32 +1282,32 @@ function VisualizationsStudioContent() {
                 </div>
 
                 {/* 2. LEGEND CONFIGURATION */}
-                <div className="pt-2 border-t border-gray-100 space-y-2.5">
-                  <label className="block text-xs font-semibold text-gray-700">
+                <div className="pt-2 border-t border-[#262626] space-y-2.5">
+                  <label className="block text-xs font-semibold text-[#fafafa] uppercase tracking-wider font-mono-code">
                     Legend Settings
                   </label>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Show Legend</span>
+                    <span className="text-xs text-[#898989]">Show Legend</span>
                     <input
                       type="checkbox"
                       checked={legendShow}
                       onChange={(e) => setLegendShow(e.target.checked)}
-                      className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      className="h-4 w-4 rounded border-[#262626] bg-[#121212] accent-[#ff6b35] focus:ring-0 cursor-pointer"
                     />
                   </div>
                   {legendShow && (
                     <div>
-                      <span className="text-2xs text-gray-400 block mb-1">Position</span>
+                      <span className="text-[10px] text-[#898989] font-mono-code block mb-1">Position</span>
                       <div className="grid grid-cols-4 gap-1.5">
                         {(["top", "bottom", "left", "right"] as const).map((pos) => (
                           <button
                             key={pos}
                             type="button"
                             onClick={() => setLegendPosition(pos)}
-                            className={`py-1 rounded text-2xs font-medium capitalize border transition ${
+                            className={`py-1.5 rounded-xl text-xs font-mono-code capitalize border transition cursor-pointer ${
                               legendPosition === pos
-                                ? "border-indigo-600 bg-indigo-50 text-indigo-700 font-bold"
-                                : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                                ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-semibold"
+                                : "border-[#262626] bg-[#181818] text-[#898989] hover:border-[#383838] hover:text-[#fafafa]"
                             }`}
                           >
                             {pos}
@@ -1319,53 +1319,53 @@ function VisualizationsStudioContent() {
                 </div>
 
                 {/* 3. AXIS CONFIGURATION */}
-                <div className="pt-2 border-t border-gray-100 space-y-3">
-                  <label className="block text-xs font-semibold text-gray-700">
+                <div className="pt-2 border-t border-[#262626] space-y-3">
+                  <label className="block text-xs font-semibold text-[#fafafa] uppercase tracking-wider font-mono-code">
                     Axes & Gridlines
                   </label>
                   <div>
-                    <span className="text-2xs text-gray-500 block mb-1">X-Axis Custom Title</span>
+                    <span className="text-[10px] text-[#898989] font-mono-code block mb-1">X-Axis Custom Title</span>
                     <input
                       type="text"
                       value={xAxisTitle}
                       onChange={(e) => setXAxisTitle(e.target.value)}
                       placeholder="e.g. Regions, Months, Categories"
-                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-2.5 py-1.5"
+                      className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Show X-Axis Gridlines</span>
+                    <span className="text-xs text-[#898989]">Show X-Axis Gridlines</span>
                     <input
                       type="checkbox"
                       checked={showXGrid}
                       onChange={(e) => setShowXGrid(e.target.checked)}
-                      className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      className="h-4 w-4 rounded border-[#262626] bg-[#121212] accent-[#ff6b35] focus:ring-0 cursor-pointer"
                     />
                   </div>
                   <div>
-                    <span className="text-2xs text-gray-500 block mb-1">Y-Axis Custom Title</span>
+                    <span className="text-[10px] text-[#898989] font-mono-code block mb-1">Y-Axis Custom Title</span>
                     <input
                       type="text"
                       value={yAxisTitle}
                       onChange={(e) => setYAxisTitle(e.target.value)}
                       placeholder="e.g. Revenue ($), Total Count"
-                      className="w-full text-xs rounded-lg border border-gray-300 bg-white px-2.5 py-1.5"
+                      className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     />
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Show Y-Axis Gridlines</span>
+                    <span className="text-xs text-[#898989]">Show Y-Axis Gridlines</span>
                     <input
                       type="checkbox"
                       checked={showYGrid}
                       onChange={(e) => setShowYGrid(e.target.checked)}
-                      className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      className="h-4 w-4 rounded border-[#262626] bg-[#121212] accent-[#ff6b35] focus:ring-0 cursor-pointer"
                     />
                   </div>
                 </div>
 
                 {/* 4. NUMBER FORMATTING */}
-                <div className="pt-2 border-t border-gray-100 space-y-3">
-                  <label className="block text-xs font-semibold text-gray-700">
+                <div className="pt-2 border-t border-[#262626] space-y-3">
+                  <label className="block text-xs font-semibold text-[#fafafa] uppercase tracking-wider font-mono-code">
                     Metric & Number Formatting
                   </label>
                   <div className="grid grid-cols-3 gap-1.5">
@@ -1378,10 +1378,10 @@ function VisualizationsStudioContent() {
                         key={f.id}
                         type="button"
                         onClick={() => setNumberFormatType(f.id as any)}
-                        className={`py-1.5 text-2xs rounded-lg border text-center font-medium transition ${
+                        className={`py-1.5 text-xs rounded-xl border text-center font-mono-code transition cursor-pointer ${
                           numberFormatType === f.id
-                            ? "border-indigo-600 bg-indigo-50 text-indigo-700 font-bold"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                            ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-semibold"
+                            : "border-[#262626] bg-[#181818] text-[#898989] hover:border-[#383838] hover:text-[#fafafa]"
                         }`}
                       >
                         {f.label}
@@ -1391,76 +1391,76 @@ function VisualizationsStudioContent() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <span className="text-2xs text-gray-500 block mb-1">Prefix</span>
+                      <span className="text-[10px] text-[#898989] font-mono-code block mb-1">Prefix</span>
                       <input
                         type="text"
                         value={numberPrefix}
                         onChange={(e) => setNumberPrefix(e.target.value)}
                         placeholder="e.g. $, €"
-                        className="w-full text-xs rounded-lg border border-gray-300 px-2 py-1"
+                        className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       />
                     </div>
                     <div>
-                      <span className="text-2xs text-gray-500 block mb-1">Suffix</span>
+                      <span className="text-[10px] text-[#898989] font-mono-code block mb-1">Suffix</span>
                       <input
                         type="text"
                         value={numberSuffix}
                         onChange={(e) => setNumberSuffix(e.target.value)}
                         placeholder="e.g. USD, /mo"
-                        className="w-full text-xs rounded-lg border border-gray-300 px-2 py-1"
+                        className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       />
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Decimal Places</span>
+                    <span className="text-xs text-[#898989]">Decimal Places</span>
                     <select
                       value={numberDecimals}
                       onChange={(e) => setNumberDecimals(Number(e.target.value))}
-                      className="text-xs rounded border border-gray-300 bg-white px-2 py-1"
+                      className="text-xs rounded-xl border border-[#262626] bg-[#121212] px-2.5 py-1 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                     >
-                      <option value={0}>0 (Integer)</option>
-                      <option value={1}>1 decimal</option>
-                      <option value={2}>2 decimals</option>
-                      <option value={3}>3 decimals</option>
+                      <option value={0} className="bg-[#141414] text-[#fafafa]">0 (Integer)</option>
+                      <option value={1} className="bg-[#141414] text-[#fafafa]">1 decimal</option>
+                      <option value={2} className="bg-[#141414] text-[#fafafa]">2 decimals</option>
+                      <option value={3} className="bg-[#141414] text-[#fafafa]">3 decimals</option>
                     </select>
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Compact Format (1.5M, 24K)</span>
+                    <span className="text-xs text-[#898989]">Compact Format (1.5M, 24K)</span>
                     <input
                       type="checkbox"
                       checked={numberCompact}
                       onChange={(e) => setNumberCompact(e.target.checked)}
-                      className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      className="h-4 w-4 rounded border-[#262626] bg-[#121212] accent-[#ff6b35] focus:ring-0 cursor-pointer"
                     />
                   </div>
                 </div>
 
                 {/* 5. VISUALIZATION-SPECIFIC SETTINGS */}
-                <div className="pt-2 border-t border-gray-100 space-y-2.5">
-                  <label className="block text-xs font-semibold text-gray-700">
+                <div className="pt-2 border-t border-[#262626] space-y-2.5">
+                  <label className="block text-xs font-semibold text-[#fafafa] uppercase tracking-wider font-mono-code">
                     Display Settings
                   </label>
                   {(chartType === "BAR" || chartType === "AREA") && (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600">Stacked Series</span>
+                      <span className="text-xs text-[#898989]">Stacked Series</span>
                       <input
                         type="checkbox"
                         checked={chartStacked}
                         onChange={(e) => setChartStacked(e.target.checked)}
-                        className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        className="h-4 w-4 rounded border-[#262626] bg-[#121212] accent-[#ff6b35] focus:ring-0 cursor-pointer"
                       />
                     </div>
                   )}
                   {(chartType === "LINE" || chartType === "AREA") && (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600">Smooth Spline Curve</span>
+                      <span className="text-xs text-[#898989]">Smooth Spline Curve</span>
                       <input
                         type="checkbox"
                         checked={chartSmooth}
                         onChange={(e) => setChartSmooth(e.target.checked)}
-                        className="h-4 w-4 rounded text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        className="h-4 w-4 rounded border-[#262626] bg-[#121212] accent-[#ff6b35] focus:ring-0 cursor-pointer"
                       />
                     </div>
                   )}
@@ -1470,44 +1470,44 @@ function VisualizationsStudioContent() {
           </aside>
 
           {/* MAIN PREVIEW CANVAS */}
-          <main className="flex-1 flex flex-col h-[calc(100vh-57px)] overflow-hidden bg-gray-50/70 p-6">
+          <main className="flex-1 flex flex-col h-[calc(100vh-57px)] overflow-hidden bg-[#121212] p-6">
             {/* Title & Metadata Top Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 bg-white p-4 rounded-xl border border-gray-200 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 bg-[#141414] p-4 rounded-2xl border border-[#262626] shadow-sm">
               <div className="flex-1 max-w-xl">
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Visualization Title"
-                  className="w-full text-base font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-indigo-500 focus:outline-hidden px-1 py-0.5"
+                  className="w-full text-base font-semibold text-[#fafafa] bg-transparent border-b border-transparent hover:border-[#262626] focus:border-[#ff6b35] focus:outline-none px-1 py-0.5"
                 />
                 <input
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Add an optional description or business insight notes…"
-                  className="w-full text-xs text-gray-500 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-indigo-500 focus:outline-hidden px-1 py-0.5 mt-0.5"
+                  className="w-full text-xs text-[#898989] bg-transparent border-b border-transparent hover:border-[#262626] focus:border-[#ff6b35] focus:outline-none px-1 py-0.5 mt-0.5"
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-xs">
+                <div className="flex items-center bg-[#181818] p-1 rounded-full border border-[#262626] text-xs font-mono-code">
                   <button
                     onClick={() => setPreviewTab("chart")}
-                    className={`px-3 py-1 rounded-md transition ${
+                    className={`px-3 py-1 rounded-full transition cursor-pointer ${
                       previewTab === "chart"
-                        ? "bg-white text-indigo-700 shadow-2xs font-semibold"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "bg-[#ff6b35]/15 text-[#ff6b35] border border-[#ff6b35]/30 font-semibold"
+                        : "text-[#898989] hover:text-[#fafafa] border border-transparent"
                     }`}
                   >
                     Live Chart
                   </button>
                   <button
                     onClick={() => setPreviewTab("data")}
-                    className={`px-3 py-1 rounded-md transition ${
+                    className={`px-3 py-1 rounded-full transition cursor-pointer ${
                       previewTab === "data"
-                        ? "bg-white text-indigo-700 shadow-2xs font-semibold"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "bg-[#ff6b35]/15 text-[#ff6b35] border border-[#ff6b35]/30 font-semibold"
+                        : "text-[#898989] hover:text-[#fafafa] border border-transparent"
                     }`}
                   >
                     Raw Data ({queryResult?.rows?.length ?? 0})
@@ -1518,16 +1518,16 @@ function VisualizationsStudioContent() {
                   type="button"
                   onClick={executeQuery}
                   disabled={isQuerying}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#262626] bg-[#181818] px-3.5 py-1 text-xs font-mono-code text-[#fafafa] hover:bg-[#222] transition disabled:opacity-50 cursor-pointer"
                 >
-                  <RefreshCw className={`h-3 w-3 ${isQuerying ? "animate-spin text-indigo-600" : ""}`} />
+                  <RefreshCw className={`h-3 w-3 ${isQuerying ? "animate-spin text-[#ff6b35]" : "text-[#898989]"}`} />
                   <span>Refresh</span>
                 </button>
               </div>
             </div>
 
             {/* PREVIEW CONTAINER */}
-            <div className="flex-1 bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col overflow-hidden">
+            <div className="flex-1 bg-[#141414] rounded-2xl border border-[#262626] p-6 shadow-sm flex flex-col overflow-hidden">
               {previewTab === "chart" ? (
                 <div className="flex-1 w-full h-full relative">
                   <ChartRenderer
@@ -1540,25 +1540,25 @@ function VisualizationsStudioContent() {
                   />
                 </div>
               ) : (
-                <div className="flex-1 overflow-auto rounded-lg border border-gray-100">
-                  <table className="min-w-full divide-y divide-gray-200 text-xs">
-                    <thead className="bg-gray-50 sticky top-0">
+                <div className="flex-1 overflow-auto rounded-xl border border-[#262626] bg-[#121212]">
+                  <table className="min-w-full divide-y divide-[#262626] text-xs">
+                    <thead className="bg-[#181818] sticky top-0">
                       <tr>
                         {queryResult?.columns?.map((col) => (
-                          <th key={col.name} className="px-3.5 py-2.5 text-left font-semibold text-gray-700">
+                          <th key={col.name} className="px-3.5 py-2.5 text-left font-medium text-[#fafafa] font-mono-code">
                             {col.name}
-                            <span className="block text-3xs text-gray-400 font-mono font-normal">
+                            <span className="block text-[10px] text-[#898989] font-normal">
                               {col.type}
                             </span>
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
+                    <tbody className="divide-y divide-[#262626] bg-[#141414]">
                       {queryResult?.rows?.map((row, rIdx) => (
-                        <tr key={rIdx} className="hover:bg-gray-50">
+                        <tr key={rIdx} className="hover:bg-[#181818]/60 transition-colors">
                           {queryResult.columns.map((col) => (
-                            <td key={col.name} className="px-3.5 py-2 font-mono text-gray-800">
+                            <td key={col.name} className="px-3.5 py-2 font-mono-code text-[#fafafa]">
                               {row[col.name] !== undefined && row[col.name] !== null
                                 ? String(row[col.name])
                                 : "—"}
@@ -1580,8 +1580,8 @@ function VisualizationsStudioContent() {
         <main className="max-w-7xl mx-auto w-full px-6 py-8 flex-1">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Saved Visualizations Gallery</h2>
-              <p className="text-xs text-gray-500 mt-1">
+              <h2 className="text-xl font-semibold text-[#fafafa]">Saved Visualizations Gallery</h2>
+              <p className="text-xs text-[#898989] mt-1">
                 Explore, edit, or attach saved visualizations directly into your dashboards.
               </p>
             </div>
@@ -1591,7 +1591,7 @@ function VisualizationsStudioContent() {
                 setTitle("New Visualization");
                 setActiveTab("builder");
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-2 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>Create New Visualization</span>
@@ -1599,22 +1599,22 @@ function VisualizationsStudioContent() {
           </div>
 
           {isLoadingSaved ? (
-            <div className="py-20 text-center text-sm text-gray-500">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2" />
+            <div className="py-20 text-center text-xs font-mono-code text-[#898989]">
+              <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-[#ff6b35] border-t-transparent mb-2" />
               <p>Loading saved visualizations…</p>
             </div>
           ) : savedVisualizations.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 text-2xl mb-3">
+            <div className="rounded-2xl border border-dashed border-[#262626] bg-[#141414] p-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35] text-2xl mb-3">
                 📊
               </div>
-              <h3 className="text-base font-bold text-gray-900">No saved visualizations yet</h3>
-              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+              <h3 className="text-base font-semibold text-[#fafafa]">No saved visualizations yet</h3>
+              <p className="text-xs text-[#898989] mt-1 max-w-sm mx-auto">
                 Use the Studio Builder to create and save charts, then pin them onto your analytics dashboards.
               </p>
               <button
                 onClick={() => setActiveTab("builder")}
-                className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500"
+                className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-2 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer"
               >
                 Open Studio Builder →
               </button>
@@ -1624,35 +1624,35 @@ function VisualizationsStudioContent() {
               {savedVisualizations.map((viz) => (
                 <div
                   key={viz.id}
-                  className="rounded-xl border border-gray-200 bg-white p-5 shadow-2xs hover:shadow-md transition flex flex-col justify-between"
+                  className="rounded-2xl border border-[#262626] bg-[#141414] p-5 shadow-sm hover:border-[#ff6b35]/40 transition-all flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-2xs font-semibold text-indigo-700">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#ff6b35]/15 border border-[#ff6b35]/30 px-2.5 py-0.5 text-[11px] font-semibold font-mono-code text-[#ff6b35]">
                         {viz.chartType}
                       </span>
-                      <span className="text-3xs text-gray-400">
+                      <span className="text-[10px] text-[#898989] font-mono-code">
                         {new Date(viz.createdAt).toLocaleDateString()}
                       </span>
                     </div>
 
-                    <h3 className="text-sm font-bold text-gray-900 truncate">{viz.title}</h3>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    <h3 className="text-sm font-semibold text-[#fafafa] truncate">{viz.title}</h3>
+                    <p className="text-xs text-[#898989] mt-1 line-clamp-2">
                       {viz.description || "No description provided."}
                     </p>
 
-                    <div className="mt-4 pt-3 border-t border-gray-100 text-2xs text-gray-500 flex items-center justify-between">
+                    <div className="mt-4 pt-3 border-t border-[#262626] text-xs text-[#898989] flex items-center justify-between">
                       <span className="truncate">
-                        Dataset: <strong>{viz.datasetName || "Linked Dataset"}</strong>
+                        Dataset: <strong className="text-[#fafafa] font-normal">{viz.datasetName || "Linked Dataset"}</strong>
                       </span>
                     </div>
                   </div>
 
-                  <div className="mt-5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                  <div className="mt-5 pt-3 border-t border-[#262626] flex items-center justify-between gap-2">
                     <button
                       type="button"
                       onClick={() => handleLoadSaved(viz)}
-                      className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                      className="text-xs font-mono-code text-[#ff6b35] hover:underline cursor-pointer"
                     >
                       Edit in Builder
                     </button>
@@ -1660,24 +1660,24 @@ function VisualizationsStudioContent() {
                       <button
                         type="button"
                         onClick={() => handleOpenShareModal(viz)}
-                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-2xs font-semibold text-gray-700 hover:bg-gray-50 shadow-2xs"
+                        className="inline-flex items-center gap-1 rounded-full border border-[#262626] bg-[#181818] px-2.5 py-1 text-xs text-[#fafafa] hover:bg-[#222] transition cursor-pointer"
                         title="Share visualization"
                       >
-                        <Share2 className="h-3 w-3 text-indigo-600" />
+                        <Share2 className="h-3 w-3 text-[#ff6b35]" />
                         <span>Share</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => openAddToDashboard(viz)}
-                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-2xs font-semibold text-gray-700 hover:bg-gray-50 shadow-2xs"
+                        className="inline-flex items-center gap-1 rounded-full border border-[#262626] bg-[#181818] px-2.5 py-1 text-xs text-[#fafafa] hover:bg-[#222] transition cursor-pointer"
                       >
-                        <LayoutDashboard className="h-3 w-3 text-indigo-600" />
-                        <span>Add to Dashboard</span>
+                        <LayoutDashboard className="h-3 w-3 text-[#ff6b35]" />
+                        <span>Add</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteSaved(viz.id, viz.title)}
-                        className="text-gray-400 hover:text-red-600 p-1"
+                        className="text-[#898989] hover:text-rose-400 p-1 cursor-pointer"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -1692,33 +1692,33 @@ function VisualizationsStudioContent() {
 
       {/* ADD TO DASHBOARD MODAL */}
       {isDashboardModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-2xs">
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <h3 className="text-base font-bold text-gray-900 mb-1">Add to Dashboard</h3>
-            <p className="text-xs text-gray-500 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-2xl bg-[#141414] border border-[#262626] p-6 shadow-2xl">
+            <h3 className="text-base font-semibold text-[#fafafa] mb-1">Add to Dashboard</h3>
+            <p className="text-xs text-[#898989] mb-4">
               Pin &quot;{targetVizForDashboard?.title || title}&quot; to one of your active dashboards.
             </p>
 
             {dashboards.length === 0 ? (
-              <div className="p-4 bg-amber-50 rounded-lg text-xs text-amber-800 border border-amber-200 mb-4">
+              <div className="p-4 bg-amber-500/10 rounded-xl text-xs text-amber-300 border border-amber-500/30 mb-4">
                 No dashboards found in your organization.{" "}
-                <Link href="/dashboards" className="underline font-bold">
+                <Link href="/dashboards" className="underline font-bold text-[#ff6b35]">
                   Create a dashboard first
                 </Link>
                 .
               </div>
             ) : (
               <div className="space-y-3 mb-5">
-                <label className="block text-xs font-semibold text-gray-700">
+                <label className="block text-xs font-medium text-[#898989]">
                   Select Destination Dashboard
                 </label>
                 <select
                   value={selectedDashboardId}
                   onChange={(e) => setSelectedDashboardId(e.target.value)}
-                  className="w-full text-xs rounded-lg border border-gray-300 bg-white p-2.5 text-gray-800 shadow-2xs"
+                  className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] p-2.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                 >
                   {dashboards.map((dash) => (
-                    <option key={dash.id} value={dash.id}>
+                    <option key={dash.id} value={dash.id} className="bg-[#141414] text-[#fafafa]">
                       {dash.name} ({dash.charts?.length ?? dash.chartCount ?? 0} charts)
                     </option>
                   ))}
@@ -1726,11 +1726,11 @@ function VisualizationsStudioContent() {
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-end gap-2 border-t border-[#262626] pt-4">
               <button
                 type="button"
                 onClick={() => setIsDashboardModalOpen(false)}
-                className="rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-full border border-[#262626] bg-[#181818] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:bg-[#222] transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -1738,7 +1738,7 @@ function VisualizationsStudioContent() {
                 type="button"
                 disabled={addingToDashboard || dashboards.length === 0}
                 onClick={handleConfirmAddToDashboard}
-                className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500 disabled:opacity-50"
+                className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer disabled:opacity-50"
               >
                 {addingToDashboard ? "Adding…" : "Confirm & Add"}
               </button>
@@ -1749,35 +1749,35 @@ function VisualizationsStudioContent() {
 
       {/* SHARE VISUALIZATION MODAL (FEATURE 15) */}
       {isShareModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-2xs">
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-2xl bg-[#141414] border border-[#262626] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#262626]">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35] flex items-center justify-center">
                   <Share2 className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Share Visualization</h3>
-                  <p className="text-2xs text-gray-500">Public view-only standalone access</p>
+                  <h3 className="text-sm font-semibold text-[#fafafa]">Share Visualization</h3>
+                  <p className="text-[11px] text-[#898989]">Public view-only standalone access</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsShareModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded"
+                className="text-[#898989] hover:text-[#fafafa] p-1.5 rounded-lg hover:bg-[#1f1f1f] transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {isSharingLoading ? (
-              <div className="py-8 text-center text-xs text-gray-500 flex flex-col items-center gap-2">
-                <RefreshCw className="h-5 w-5 animate-spin text-indigo-600" />
+              <div className="py-8 text-center text-xs text-[#898989] flex flex-col items-center gap-2 font-mono-code">
+                <RefreshCw className="h-5 w-5 animate-spin text-[#ff6b35]" />
                 <span>Generating secure public link...</span>
               </div>
             ) : shareUrl ? (
               <div className="space-y-3">
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-[#898989]">
                   Anyone with this link can view the &quot;{sharingVizTitle}&quot; chart in live read-only mode without logging in.
                 </p>
                 <div className="flex items-center gap-2">
@@ -1785,7 +1785,7 @@ function VisualizationsStudioContent() {
                     type="text"
                     readOnly
                     value={shareUrl}
-                    className="flex-1 text-xs font-mono bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 select-all"
+                    className="flex-1 text-xs font-mono-code bg-[#121212] border border-[#262626] rounded-xl px-3 py-2 text-[#fafafa] select-all focus:outline-none"
                   />
                   <button
                     type="button"
@@ -1796,7 +1796,7 @@ function VisualizationsStudioContent() {
                         setTimeout(() => setCopiedShare(false), 2000);
                       }
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-500"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-3.5 py-2 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer"
                   >
                     {copiedShare ? (
                       <>
@@ -1816,7 +1816,7 @@ function VisualizationsStudioContent() {
                     href={shareUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline font-medium"
+                    className="inline-flex items-center gap-1 text-xs font-mono-code text-[#ff6b35] hover:underline"
                   >
                     <ExternalLink className="h-3 w-3" />
                     <span>Open in new tab</span>
@@ -1824,7 +1824,7 @@ function VisualizationsStudioContent() {
                   <button
                     type="button"
                     onClick={handleRevokeShare}
-                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline font-medium"
+                    className="inline-flex items-center gap-1 text-xs font-mono-code text-rose-400 hover:underline cursor-pointer"
                   >
                     <Lock className="h-3 w-3" />
                     <span>Revoke link</span>
@@ -1833,7 +1833,7 @@ function VisualizationsStudioContent() {
               </div>
             ) : (
               <div className="text-center py-4 space-y-3">
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[#898989]">
                   This chart is not publicly shared. Create a shareable link to allow external viewing.
                 </p>
                 <button
@@ -1846,18 +1846,18 @@ function VisualizationsStudioContent() {
                       });
                     }
                   }}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500"
+                  className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-2 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer"
                 >
                   Generate Share Link
                 </button>
               </div>
             )}
 
-            <div className="pt-3 border-t border-gray-100 flex justify-end">
+            <div className="pt-3 border-t border-[#262626] flex justify-end">
               <button
                 type="button"
                 onClick={() => setIsShareModalOpen(false)}
-                className="rounded-lg border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-full border border-[#262626] bg-[#181818] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:bg-[#222] transition cursor-pointer"
               >
                 Done
               </button>
@@ -1873,8 +1873,8 @@ export default function VisualizationsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <p className="text-xs text-gray-500">Loading Visualizations Studio…</p>
+        <div className="min-h-screen flex items-center justify-center bg-[#121212]">
+          <p className="text-xs font-mono-code text-[#898989]">Loading Visualizations Studio…</p>
         </div>
       }
     >

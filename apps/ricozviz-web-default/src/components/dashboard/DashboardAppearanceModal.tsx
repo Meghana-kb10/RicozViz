@@ -96,19 +96,19 @@ export function DashboardAppearanceModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-2xs p-3 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-4xl bg-[#141414] rounded-2xl shadow-2xl border border-[#262626] flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-[#fafafa]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-gray-50/50 dark:bg-slate-900/50 shrink-0">
+        <div className="px-6 py-4 border-b border-[#242424] flex items-center justify-between bg-[#171717] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35] shadow-xs">
               <Palette className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+              <h3 className="text-base font-medium text-[#fafafa]">
                 Dashboard Appearance & Branding
               </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[#898989]">
                 Customize colors, card surfaces, corporate branding, and visual typography.
               </p>
             </div>
@@ -116,21 +116,21 @@ export function DashboardAppearanceModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+            className="rounded-lg p-1.5 text-[#898989] hover:text-[#fafafa] hover:bg-white/10 transition cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex border-b border-gray-200 dark:border-slate-800 px-6 bg-white dark:bg-slate-900 text-xs font-semibold shrink-0">
+        <div className="flex border-b border-[#242424] px-6 bg-[#141414] text-xs font-medium shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab("theme")}
-            className={`py-3 px-4 border-b-2 flex items-center gap-2 transition ${
+            className={`py-3 px-4 border-b-2 flex items-center gap-2 transition cursor-pointer ${
               activeTab === "theme"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/30"
-                : "border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+                ? "border-[#ff6b35] text-[#ff6b35] bg-[#ff6b35]/10"
+                : "border-transparent text-[#898989] hover:text-[#fafafa]"
             }`}
           >
             <Sparkles className="h-4 w-4" />
@@ -139,10 +139,10 @@ export function DashboardAppearanceModal({
           <button
             type="button"
             onClick={() => setActiveTab("branding")}
-            className={`py-3 px-4 border-b-2 flex items-center gap-2 transition ${
+            className={`py-3 px-4 border-b-2 flex items-center gap-2 transition cursor-pointer ${
               activeTab === "branding"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/30"
-                : "border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+                ? "border-[#ff6b35] text-[#ff6b35] bg-[#ff6b35]/10"
+                : "border-transparent text-[#898989] hover:text-[#fafafa]"
             }`}
           >
             <ImageIcon className="h-4 w-4" />
@@ -674,11 +674,11 @@ export function DashboardAppearanceModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-3.5 border-t border-gray-200 dark:border-slate-800 bg-gray-50/70 dark:bg-slate-900/70 flex items-center justify-between shrink-0">
+        <div className="px-6 py-3.5 border-t border-[#242424] bg-[#171717] flex items-center justify-between shrink-0">
           <button
             type="button"
             onClick={() => handleSelectPreset("default")}
-            className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-300 font-medium transition"
+            className="text-xs text-[#898989] hover:text-[#fafafa] font-normal transition cursor-pointer"
           >
             Reset to Default
           </button>
@@ -686,7 +686,7 @@ export function DashboardAppearanceModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition"
+              className="px-4 py-2 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] text-xs font-normal text-[#dedede] hover:text-white hover:bg-[#222222] transition cursor-pointer"
             >
               Cancel
             </button>
@@ -694,7 +694,7 @@ export function DashboardAppearanceModal({
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow-xs transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#9a3412] border border-[#ff6b35]/60 hover:bg-[#c2410c] hover:border-[#ff6b35] text-xs font-medium text-white shadow-xs transition disabled:opacity-50 cursor-pointer"
             >
               {isSaving ? (
                 <>

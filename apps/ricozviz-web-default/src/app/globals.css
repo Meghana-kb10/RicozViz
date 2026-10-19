@@ -8,9 +8,9 @@
    ========================================================================== */
 
 @theme {
-  --font-heading: var(--font-heading, "Manrope", sans-serif);
+  --font-heading: var(--font-heading, "Inter", sans-serif);
   --font-sans: var(--font-sans, "Inter", sans-serif);
-  --font-mono: var(--font-mono, "IBM Plex Mono", monospace);
+  --font-mono: var(--font-mono, "JetBrains Mono", monospace);
 
   --color-editorial-bg: #F4F1EA;
   --color-editorial-card: #FFFFFF;
@@ -50,51 +50,51 @@
 }
 
 :root {
-  /* ---- Editorial Enterprise Palette (Light Marketing & Default Theme) ---- */
-  --background: 42 31% 94%;
-  /* #F4F1EA - Main background */
-  --foreground: 206 43% 16%;
-  /* #172B3A - Primary text */
+  /* ---- Precision Dark Analytics Workspace Palette (Harmonized with Landing Page) ---- */
+  --background: 0 0% 7%;
+  /* #121212 - Main floor */
+  --foreground: 0 0% 98%;
+  /* #fafafa - Primary text */
 
-  --surface: 0 0% 100%;
-  /* #FFFFFF - Surface / card background */
-  --surface-border: 110 9% 86%;
-  /* #DADFD9 - Hairline borders */
-  --surface-subtle: 40 16% 91%;
-  /* #EBE7DF - Soft panel / tag fill */
+  --surface: 0 0% 8%;
+  /* #141414 - Surface / card background */
+  --surface-border: 0 0% 15%;
+  /* #262626 - Hairline borders */
+  --surface-subtle: 0 0% 10%;
+  /* #1a1a1a - Soft panel / tag fill */
 
-  --primary: 177 72% 28%;
-  /* #147D78 - Primary accent */
-  --primary-hover: 176 74% 24%;
-  /* #106963 - Accent hover */
+  --primary: 16 100% 60%;
+  /* #ff6b35 - Primary accent */
+  --primary-hover: 16 85% 48%;
+  /* #c2410c - Accent hover */
   --primary-foreground: 0 0% 100%;
   /* Crisp readable white */
-  --primary-glow: 177 72% 28% / 0.12;
+  --primary-glow: 16 100% 60% / 0.15;
 
-  --secondary: 40 16% 91%;
-  /* #EBE7DF */
-  --secondary-foreground: 206 43% 16%;
-  /* #172B3A */
+  --secondary: 0 0% 10%;
+  /* #1a1a1a */
+  --secondary-foreground: 0 0% 98%;
+  /* #fafafa */
 
-  --accent: 177 72% 28%;
-  /* #147D78 */
-  --accent-hover: 176 74% 24%;
-  /* #106963 */
+  --accent: 16 100% 60%;
+  /* #ff6b35 */
+  --accent-hover: 16 85% 48%;
+  /* #c2410c */
   --accent-foreground: 0 0% 100%;
 
   --highlight: 39 68% 55%;
   /* #D9A441 - Subtle highlight */
 
-  --muted: 40 16% 91%;
-  --muted-foreground: 210 14% 40%;
-  /* #596775 - Secondary text */
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 54%;
+  /* #898989 - Secondary text */
 
-  --card: 0 0% 100%;
-  /* #FFFFFF */
-  --card-foreground: 206 43% 16%;
-  /* #172B3A */
-  --card-border: 110 9% 86%;
-  /* #DADFD9 */
+  --card: 0 0% 8%;
+  /* #141414 */
+  --card-foreground: 0 0% 98%;
+  /* #fafafa */
+  --card-border: 0 0% 15%;
+  /* #262626 */
 
   --success: 160 84% 39%;
   /* #10B981 */
@@ -113,52 +113,52 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.25rem;
 
-  --shadow-tactile: 0 1px 2px 0 rgba(23, 43, 58, 0.04), 0 1px 3px 0 rgba(23, 43, 58, 0.03);
-  --shadow-float: 0 4px 12px -2px rgba(23, 43, 58, 0.08);
+  --shadow-tactile: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 4px 14px -2px rgba(0, 0, 0, 0.4);
 }
 
 .dark {
   /* ---- Precision Dark Analytics Workspace Palette ---- */
-  --background: 221 39% 11%;
-  /* #111827 - Background */
-  --foreground: 220 14% 91%;
-  /* #E5E7EB - Primary text */
+  --background: 0 0% 7%;
+  /* #121212 - Background */
+  --foreground: 0 0% 98%;
+  /* #fafafa - Primary text */
 
-  --surface: 215 28% 17%;
-  /* #1F2937 - Card surfaces */
-  --surface-border: 217 19% 27%;
-  /* #374151 - Borders */
-  --surface-subtle: 217 25% 21%;
-  /* #283548 - Secondary panel fill */
+  --surface: 0 0% 8%;
+  /* #141414 - Card surfaces */
+  --surface-border: 0 0% 15%;
+  /* #262626 - Borders */
+  --surface-subtle: 0 0% 10%;
+  /* #1a1a1a - Secondary panel fill */
 
-  --primary: 168 33% 46%;
-  /* #4F9D8E - Accent */
-  --primary-hover: 168 35% 40%;
-  /* #43887B */
+  --primary: 16 100% 60%;
+  /* #ff6b35 - Accent */
+  --primary-hover: 16 85% 48%;
+  /* #c2410c */
   --primary-foreground: 0 0% 100%;
-  --primary-glow: 168 33% 46% / 0.15;
+  --primary-glow: 16 100% 60% / 0.15;
 
-  --secondary: 215 28% 17%;
-  --secondary-foreground: 220 14% 91%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 98%;
 
-  --accent: 168 33% 46%;
-  /* #4F9D8E */
-  --accent-hover: 168 35% 40%;
+  --accent: 16 100% 60%;
+  /* #ff6b35 */
+  --accent-hover: 16 85% 48%;
   --accent-foreground: 0 0% 100%;
 
   --highlight: 39 68% 55%;
   /* #D9A441 */
 
-  --muted: 215 28% 17%;
-  --muted-foreground: 218 11% 65%;
-  /* #9CA3AF - Secondary text */
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 54%;
+  /* #898989 - Secondary text */
 
-  --card: 215 28% 17%;
-  /* #1F2937 */
-  --card-foreground: 220 14% 91%;
-  /* #E5E7EB */
-  --card-border: 217 19% 27%;
-  /* #374151 */
+  --card: 0 0% 8%;
+  /* #141414 */
+  --card-foreground: 0 0% 98%;
+  /* #fafafa */
+  --card-border: 0 0% 15%;
+  /* #262626 */
 
   --shadow-tactile: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
   --shadow-float: 0 4px 14px -2px rgba(0, 0, 0, 0.4);
@@ -189,7 +189,7 @@ body {
   min-height: 100vh;
 }
 
-/* Headings: Manrope with purposeful, disciplined weighting */
+/* Headings: Inter with purposeful, disciplined weighting */
 h1,
 h2,
 h3,
@@ -197,17 +197,18 @@ h4,
 h5,
 h6,
 .font-heading {
-  font-family: var(--font-heading, "Manrope", sans-serif);
+  font-family: var(--font-heading, "Inter", sans-serif);
   letter-spacing: -0.02em;
 }
 
-/* Technical Metrics, Query Timings & Code: IBM Plex Mono strictly */
+/* Technical Metrics, Query Timings & Code: JetBrains Mono strictly */
 code,
 kbd,
 samp,
 pre,
-.font-mono {
-  font-family: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+.font-mono,
+.font-mono-code {
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
   letter-spacing: -0.015em;
 }
 
@@ -239,26 +240,26 @@ pre,
 }
 
 .btn-primary {
-  background-color: #147D78;
+  background-color: #ff6b35;
   color: #FFFFFF;
-  border: 1px solid #106963;
-  box-shadow: 0 1px 2px 0 rgba(20, 125, 120, 0.15);
+  border: 1px solid #c2410c;
+  box-shadow: 0 1px 2px 0 rgba(255, 107, 53, 0.2);
 }
 
 .btn-primary:hover {
-  background-color: #106963;
-  border-color: #0d544f;
+  background-color: #c2410c;
+  border-color: #9a3412;
 }
 
 .dark .btn-primary {
-  background-color: #4F9D8E;
+  background-color: #ff6b35;
   color: #FFFFFF;
-  border: 1px solid #43887B;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  border: 1px solid #ff6b35;
+  box-shadow: 0 0 16px -2px rgba(255, 107, 53, 0.35);
 }
 
 .dark .btn-primary:hover {
-  background-color: #43887B;
+  background-color: #c2410c;
 }
 
 .btn-secondary {
@@ -303,16 +304,16 @@ pre,
 
 /* Precision Dark Workspace Bento Card */
 .bento-card-technical {
-  background-color: #1F2937;
-  border: 1px solid #374151;
+  background-color: #141414;
+  border: 1px solid #262626;
   border-radius: var(--radius-lg);
-  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.4);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .bento-card-technical:hover {
-  border-color: #4F9D8E;
-  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.35);
+  border-color: #ff6b35;
+  box-shadow: 0 4px 14px -2px rgba(255, 107, 53, 0.25);
 }
 
 /* ==========================================================================
@@ -332,22 +333,22 @@ pre,
 
 .haikei-tech-grid {
   background-image:
-    linear-gradient(to right, rgba(20, 125, 120, 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(20, 125, 120, 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 107, 53, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 107, 53, 0.06) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 .dark .haikei-tech-grid {
   background-image:
-    linear-gradient(to right, rgba(79, 157, 142, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(79, 157, 142, 0.08) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 107, 53, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 107, 53, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 .haikei-emerald-grid {
   background-image:
-    linear-gradient(to right, rgba(20, 125, 120, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(20, 125, 120, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(16, 185, 129, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
   background-size: 36px 36px;
 }
 
@@ -360,7 +361,7 @@ pre,
   left: 0;
   right: 0;
   height: 2px;
-  background-color: #147D78;
+  background-color: #ff6b35;
   transform-origin: 0%;
   z-index: 9999;
   pointer-events: none;
@@ -368,7 +369,7 @@ pre,
 }
 
 .dark #scroll-progress-bar {
-  background-color: #4F9D8E;
+  background-color: #ff6b35;
 }
 
 /* ==========================================================================

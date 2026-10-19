@@ -108,7 +108,7 @@ export default function LoginPage() {
       <header className="relative z-10 w-full border-b border-[#2e2e2e]/70 px-6 py-4">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <img className="size-6 object-contain" src="/images/logo.png" alt="RicozViz" />
+            <img className="size-6 rounded-md object-contain" src="/images/logo.png" alt="RicozViz" />
             <span className="text-[17px] font-medium tracking-tight text-[#fafafa] group-hover:text-[#ff6b35] transition-colors">
               ricozviz
             </span>
@@ -160,9 +160,10 @@ export default function LoginPage() {
             )}
 
             {/* Mode Switcher Buttons */}
-            <div className="mb-5 flex rounded-[10px] border border-[#2e2e2e] bg-[#121212] p-1">
+            <div className="mb-5 flex rounded-[10px] border border-[#2e2e2e] bg-[#121212] p-1" suppressHydrationWarning>
               <button
                 type="button"
+                suppressHydrationWarning
                 onClick={() => {
                   setIsSsoMode(false);
                   setError(null);
@@ -176,6 +177,7 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
+                suppressHydrationWarning
                 onClick={() => {
                   setIsSsoMode(true);
                   setError(null);
@@ -190,7 +192,7 @@ export default function LoginPage() {
             </div>
 
             {/* Form */}
-            <form onSubmit={(e) => { void handleSubmit(e); }} noValidate className="space-y-4">
+            <form onSubmit={(e) => { void handleSubmit(e); }} noValidate className="space-y-4" suppressHydrationWarning>
               {!isSsoMode ? (
                 <>
                   {/* Email Input */}
@@ -209,6 +211,7 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="architect@enterprise.io"
                       disabled={isLoading}
+                      suppressHydrationWarning
                       className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["email"]
                           ? "border-red-500/60 bg-red-950/20"
                           : "border-[#393939]"
@@ -238,6 +241,7 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       disabled={isLoading}
+                      suppressHydrationWarning
                       className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["password"]
                           ? "border-red-500/60 bg-red-950/20"
                           : "border-[#393939]"
@@ -263,6 +267,7 @@ export default function LoginPage() {
                       onChange={(e) => setSsoDomain(e.target.value)}
                       placeholder="acmecorp.io or tenant-slug"
                       disabled={isLoading}
+                      suppressHydrationWarning
                       className="w-full rounded-[10px] border border-[#393939] bg-[#121212] px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] outline-none transition focus:border-[#ff6b35] disabled:opacity-50"
                     />
                   </div>
@@ -277,6 +282,7 @@ export default function LoginPage() {
                 id="login-submit"
                 type="submit"
                 disabled={isLoading}
+                suppressHydrationWarning
                 className="w-full mt-2 flex h-[40px] items-center justify-center gap-2 rounded-full border border-[#ff6b35]/80 bg-[#9a3412] px-4 text-sm font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c] disabled:opacity-60 cursor-pointer shadow-[0_0_20px_rgba(255,107,53,0.18)]"
               >
                 {isLoading ? (
@@ -302,10 +308,11 @@ export default function LoginPage() {
             </form>
 
             {/* Quick Demo Pre-fill */}
-            <div className="mt-5 pt-4 border-t border-[#2e2e2e] flex items-center justify-between text-[11px] font-mono-code text-[#898989]">
+            <div className="mt-5 pt-4 border-t border-[#2e2e2e] flex items-center justify-between text-[11px] font-mono-code text-[#898989]" suppressHydrationWarning>
               <span>Demo tenant:</span>
               <button
                 type="button"
+                suppressHydrationWarning
                 onClick={() => {
                   setEmail("demo@ricozviz.io");
                   setPassword("password123");

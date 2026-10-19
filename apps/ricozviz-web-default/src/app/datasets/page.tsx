@@ -6,6 +6,25 @@ import Link from "next/link";
 import { useAuth } from "../../contexts/auth-context";
 import { useWorkspace } from "../../contexts/workspace-context";
 import { BrandLogo } from "@/components/shell/BrandLogo";
+import { AppShell } from "@/components/shell/AppShell";
+import {
+  Database,
+  Plus,
+  Search,
+  Sparkles,
+  RefreshCw,
+  Shield,
+  Layers,
+  FileSpreadsheet,
+  Eye,
+  Trash2,
+  ArrowRight,
+  X,
+  Table as TableIcon,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
 import {
   apiListDatasets,
   apiCreateDataset,
@@ -656,8 +675,11 @@ export default function DatasetsPage() {
 
   if (isLoading || !auth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">Loading datasets...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#121212]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
+          <p className="text-xs font-mono text-[#898989]">Loading datasets...</p>
+        </div>
       </div>
     );
   }
@@ -683,126 +705,133 @@ export default function DatasetsPage() {
     return true;
   });
 
+  const totalDatasets = datasets.length;
+  const totalRows = datasets.reduce((acc, d) => acc + (d.rowCount || 0), 0);
+  const connectedCount = datasets.filter((d) => d.type === "CONNECTED").length;
+  const derivedCount = datasets.filter((d) => d.type === "DERIVED").length;
+
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Top Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 font-bold text-gray-900">
-              <BrandLogo size={32} />
-              <span>RicozViz</span>
-            </Link>
-            <span className="text-gray-300">/</span>
-            <Link href="/workspace" className="text-sm text-gray-500 hover:text-gray-900">
-              Workspace
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-sm font-semibold text-gray-900">Datasets</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/data-sources"
-              className="text-xs font-medium text-gray-600 hover:text-indigo-600 transition hidden sm:inline"
-            >
-              Data Sources →
-            </Link>
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">{auth.user.name}</p>
-              <p className="text-xs text-gray-500">
-                {auth.role} · {auth.organization.name}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                void logout();
-                router.replace("/login");
-              }}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl w-full px-4 py-8 sm:px-6 flex-1">
+    <AppShell>
+      <div className="flex-1 space-y-6 p-6 md:p-8 max-w-7xl mx-auto w-full">
         {/* Alerts */}
         {errorMsg && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 flex justify-between items-center">
-            <span>{errorMsg}</span>
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs font-mono text-rose-300 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
             <button
               onClick={() => setErrorMsg(null)}
-              className="text-red-500 hover:text-red-800 text-xs font-bold"
+              className="text-rose-400 hover:text-white p-1 rounded transition-colors"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex justify-between items-center">
-            <span>{successMsg}</span>
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-mono text-emerald-300 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
             <button
               onClick={() => setSuccessMsg(null)}
-              className="text-green-500 hover:text-green-800 text-xs font-bold"
+              className="text-emerald-400 hover:text-white p-1 rounded transition-colors"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
 
+        {/* 4-KPI Metric Ribbon */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          <div className="rounded-[16px] border border-[#262626] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] mb-1">
+              <span className="text-[11px] font-mono-code uppercase tracking-wider">Total Datasets</span>
+              <Database className="h-4 w-4 text-[#ff6b35]" />
+            </div>
+            <div className="text-2xl font-semibold font-mono text-[#fafafa]">{totalDatasets}</div>
+            <div className="text-[11px] text-[#666666] mt-0.5">Active in workspace</div>
+          </div>
+          <div className="rounded-[16px] border border-[#262626] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] mb-1">
+              <span className="text-[11px] font-mono-code uppercase tracking-wider">Total Records</span>
+              <TableIcon className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-semibold font-mono text-emerald-400">{totalRows.toLocaleString()}</div>
+            <div className="text-[11px] text-[#666666] mt-0.5">Tabular data ingested</div>
+          </div>
+          <div className="rounded-[16px] border border-[#262626] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] mb-1">
+              <span className="text-[11px] font-mono-code uppercase tracking-wider">Connected DBs</span>
+              <RefreshCw className="h-4 w-4 text-sky-400" />
+            </div>
+            <div className="text-2xl font-semibold font-mono text-[#fafafa]">{connectedCount}</div>
+            <div className="text-[11px] text-[#666666] mt-0.5">Live database tables</div>
+          </div>
+          <div className="rounded-[16px] border border-[#262626] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] mb-1">
+              <span className="text-[11px] font-mono-code uppercase tracking-wider">Blended & Derived</span>
+              <Layers className="h-4 w-4 text-purple-400" />
+            </div>
+            <div className="text-2xl font-semibold font-mono text-purple-400">{derivedCount}</div>
+            <div className="text-[11px] text-[#666666] mt-0.5">Virtual blended tables</div>
+          </div>
+        </div>
+
         {/* Page Title & Action Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Datasets</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-2xl font-normal tracking-[-0.02em] text-[#fafafa]">Datasets</h1>
+            <p className="text-xs text-[#898989] mt-1 font-sans">
               Curate, preview, blend, and govern tabular datasets ready for exploration.
             </p>
           </div>
 
           {canCreate && (
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <Link
                 href="/datasets/demo"
                 id="explore-demo-datasets-btn"
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 transition shadow-2xs"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] transition-colors"
               >
-                <span>✨ Demo Datasets</span>
+                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                <span>Demo Datasets</span>
               </Link>
               <button
                 id="blend-datasets-btn"
                 type="button"
                 onClick={openBlendModal}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50/80 px-3.5 py-2 text-sm font-semibold text-purple-700 hover:bg-purple-100 transition shadow-2xs"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#ff6b35]/40 hover:text-[#ff6b35] transition-colors cursor-pointer"
               >
-                <span>⚡ Blend Datasets</span>
+                <Layers className="h-3.5 w-3.5 text-[#ff6b35]" />
+                <span>Blend Datasets</span>
               </button>
               <button
                 id="add-dataset-btn"
                 type="button"
                 onClick={openCreateModal}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer"
               >
-                <span>+ Create Dataset</span>
+                <Plus className="h-3.5 w-3.5" />
+                <span>Create Dataset</span>
               </button>
             </div>
           )}
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-gray-200 pb-2 sm:pb-0 sm:border-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-1.5">
             {["ALL", "CSV", "XLSX", "JSON", "CONNECTED", "DERIVED"].map((t) => (
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                className={`rounded-full border px-3 py-1 text-xs transition-colors cursor-pointer ${
                   filterType === t
-                    ? "bg-indigo-600 text-white font-semibold"
-                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-semibold"
+                    : "border-[#262626] bg-[#141414] text-[#898989] hover:border-[#393939] hover:text-[#fafafa]"
                 }`}
               >
                 {t === "ALL"
@@ -820,63 +849,66 @@ export default function DatasetsPage() {
             ))}
           </div>
 
-          <div className="w-full sm:w-64">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-[#666666]" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search datasets..."
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-full border border-[#262626] bg-[#141414] pl-9 pr-3 py-1.5 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         {/* Datasets Grid / Empty State */}
         {loadingData ? (
-          <div className="py-16 text-center text-sm text-gray-500">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2" />
-            <p>Loading datasets...</p>
+          <div className="py-20 text-center text-xs text-[#898989]">
+            <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-[#ff6b35] border-t-transparent mb-3" />
+            <p className="font-mono">Loading workspace datasets...</p>
           </div>
         ) : filteredDatasets.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 text-2xl mb-4">
-              🗃️
+          <div className="rounded-[16px] border border-dashed border-[#262626] bg-[#141414] p-12 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#1c1c1c] text-[#ff6b35] text-2xl mb-4 border border-[#262626]">
+              <Database className="h-6 w-6 text-[#ff6b35]" />
             </div>
             {searchTerm || filterType !== "ALL" ? (
               <>
-                <h3 className="text-base font-semibold text-gray-900">No matching datasets found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  No datasets match your active search term &quot;{searchTerm}&quot; or source filter.
+                <h3 className="text-base font-medium text-[#fafafa]">No matching datasets found</h3>
+                <p className="mt-1 text-xs text-[#898989]">
+                  No datasets match your active search term &quot;{searchTerm}&quot; or filter.
                 </p>
                 <button
                   onClick={() => {
                     setSearchTerm("");
                     setFilterType("ALL");
                   }}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 shadow-2xs"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#262626] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] transition-colors"
                 >
                   Clear Search & Filters
                 </button>
               </>
             ) : (
               <>
-                <h3 className="text-base font-semibold text-gray-900">No datasets found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Create a dataset from a connected PostgreSQL database or import an uploaded CSV/Excel file.
+                <h3 className="text-base font-medium text-[#fafafa]">No datasets configured yet</h3>
+                <p className="mt-1 text-xs text-[#898989] max-w-md mx-auto">
+                  Connect PostgreSQL, MySQL, ClickHouse or upload CSV/XLSX spreadsheets to start building analytics.
                 </p>
                 {canCreate && (
                   <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                     <button
                       onClick={openCreateModal}
-                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-2 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer"
                     >
-                      + Create Dataset
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Create Dataset</span>
                     </button>
                     <Link
                       href="/datasets/demo"
-                      className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 shadow-2xs hover:bg-amber-100"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-4 py-2 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] transition-colors"
                     >
-                      ✨ Explore Demo Datasets
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      <span>Explore Demo Datasets</span>
                     </Link>
                   </div>
                 )}
@@ -884,15 +916,15 @@ export default function DatasetsPage() {
             )}
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filteredDatasets.map((ds) => (
               <div
                 key={ds.id}
-                className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between"
+                className="group rounded-[16px] border border-[#262626] bg-[#141414] p-5 hover:border-[#3d3d3d] transition-all duration-300 flex flex-col justify-between hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+                    <span className="inline-flex items-center gap-1 rounded-md border border-[#333333] bg-[#1a1a1a] px-2 py-0.5 text-[10px] font-mono-code font-semibold text-[#dedede]">
                       {ds.type === "CONNECTED"
                         ? "🔌 Connected"
                         : ds.sourceType === "XLSX"
@@ -902,121 +934,123 @@ export default function DatasetsPage() {
                         : "📄 CSV"}
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-mono-code font-semibold border ${
                         ds.status === "READY"
-                          ? "bg-green-50 text-green-700 border border-green-200"
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
                           : ds.status === "FAILED" || ds.status === "ERROR"
-                          ? "bg-red-50 text-red-700 border border-red-200"
-                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                          ? "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                          : "border-sky-500/30 bg-sky-500/10 text-sky-400"
                       }`}
                     >
-                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
                       {ds.status}
                     </span>
                   </div>
 
                   <Link
                     href={`/datasets/${ds.id}`}
-                    className="text-base font-semibold text-gray-900 hover:text-indigo-600 transition truncate block"
+                    className="text-base font-medium text-[#fafafa] group-hover:text-[#ff6b35] transition-colors truncate block"
                   >
                     {ds.name}
                   </Link>
 
-                  {ds.description && (
-                    <p className="mt-1 text-xs text-gray-500 line-clamp-2">
-                      {ds.description}
-                    </p>
-                  )}
+                  <p className="mt-1 text-xs text-[#898989] line-clamp-2 min-h-[32px] leading-relaxed">
+                    {ds.description || "Tabular schema registered for reporting and exploratory analytics."}
+                  </p>
 
-                  <div className="mt-4 rounded-lg bg-gray-50 p-2.5 text-xs text-gray-600 space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Source:</span>
-                      <span className="font-medium text-gray-700 truncate max-w-[140px]">
+                  <div className="mt-4 rounded-xl bg-[#181818] border border-[#222222] p-3 text-[11px] font-mono-code text-[#898989] space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#666666]">Source:</span>
+                      <span className="text-[#dedede] font-medium truncate max-w-[140px]">
                         {ds.dataSourceName || ds.fileName || (ds.sourceType ? `${ds.sourceType} File` : "Uploaded File")}
                       </span>
                     </div>
                     {ds.fileName && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">File:</span>
-                        <span className="font-mono text-gray-700 truncate max-w-[140px]" title={ds.fileName}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#666666]">File:</span>
+                        <span className="text-[#fafafa] truncate max-w-[140px]" title={ds.fileName}>
                           {ds.fileName}
                         </span>
                       </div>
                     )}
                     {ds.tableName && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Table:</span>
-                        <span className="font-mono text-gray-700 truncate max-w-[140px]">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#666666]">Table:</span>
+                        <span className="text-[#ff6b35] truncate max-w-[140px]">
                           {ds.tableName}
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Rows:</span>
-                      <span className="font-medium text-gray-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#666666]">Rows:</span>
+                      <span className="text-emerald-400 font-semibold">
                         {ds.rowCount.toLocaleString()} rows
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Columns:</span>
-                      <span className="font-medium text-gray-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#666666]">Columns:</span>
+                      <span className="text-[#fafafa]">
                         {ds.columnCount || ds.columns.length} columns
                       </span>
                     </div>
                     {ds.fileSize && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Size:</span>
-                        <span className="font-medium text-gray-700">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[#666666]">Size:</span>
+                        <span className="text-[#dedede]">
                           {(ds.fileSize / 1024).toFixed(1)} KB
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Updated:</span>
-                      <span className="text-gray-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#666666]">Updated:</span>
+                      <span className="text-[#898989]">
                         {ds.updatedAt ? new Date(ds.updatedAt).toLocaleDateString() : "Recently"}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                <div className="mt-5 pt-3.5 border-t border-[#222222] flex items-center justify-between gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={() => void openQuickPreview(ds)}
-                      className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      className="rounded-md border border-[#262626] bg-[#1a1a1a] px-2.5 py-1 text-[11px] font-mono-code text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                      👁️ Preview
+                      <Eye className="h-3 w-3 text-[#ff6b35]" />
+                      <span>Preview</span>
                     </button>
                     <Link
                       href={`/datasets/${ds.id}`}
-                      className="rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
+                      className="rounded-md border border-[#ff6b35]/40 bg-[#ff6b35]/10 px-2.5 py-1 text-[11px] font-medium text-[#ff6b35] hover:bg-[#ff6b35]/20 flex items-center gap-1 transition-colors"
                     >
-                      Details →
+                      <span>Details</span>
+                      <ArrowRight className="h-3 w-3" />
                     </Link>
                     <button
                       onClick={() => void openRefreshModal(ds)}
-                      className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 flex items-center gap-1"
+                      className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-400 hover:bg-emerald-500/20 flex items-center gap-1 transition-colors cursor-pointer"
                       title="Schedule automated data refresh"
                     >
-                      🔄 Refresh
+                      <RefreshCw className="h-3 w-3" />
+                      <span>Refresh</span>
                     </button>
                     <button
                       onClick={() => void openRlsModal(ds)}
-                      className="rounded-lg border border-purple-200 bg-purple-50/80 px-2 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100 flex items-center gap-1"
+                      className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-[11px] font-medium text-purple-400 hover:bg-purple-500/20 flex items-center gap-1 transition-colors cursor-pointer"
                       title="Manage Row-Level Security (RLS) rules"
                     >
-                      🔒 RLS
+                      <Shield className="h-3 w-3" />
+                      <span>RLS</span>
                     </button>
                   </div>
-
 
                   {canDelete && (
                     <button
                       onClick={() => void handleDelete(ds.id, ds.name)}
-                      className="rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                      className="rounded-md border border-rose-500/20 bg-rose-500/10 p-1.5 text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                      title="Delete dataset"
                     >
-                      Delete
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
@@ -1024,370 +1058,370 @@ export default function DatasetsPage() {
             ))}
           </div>
         )}
-      </main>
 
-      {/* Modal: Create Dataset */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">Create Dataset</h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitCreate} className="mt-4 space-y-4">
-              {/* Mode switch */}
-              <div className="grid grid-cols-3 gap-2">
+        {/* Modal: Create Dataset */}
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-xl rounded-[20px] border border-[#262626] bg-[#141414] p-6 shadow-2xl max-h-[90vh] overflow-y-auto text-[#fafafa]">
+              <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
+                <h2 className="text-base font-medium text-[#fafafa]">Create Dataset</h2>
                 <button
-                  type="button"
-                  onClick={() => setCreationMode("FILE")}
-                  className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center ${
-                    creationMode === "FILE"
-                      ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                      : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                  }`}
+                  onClick={() => setIsModalOpen(false)}
+                  className="rounded-full p-1 text-[#898989] hover:text-[#fafafa] transition-colors"
                 >
-                  📁 Upload File
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCreationMode("DATASOURCE")}
-                  className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center ${
-                    creationMode === "DATASOURCE"
-                      ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                      : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  🔌 Data Source
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCreationMode("CSV")}
-                  className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center ${
-                    creationMode === "CSV"
-                      ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                      : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  📝 Paste CSV
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Mode: File Upload (CSV / XLSX / JSON) */}
-              {creationMode === "FILE" && (
-                <div className="space-y-3 pt-2">
-                  <div className="rounded-lg bg-indigo-50/70 border border-indigo-100 p-3 text-xs text-indigo-900 space-y-1">
-                    <p className="font-semibold flex items-center gap-1.5">
-                      <span>ℹ️</span> Supported Formats: CSV, XLSX, JSON
-                    </p>
-                    <p className="text-indigo-700 text-[11px] leading-relaxed">
-                      Upload files up to 15MB. RicozViz parses tabular records, extracts column headers, infers data types (string, integer, decimal/number, boolean, date, datetime), and saves the dataset into your active workspace.
-                    </p>
-                  </div>
+              <form onSubmit={handleSubmitCreate} className="mt-4 space-y-4">
+                {/* Mode switch */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCreationMode("FILE")}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center cursor-pointer ${
+                      creationMode === "FILE"
+                        ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35]"
+                        : "border-[#262626] bg-[#1a1a1a] text-[#898989] hover:border-[#393939] hover:text-[#fafafa]"
+                    }`}
+                  >
+                    📁 Upload File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreationMode("DATASOURCE")}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center cursor-pointer ${
+                      creationMode === "DATASOURCE"
+                        ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35]"
+                        : "border-[#262626] bg-[#1a1a1a] text-[#898989] hover:border-[#393939] hover:text-[#fafafa]"
+                    }`}
+                  >
+                    🔌 Data Source
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCreationMode("CSV")}
+                    className={`py-2 px-2.5 rounded-lg text-xs font-semibold border transition text-center cursor-pointer ${
+                      creationMode === "CSV"
+                        ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35]"
+                        : "border-[#262626] bg-[#1a1a1a] text-[#898989] hover:border-[#393939] hover:text-[#fafafa]"
+                    }`}
+                  >
+                    📝 Paste CSV
+                  </button>
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Choose File (.csv, .xlsx, or .json) *
-                    </label>
-                    <div className="flex items-center justify-center w-full">
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 border-gray-300 hover:bg-gray-100 transition">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                          <svg className="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          {selectedFile ? (
-                            <div>
-                              <p className="text-xs font-bold text-indigo-600">{selectedFile.name}</p>
-                              <p className="text-[11px] text-gray-500">{(selectedFile.size / 1024).toFixed(1)} KB</p>
-                            </div>
-                          ) : (
-                            <div>
-                              <p className="text-xs font-semibold text-gray-600">Click or drag & drop to choose file</p>
-                              <p className="text-[11px] text-gray-400">CSV, XLSX, or JSON (max 15MB)</p>
-                            </div>
-                          )}
-                        </div>
-                        <input
-                          type="file"
-                          accept=".csv,.xlsx,.xls,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            setSelectedFile(file);
-                            if (file && !formName) {
-                              setFormName(file.name.replace(/\.[^/.]+$/, ""));
-                            }
-                          }}
-                        />
+                {/* Mode: File Upload (CSV / XLSX / JSON) */}
+                {creationMode === "FILE" && (
+                  <div className="space-y-3 pt-2">
+                    <div className="rounded-xl bg-[#ff6b35]/10 border border-[#ff6b35]/20 p-3 text-xs text-[#fafafa] space-y-1 font-sans">
+                      <p className="font-semibold text-[#ff6b35] flex items-center gap-1.5">
+                        <span>ℹ️</span> Supported Formats: CSV, XLSX, JSON
+                      </p>
+                      <p className="text-[#898989] text-[11px] leading-relaxed">
+                        Upload files up to 15MB. RicozViz parses tabular records, extracts column headers, infers data types, and saves the dataset into your active workspace.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-[#898989] mb-1">
+                        Choose File (.csv, .xlsx, or .json) *
                       </label>
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer bg-[#181818] border-[#2e2e2e] hover:border-[#ff6b35]/50 hover:bg-[#1a1a1a] transition">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                            <svg className="w-8 h-8 mb-2 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            {selectedFile ? (
+                              <div>
+                                <p className="text-xs font-bold text-[#ff6b35]">{selectedFile.name}</p>
+                                <p className="text-[11px] text-[#898989]">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="text-xs font-medium text-[#dedede]">Click or drag & drop to choose file</p>
+                                <p className="text-[11px] text-[#666666]">CSV, XLSX, or JSON (max 15MB)</p>
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            accept=".csv,.xlsx,.xls,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setSelectedFile(file);
+                              if (file && !formName) {
+                                setFormName(file.name.replace(/\.[^/.]+$/, ""));
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Mode: Data Source */}
-              {creationMode === "DATASOURCE" && (
-                <div className="space-y-3 pt-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Select Data Source *
-                    </label>
-                    <select
-                      value={selectedSourceId}
-                      onChange={(e) => handleSelectDataSource(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-                    >
-                      {dataSources.map((ds) => (
-                        <option key={ds.id} value={ds.id}>
-                          {ds.name} ({ds.type})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Select Table / View *
-                    </label>
-                    {loadingTables ? (
-                      <p className="text-xs text-gray-500">Discovering tables...</p>
-                    ) : (
+                {/* Mode: Data Source */}
+                {creationMode === "DATASOURCE" && (
+                  <div className="space-y-3 pt-2">
+                    <div>
+                      <label className="block text-xs font-medium text-[#898989] mb-1">
+                        Select Data Source *
+                      </label>
                       <select
-                        value={selectedTable}
-                        onChange={(e) =>
-                          handleSelectTable(selectedSourceId, e.target.value)
-                        }
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none font-mono text-xs"
+                        value={selectedSourceId}
+                        onChange={(e) => handleSelectDataSource(e.target.value)}
+                        className="w-full rounded-lg border border-[#262626] bg-[#1a1a1a] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       >
-                        {sourceTables.map((t) => (
-                          <option key={t.name} value={t.name}>
-                            {t.name} ({t.type})
+                        {dataSources.map((ds) => (
+                          <option key={ds.id} value={ds.id}>
+                            {ds.name} ({ds.type})
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-[#898989] mb-1">
+                        Select Table / View *
+                      </label>
+                      {loadingTables ? (
+                        <p className="text-xs text-[#898989] font-mono">Discovering tables...</p>
+                      ) : (
+                        <select
+                          value={selectedTable}
+                          onChange={(e) =>
+                            handleSelectTable(selectedSourceId, e.target.value)
+                          }
+                          className="w-full rounded-lg border border-[#262626] bg-[#1a1a1a] px-3 py-2 text-xs font-mono text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
+                        >
+                          {sourceTables.map((t) => (
+                            <option key={t.name} value={t.name}>
+                              {t.name} ({t.type})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    {discoveredCols.length > 0 && (
+                      <div className="rounded-xl bg-[#181818] border border-[#262626] p-3">
+                        <p className="text-xs font-medium text-[#fafafa] mb-2 font-mono">
+                          Discovered Schema ({discoveredCols.length} columns)
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                          {discoveredCols.map((c) => (
+                            <span
+                              key={c.name}
+                              className="rounded-md bg-[#141414] border border-[#262626] px-2 py-0.5 text-xs text-[#dedede]"
+                            >
+                              <span className="font-mono">{c.name}</span>:{" "}
+                              <span className="text-[#ff6b35] text-[10px]">{c.type}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
+                )}
 
-                  {discoveredCols.length > 0 && (
-                    <div className="rounded-lg bg-gray-50 p-3">
-                      <p className="text-xs font-semibold text-gray-700 mb-2">
-                        Discovered Schema ({discoveredCols.length} columns)
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                        {discoveredCols.map((c) => (
-                          <span
-                            key={c.name}
-                            className="rounded bg-white border border-gray-200 px-2 py-0.5 text-xs text-gray-600"
-                          >
-                            <span className="font-mono">{c.name}</span>:{" "}
-                            <span className="text-indigo-600 text-[10px]">{c.type}</span>
-                          </span>
-                        ))}
-                      </div>
+                {/* Mode: CSV */}
+                {creationMode === "CSV" && (
+                  <div className="space-y-3 pt-2">
+                    <div>
+                      <label className="block text-xs font-medium text-[#898989] mb-1">
+                        Paste CSV Content *
+                      </label>
+                      <textarea
+                        rows={5}
+                        required
+                        value={csvInput}
+                        onChange={(e) => setCsvInput(e.target.value)}
+                        placeholder={`customer_id,name,revenue,is_active\n1,"Acme Corp",15000.50,true\n2,"Globex",8500.00,false`}
+                        className="w-full rounded-lg border border-[#262626] bg-[#1a1a1a] px-3 py-2 text-xs font-mono text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
+                      />
                     </div>
-                  )}
-                </div>
-              )}
 
-              {/* Mode: CSV */}
-              {creationMode === "CSV" && (
-                <div className="space-y-3 pt-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Paste CSV Content *
-                    </label>
-                    <textarea
-                      rows={5}
-                      required
-                      value={csvInput}
-                      onChange={(e) => setCsvInput(e.target.value)}
-                      placeholder={`customer_id,name,revenue,is_active\n1,"Acme Corp",15000.50,true\n2,"Globex",8500.00,false`}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-mono focus:border-indigo-500 focus:outline-none"
-                    />
+                    <button
+                      type="button"
+                      onClick={handleParseCsv}
+                      disabled={previewingCsv || !csvInput.trim()}
+                      className="rounded-full border border-[#262626] bg-[#1a1a1a] px-3 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] cursor-pointer"
+                    >
+                      {previewingCsv ? "Parsing..." : "🔍 Inspect CSV & Infer Schema"}
+                    </button>
+
+                    {csvInferredCols.length > 0 && (
+                      <div className="rounded-xl bg-[#181818] border border-[#262626] p-3">
+                        <p className="text-xs font-medium text-[#fafafa] mb-2 font-mono">
+                          Inferred Schema ({csvInferredCols.length} columns)
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {csvInferredCols.map((c) => (
+                            <span
+                              key={c.name}
+                              className="rounded-md bg-[#141414] border border-[#262626] px-2 py-0.5 text-xs text-[#dedede]"
+                            >
+                              <span className="font-mono">{c.name}</span>:{" "}
+                              <span className="text-[#ff6b35] text-[10px]">{c.type}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
+                )}
 
+                {/* Common Details */}
+                <div>
+                  <label className="block text-xs font-medium text-[#898989] mb-1">
+                    Dataset Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="e.g. Monthly Revenue"
+                    className="w-full rounded-lg border border-[#262626] bg-[#1a1a1a] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#898989] mb-1">
+                    Description
+                  </label>
+                  <input
+                    type="text"
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    placeholder="Optional context about this dataset"
+                    className="w-full rounded-lg border border-[#262626] bg-[#1a1a1a] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#242424]">
                   <button
                     type="button"
-                    onClick={handleParseCsv}
-                    disabled={previewingCsv || !csvInput.trim()}
-                    className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsModalOpen(false)}
+                    className="rounded-full border border-[#2e2e2e] bg-[#1c1c1c] px-4 py-2 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] transition-colors cursor-pointer"
                   >
-                    {previewingCsv ? "Parsing..." : "🔍 Inspect CSV & Infer Schema"}
+                    Cancel
                   </button>
-
-                  {csvInferredCols.length > 0 && (
-                    <div className="rounded-lg bg-gray-50 p-3">
-                      <p className="text-xs font-semibold text-gray-700 mb-2">
-                        Inferred Schema ({csvInferredCols.length} columns)
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {csvInferredCols.map((c) => (
-                          <span
-                            key={c.name}
-                            className="rounded bg-white border border-gray-200 px-2 py-0.5 text-xs text-gray-600"
-                          >
-                            <span className="font-mono">{c.name}</span>:{" "}
-                            <span className="text-indigo-600 text-[10px]">{c.type}</span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-2 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>{creationMode === "FILE" ? "Uploading..." : "Creating..."}</span>
+                      </span>
+                    ) : (
+                      "Save Dataset"
+                    )}
+                  </button>
                 </div>
-              )}
-
-              {/* Common Details */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Dataset Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. Monthly Revenue"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Description
-                </label>
-                <input
-                  type="text"
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Optional context about this dataset"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>{creationMode === "FILE" ? "Uploading & Ingesting..." : "Creating..."}</span>
-                    </span>
-                  ) : (
-                    "Save Dataset"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Quick Preview */}
-      {previewingDataset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">
-                  Preview: {previewingDataset.name}
-                </h2>
-                <p className="text-xs text-gray-500">
-                  Showing up to 25 sample rows
-                </p>
-              </div>
-              <button
-                onClick={() => setPreviewingDataset(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+              </form>
             </div>
+          </div>
+        )}
 
-            <div className="flex-1 overflow-auto my-4 border border-gray-200 rounded-lg">
-              {loadingPreview ? (
-                <div className="p-8 text-center text-sm text-gray-500">
-                  Loading preview data...
+        {/* Modal: Quick Preview */}
+        {previewingDataset && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-4xl rounded-[20px] border border-[#262626] bg-[#141414] p-6 shadow-2xl max-h-[90vh] flex flex-col text-[#fafafa]">
+              <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
+                <div>
+                  <h2 className="text-base font-medium text-[#fafafa]">
+                    Preview: {previewingDataset.name}
+                  </h2>
+                  <p className="text-xs text-[#898989] font-mono">
+                    Showing up to 25 sample rows
+                  </p>
                 </div>
-              ) : previewRows.length === 0 ? (
-                <div className="p-8 text-center text-sm text-gray-500">
-                  No sample rows available.
-                </div>
-              ) : (
-                <table className="min-w-full divide-y divide-gray-200 text-xs">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      {previewCols.map((col) => (
-                        <th
-                          key={col}
-                          className="px-3 py-2 text-left font-semibold text-gray-700 uppercase tracking-wider"
-                        >
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
-                    {previewRows.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50">
+                <button
+                  onClick={() => setPreviewingDataset(null)}
+                  className="rounded-full p-1 text-[#898989] hover:text-[#fafafa] transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto my-4 border border-[#262626] rounded-xl bg-[#141414]">
+                {loadingPreview ? (
+                  <div className="p-8 text-center text-xs font-mono text-[#898989]">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-[#ff6b35] border-t-transparent mb-2" />
+                    <p>Loading preview data...</p>
+                  </div>
+                ) : previewRows.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-[#898989] font-mono">
+                    No sample rows available.
+                  </div>
+                ) : (
+                  <table className="min-w-full divide-y divide-[#262626] text-xs font-mono-code">
+                    <thead className="bg-[#1a1a1a]">
+                      <tr>
                         {previewCols.map((col) => (
-                          <td
+                          <th
                             key={col}
-                            className="px-3 py-2 text-gray-700 whitespace-nowrap"
+                            className="px-3 py-2 text-left text-[11px] font-semibold text-[#fafafa] uppercase tracking-wider"
                           >
-                            {row[col] !== undefined && row[col] !== null
-                              ? String(row[col])
-                              : "-"}
-                          </td>
+                            {col}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#222222] bg-[#141414]">
+                      {previewRows.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-[#1a1a1a] transition-colors">
+                          {previewCols.map((col) => (
+                            <td
+                              key={col}
+                              className="px-3 py-2 text-[#b4b4b4] whitespace-nowrap"
+                            >
+                              {row[col] !== undefined && row[col] !== null
+                                ? String(row[col])
+                                : "-"}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
 
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => setPreviewingDataset(null)}
-                className="rounded-lg bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200"
-              >
-                Close Preview
-              </button>
+              <div className="flex justify-end pt-2 border-t border-[#242424]">
+                <button
+                  onClick={() => setPreviewingDataset(null)}
+                  className="rounded-full border border-[#2e2e2e] bg-[#1c1c1c] px-4 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] transition-colors cursor-pointer"
+                >
+                  Close Preview
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Modal: Data Blending */}
       {isBlendModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-3xl rounded-[20px] border border-[#262626] bg-[#141414] p-6 shadow-2xl max-h-[90vh] flex flex-col text-[#fafafa]">
+            <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-700 font-bold text-sm">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#ff6b35]/15 text-[#ff6b35] font-bold text-sm border border-[#ff6b35]/30">
                   ⚡
                 </span>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="text-base font-medium text-[#fafafa]">
                     Blend Two Datasets
                   </h2>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[#898989]">
                     Join datasets by a common field using INNER or LEFT JOIN.
                   </p>
                 </div>
@@ -1395,20 +1429,20 @@ export default function DatasetsPage() {
               <button
                 type="button"
                 onClick={() => setIsBlendModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-sm font-bold"
+                className="rounded-full p-1 text-[#898989] hover:text-[#fafafa] transition-colors cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto my-4 space-y-5 pr-1">
+            <div className="flex-1 overflow-y-auto my-4 space-y-5 pr-1 font-sans">
               {blendError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800 flex justify-between items-center">
+                <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300 flex justify-between items-center font-mono">
                   <span>{blendError}</span>
                   <button
                     type="button"
                     onClick={() => setBlendError(null)}
-                    className="text-red-500 hover:text-red-700 font-bold ml-2"
+                    className="text-rose-400 hover:text-white font-bold ml-2"
                   >
                     ✕
                   </button>
@@ -1418,17 +1452,17 @@ export default function DatasetsPage() {
               {/* Dataset Selection Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Dataset A */}
-                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-3">
+                <div className="rounded-xl border border-[#262626] bg-[#181818] p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-900">Primary Dataset (A)</span>
-                    <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">Left Table</span>
+                    <span className="text-xs font-medium text-[#fafafa]">Primary Dataset (A)</span>
+                    <span className="text-[10px] font-mono-code bg-[#ff6b35]/15 text-[#ff6b35] px-2 py-0.5 rounded border border-[#ff6b35]/30">Left Table</span>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-gray-600 mb-1">Select Dataset</label>
+                    <label className="block text-[11px] font-medium text-[#898989] mb-1">Select Dataset</label>
                     <select
                       value={blendDatasetAId}
                       onChange={(e) => handleSelectDatasetA(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-lg border border-[#262626] bg-[#141414] px-2.5 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
                       <option value="">-- Choose Dataset A --</option>
                       {datasets.map((d) => (
@@ -1440,7 +1474,7 @@ export default function DatasetsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-medium text-gray-600 mb-1">Common Join Key (Column A)</label>
+                    <label className="block text-[11px] font-medium text-[#898989] mb-1">Common Join Key (Column A)</label>
                     <select
                       value={blendJoinColA}
                       onChange={(e) => {
@@ -1448,7 +1482,7 @@ export default function DatasetsPage() {
                         setBlendPreviewResult(null);
                       }}
                       disabled={!blendDatasetAId}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none disabled:bg-gray-100"
+                      className="w-full rounded-lg border border-[#262626] bg-[#141414] px-2.5 py-1.5 text-xs font-mono text-[#fafafa] focus:border-[#ff6b35] focus:outline-none disabled:opacity-40"
                     >
                       <option value="">-- Select Join Column --</option>
                       {datasets.find((d) => d.id === blendDatasetAId)?.columns?.map((c) => (
@@ -1461,17 +1495,17 @@ export default function DatasetsPage() {
                 </div>
 
                 {/* Dataset B */}
-                <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-3">
+                <div className="rounded-xl border border-[#262626] bg-[#181818] p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-900">Secondary Dataset (B)</span>
-                    <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">Right Table</span>
+                    <span className="text-xs font-medium text-[#fafafa]">Secondary Dataset (B)</span>
+                    <span className="text-[10px] font-mono-code bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded border border-purple-500/30">Right Table</span>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-gray-600 mb-1">Select Dataset</label>
+                    <label className="block text-[11px] font-medium text-[#898989] mb-1">Select Dataset</label>
                     <select
                       value={blendDatasetBId}
                       onChange={(e) => handleSelectDatasetB(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none"
+                      className="w-full rounded-lg border border-[#262626] bg-[#141414] px-2.5 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
                       <option value="">-- Choose Dataset B --</option>
                       {datasets
@@ -1485,7 +1519,7 @@ export default function DatasetsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-medium text-gray-600 mb-1">Common Join Key (Column B)</label>
+                    <label className="block text-[11px] font-medium text-[#898989] mb-1">Common Join Key (Column B)</label>
                     <select
                       value={blendJoinColB}
                       onChange={(e) => {
@@ -1493,7 +1527,7 @@ export default function DatasetsPage() {
                         setBlendPreviewResult(null);
                       }}
                       disabled={!blendDatasetBId}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-800 focus:border-indigo-500 focus:outline-none disabled:bg-gray-100"
+                      className="w-full rounded-lg border border-[#262626] bg-[#141414] px-2.5 py-1.5 text-xs font-mono text-[#fafafa] focus:border-[#ff6b35] focus:outline-none disabled:opacity-40"
                     >
                       <option value="">-- Select Join Column --</option>
                       {datasets.find((d) => d.id === blendDatasetBId)?.columns?.map((c) => (
@@ -1508,7 +1542,7 @@ export default function DatasetsPage() {
 
               {/* Join Type Selector */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">Join Type</label>
+                <label className="block text-xs font-medium text-[#898989] mb-2">Join Type</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -1516,17 +1550,17 @@ export default function DatasetsPage() {
                       setBlendJoinType("INNER");
                       setBlendPreviewResult(null);
                     }}
-                    className={`p-3 rounded-xl border text-left transition ${
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer ${
                       blendJoinType === "INNER"
-                        ? "border-purple-600 bg-purple-50/70 text-purple-900 ring-1 ring-purple-600"
-                        : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                        ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#fafafa]"
+                        : "border-[#262626] bg-[#181818] text-[#898989] hover:border-[#393939] hover:text-[#dedede]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold">INNER JOIN</span>
-                      <span className="text-[10px] text-purple-600 font-semibold">Intersection</span>
+                      <span className="text-xs font-bold font-mono">INNER JOIN</span>
+                      <span className="text-[10px] text-[#ff6b35] font-semibold">Intersection</span>
                     </div>
-                    <p className="text-[11px] text-gray-500 mt-1">
+                    <p className="text-[11px] text-[#898989] mt-1">
                       Includes only records with matching join values in both Dataset A and Dataset B.
                     </p>
                   </button>
@@ -1537,17 +1571,17 @@ export default function DatasetsPage() {
                       setBlendJoinType("LEFT");
                       setBlendPreviewResult(null);
                     }}
-                    className={`p-3 rounded-xl border text-left transition ${
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer ${
                       blendJoinType === "LEFT"
-                        ? "border-purple-600 bg-purple-50/70 text-purple-900 ring-1 ring-purple-600"
-                        : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                        ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#fafafa]"
+                        : "border-[#262626] bg-[#181818] text-[#898989] hover:border-[#393939] hover:text-[#dedede]"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold">LEFT JOIN</span>
-                      <span className="text-[10px] text-purple-600 font-semibold">All from A</span>
+                      <span className="text-xs font-bold font-mono">LEFT JOIN</span>
+                      <span className="text-[10px] text-purple-400 font-semibold">All from A</span>
                     </div>
-                    <p className="text-[11px] text-gray-500 mt-1">
+                    <p className="text-[11px] text-[#898989] mt-1">
                       Includes all records from Dataset A, with matching columns from Dataset B or nulls.
                     </p>
                   </button>
@@ -1560,11 +1594,11 @@ export default function DatasetsPage() {
                   type="button"
                   onClick={handlePreviewBlend}
                   disabled={previewingBlend || !blendDatasetAId || !blendDatasetBId || !blendJoinColA || !blendJoinColB}
-                  className="inline-flex items-center gap-2 rounded-lg border border-purple-300 bg-white px-4 py-2 text-xs font-bold text-purple-700 hover:bg-purple-50 transition shadow-2xs disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-4 py-2 text-xs font-medium text-[#dedede] hover:border-[#ff6b35]/50 hover:text-[#ff6b35] transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {previewingBlend ? (
                     <>
-                      <span className="h-3.5 w-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                      <span className="h-3.5 w-3.5 border-2 border-[#ff6b35] border-t-transparent rounded-full animate-spin" />
                       <span>Computing Live Blend...</span>
                     </>
                   ) : (
@@ -1573,7 +1607,7 @@ export default function DatasetsPage() {
                 </button>
 
                 {blendPreviewResult && (
-                  <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  <span className="text-xs text-emerald-400 font-mono-code font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30">
                     ✓ {blendPreviewResult.rowCount} total rows ({blendPreviewResult.resultingColumns.length} columns)
                   </span>
                 )}
@@ -1581,16 +1615,16 @@ export default function DatasetsPage() {
 
               {/* Preview Results Table & Metadata */}
               {blendPreviewResult && (
-                <div className="space-y-3 pt-2 border-t border-gray-100">
+                <div className="space-y-3 pt-2 border-t border-[#242424]">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] text-gray-500 font-medium mr-1">Resulting Columns:</span>
+                    <span className="text-[11px] text-[#898989] font-medium mr-1">Resulting Columns:</span>
                     {blendPreviewResult.resultingColumns.map((c) => (
                       <span
                         key={c.name}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono-code border ${
                           c.origin === "A"
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                            : "bg-purple-50 text-purple-700 border-purple-200"
+                            ? "bg-[#ff6b35]/15 text-[#ff6b35] border-[#ff6b35]/30"
+                            : "bg-purple-500/15 text-purple-400 border-purple-500/30"
                         }`}
                       >
                         <span>{c.name}</span>
@@ -1599,31 +1633,31 @@ export default function DatasetsPage() {
                     ))}
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg overflow-auto max-h-52 bg-white text-xs">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50 sticky top-0">
+                  <div className="border border-[#262626] rounded-xl overflow-auto max-h-52 bg-[#141414] text-xs font-mono-code">
+                    <table className="min-w-full divide-y divide-[#262626]">
+                      <thead className="bg-[#1a1a1a] sticky top-0">
                         <tr>
                           {blendPreviewResult.resultingColumns.map((col) => (
                             <th
                               key={col.name}
-                              className="px-3 py-1.5 text-left font-semibold text-gray-700 whitespace-nowrap"
+                              className="px-3 py-1.5 text-left font-semibold text-[#fafafa] whitespace-nowrap"
                             >
                               {col.name}
                             </th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-[#222222]">
                         {blendPreviewResult.rows.map((row, rIdx) => (
-                          <tr key={rIdx} className="hover:bg-gray-50">
+                          <tr key={rIdx} className="hover:bg-[#1a1a1a]">
                             {blendPreviewResult.resultingColumns.map((col) => (
                               <td
                                 key={col.name}
-                                className="px-3 py-1.5 text-gray-700 whitespace-nowrap"
+                                className="px-3 py-1.5 text-[#dedede] whitespace-nowrap"
                               >
                                 {row[col.name] !== undefined && row[col.name] !== null
                                   ? String(row[col.name])
-                                  : <span className="text-gray-400 italic">null</span>}
+                                  : <span className="text-[#666666] italic">null</span>}
                               </td>
                             ))}
                           </tr>
@@ -1633,10 +1667,10 @@ export default function DatasetsPage() {
                   </div>
 
                   {/* Save form */}
-                  <div className="space-y-3 pt-3 border-t border-gray-100">
+                  <div className="space-y-3 pt-3 border-t border-[#242424]">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Blended Dataset Name <span className="text-red-500">*</span>
+                      <label className="block text-xs font-medium text-[#898989] mb-1">
+                        Blended Dataset Name <span className="text-[#ff6b35]">*</span>
                       </label>
                       <input
                         type="text"
@@ -1644,17 +1678,17 @@ export default function DatasetsPage() {
                         value={blendName}
                         onChange={(e) => setBlendName(e.target.value)}
                         placeholder="e.g. Sales & Customers Unified"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-purple-600 focus:outline-none"
+                        className="w-full rounded-lg border border-[#262626] bg-[#1a1a1a] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Description (Optional)</label>
+                      <label className="block text-xs font-medium text-[#898989] mb-1">Description (Optional)</label>
                       <input
                         type="text"
                         value={blendDescription}
                         onChange={(e) => setBlendDescription(e.target.value)}
                         placeholder="e.g. Combined sales orders with customer demographic data"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-900 focus:border-purple-600 focus:outline-none"
+                        className="w-full rounded-lg border border-[#262626] bg-[#1a1a1a] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1662,11 +1696,11 @@ export default function DatasetsPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#242424]">
               <button
                 type="button"
                 onClick={() => setIsBlendModalOpen(false)}
-                className="rounded-lg border border-gray-300 px-3.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                className="rounded-full border border-[#2e2e2e] bg-[#1c1c1c] px-4 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] cursor-pointer"
               >
                 Cancel
               </button>
@@ -1674,7 +1708,7 @@ export default function DatasetsPage() {
                 type="button"
                 onClick={handleSaveBlend}
                 disabled={savingBlend || !blendPreviewResult || !blendName.trim()}
-                className="rounded-lg bg-purple-600 px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-purple-500 transition disabled:opacity-50 cursor-pointer"
+                className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all disabled:opacity-50 cursor-pointer"
               >
                 {savingBlend ? "Saving Blend..." : "Save Blended Dataset"}
               </button>
@@ -1685,52 +1719,52 @@ export default function DatasetsPage() {
 
       {/* Modal: Scheduled Data Refresh */}
       {isRefreshModalOpen && refreshDataset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[#262626] bg-[#141414] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-[#262626]">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <span>🔄</span>
+                <h2 className="text-base font-semibold text-[#fafafa] flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-[#ff6b35]" />
                   <span>Scheduled Data Refresh</span>
                 </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Automate re-ingestion and query updates for <span className="font-semibold text-gray-700">{refreshDataset.name}</span>
+                <p className="text-xs text-[#898989] mt-0.5">
+                  Automate re-ingestion and query updates for <span className="font-semibold text-[#fafafa]">{refreshDataset.name}</span>
                 </p>
               </div>
               <button
                 onClick={() => setIsRefreshModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 rounded-lg p-1 hover:bg-gray-100 transition cursor-pointer"
+                className="text-[#898989] hover:text-[#fafafa] rounded-lg p-1.5 hover:bg-[#1f1f1f] transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             {loadingSchedule ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-2 text-gray-500">
-                <span className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-                <span className="text-xs">Loading refresh schedule...</span>
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-[#898989]">
+                <span className="h-6 w-6 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
+                <span className="text-xs font-mono-code">Loading refresh schedule...</span>
               </div>
             ) : (
               <div className="mt-4 space-y-4">
                 {/* Status Card */}
-                <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-3.5 space-y-2 text-xs">
+                <div className="rounded-xl border border-[#262626] bg-[#181818] p-3.5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-500 font-medium">Current Status:</span>
+                    <span className="text-[#898989] font-medium">Current Status:</span>
                     <span
-                      className={`font-semibold px-2 py-0.5 rounded-full text-[11px] ${
+                      className={`font-semibold px-2 py-0.5 rounded-full text-[11px] font-mono-code ${
                         refreshSchedule?.lastStatus === "SUCCESS"
-                          ? "bg-emerald-100 text-emerald-800"
+                          ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
                           : refreshSchedule?.lastStatus === "FAILED"
-                          ? "bg-rose-100 text-rose-800"
-                          : "bg-blue-100 text-blue-800"
+                          ? "bg-rose-500/15 border border-rose-500/30 text-rose-400"
+                          : "bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35]"
                       }`}
                     >
                       {refreshSchedule?.lastStatus || "IDLE"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-500 font-medium">Last Refreshed:</span>
-                    <span className="text-gray-700 font-medium">
+                    <span className="text-[#898989] font-medium">Last Refreshed:</span>
+                    <span className="text-[#fafafa] font-mono-code">
                       {refreshSchedule?.lastRunAt
                         ? new Date(refreshSchedule.lastRunAt).toLocaleString()
                         : "Never"}
@@ -1738,14 +1772,14 @@ export default function DatasetsPage() {
                   </div>
                   {refreshSchedule?.nextRunAt && (
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 font-medium">Next Scheduled Run:</span>
-                      <span className="text-emerald-700 font-medium">
+                      <span className="text-[#898989] font-medium">Next Scheduled Run:</span>
+                      <span className="text-emerald-400 font-mono-code">
                         {new Date(refreshSchedule.nextRunAt).toLocaleString()}
                       </span>
                     </div>
                   )}
                   {refreshSchedule?.lastError && (
-                    <div className="mt-1 rounded-lg bg-rose-50 border border-rose-200 p-2 text-rose-700 text-[11px]">
+                    <div className="mt-1 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2 text-rose-400 text-[11px] font-mono-code">
                       {refreshSchedule.lastError}
                     </div>
                   )}
@@ -1754,19 +1788,19 @@ export default function DatasetsPage() {
                 {/* Schedule Configuration */}
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                    <label className="block text-xs font-medium text-[#898989] mb-1">
                       Refresh Frequency *
                     </label>
                     <select
                       value={refreshFrequency}
                       onChange={(e) => setRefreshFrequency(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                     >
-                      <option value="1H">Every Hour (1H)</option>
-                      <option value="6H">Every 6 Hours (6H)</option>
-                      <option value="12H">Every 12 Hours (12H)</option>
-                      <option value="DAILY">Daily (24 Hours)</option>
-                      <option value="WEEKLY">Weekly</option>
+                      <option value="1H" className="bg-[#141414] text-[#fafafa]">Every Hour (1H)</option>
+                      <option value="6H" className="bg-[#141414] text-[#fafafa]">Every 6 Hours (6H)</option>
+                      <option value="12H" className="bg-[#141414] text-[#fafafa]">Every 12 Hours (12H)</option>
+                      <option value="DAILY" className="bg-[#141414] text-[#fafafa]">Daily (24 Hours)</option>
+                      <option value="WEEKLY" className="bg-[#141414] text-[#fafafa]">Weekly</option>
                     </select>
                   </div>
 
@@ -1776,9 +1810,9 @@ export default function DatasetsPage() {
                       id="enable-refresh-toggle"
                       checked={refreshEnabled}
                       onChange={(e) => setRefreshEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      className="h-4 w-4 rounded border-[#262626] bg-[#121212] accent-[#ff6b35] focus:ring-0 cursor-pointer"
                     />
-                    <label htmlFor="enable-refresh-toggle" className="text-xs font-medium text-gray-700 select-none cursor-pointer">
+                    <label htmlFor="enable-refresh-toggle" className="text-xs font-medium text-[#fafafa] select-none cursor-pointer">
                       Enable automated scheduled execution
                     </label>
                   </div>
@@ -1786,29 +1820,29 @@ export default function DatasetsPage() {
 
                 {/* Execution History */}
                 {refreshSchedule?.history && refreshSchedule.history.length > 0 && (
-                  <div className="border-t border-gray-100 pt-3">
-                    <h3 className="text-xs font-bold text-gray-700 mb-2">Recent Refresh Executions</h3>
+                  <div className="border-t border-[#262626] pt-3">
+                    <h3 className="text-xs font-medium text-[#898989] mb-2 uppercase tracking-wider font-mono-code">Recent Refresh Executions</h3>
                     <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
                       {refreshSchedule.history.slice(0, 5).map((entry, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-gray-50 border border-gray-100"
+                          className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-[#181818] border border-[#262626]"
                         >
                           <div className="flex items-center gap-1.5">
                             <span
                               className={`h-2 w-2 rounded-full ${
-                                entry.status === "SUCCESS" ? "bg-emerald-500" : "bg-rose-500"
+                                entry.status === "SUCCESS" ? "bg-emerald-400" : "bg-rose-500"
                               }`}
                             />
-                            <span className="font-medium text-gray-700">
+                            <span className="font-mono-code text-[#fafafa]">
                               {new Date(entry.executedAt).toLocaleString()}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-500">
+                          <div className="flex items-center gap-2 text-[#898989] font-mono-code">
                             <span>{entry.durationMs}ms</span>
                             <span
                               className={`font-semibold ${
-                                entry.status === "SUCCESS" ? "text-emerald-600" : "text-rose-600"
+                                entry.status === "SUCCESS" ? "text-emerald-400" : "text-rose-400"
                               }`}
                             >
                               {entry.status}
@@ -1821,16 +1855,16 @@ export default function DatasetsPage() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="border-t border-gray-100 pt-3 flex items-center justify-between gap-2">
+                <div className="border-t border-[#262626] pt-3 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={handleTriggerRefreshNow}
                     disabled={triggeringRefresh}
-                    className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    className="rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 px-3.5 py-1.5 text-xs font-mono-code text-[#ff6b35] hover:bg-[#ff6b35]/20 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                   >
                     {triggeringRefresh ? (
                       <>
-                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
                         <span>Refreshing...</span>
                       </>
                     ) : (
@@ -1847,7 +1881,7 @@ export default function DatasetsPage() {
                         type="button"
                         onClick={handleDeleteSchedule}
                         disabled={savingSchedule}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition disabled:opacity-50 cursor-pointer"
+                        className="rounded-full border border-rose-500/30 bg-rose-500/10 px-3.5 py-1.5 text-xs font-medium text-rose-400 hover:bg-rose-500/20 transition disabled:opacity-50 cursor-pointer"
                       >
                         Disable
                       </button>
@@ -1856,7 +1890,7 @@ export default function DatasetsPage() {
                       type="button"
                       onClick={handleSaveSchedule}
                       disabled={savingSchedule}
-                      className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500 transition disabled:opacity-50 cursor-pointer"
+                      className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all disabled:opacity-50 cursor-pointer"
                     >
                       {savingSchedule ? "Saving..." : "Save Schedule"}
                     </button>
@@ -1872,17 +1906,17 @@ export default function DatasetsPage() {
       {/* PHASE 5: ROW-LEVEL SECURITY (RLS) MANAGEMENT MODAL */}
       {/* ============================================================ */}
       {isRlsModalOpen && rlsDataset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="flex w-full max-w-2xl flex-col max-h-[85vh] rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="flex w-full max-w-2xl flex-col max-h-[85vh] rounded-2xl bg-[#141414] shadow-2xl border border-[#262626] overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 bg-gradient-to-r from-purple-50/70 to-indigo-50/70">
+            <div className="flex items-center justify-between border-b border-[#262626] px-6 py-4 bg-[#181818]">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 text-white font-bold text-sm shadow-sm">
-                  🔒
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35] font-bold text-sm">
+                  <Shield className="h-4 w-4" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">Row-Level Security (RLS)</h2>
-                  <p className="text-xs text-gray-500">
+                  <h2 className="text-base font-semibold text-[#fafafa]">Row-Level Security (RLS)</h2>
+                  <p className="text-xs text-[#898989]">
                     Restricts dataset rows returned to specific roles or users for {rlsDataset.name}.
                   </p>
                 </div>
@@ -1890,7 +1924,7 @@ export default function DatasetsPage() {
               <button
                 type="button"
                 onClick={() => setIsRlsModalOpen(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-200/60 hover:text-gray-700 transition"
+                className="rounded-lg p-1.5 text-[#898989] hover:bg-[#262626] hover:text-[#fafafa] transition cursor-pointer"
               >
                 ✕
               </button>
@@ -1899,41 +1933,41 @@ export default function DatasetsPage() {
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {rlsError && (
-                <div className="rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+                <div className="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-400 border border-rose-500/30 font-mono-code">
                   {rlsError}
                 </div>
               )}
 
               {/* Add Rule Form (Hidden/disabled if !canEdit) */}
               {canEdit ? (
-                <form onSubmit={handleCreateRlsRule} className="rounded-xl border border-purple-100 bg-purple-50/30 p-4 space-y-3">
-                  <h3 className="text-xs font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                <form onSubmit={handleCreateRlsRule} className="rounded-xl border border-[#262626] bg-[#181818] p-4 space-y-3">
+                  <h3 className="text-xs font-semibold text-[#ff6b35] uppercase tracking-wider flex items-center gap-1.5 font-mono-code">
                     <span>+ Add Security Rule</span>
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Rule Name</label>
+                      <label className="text-[11px] font-medium text-[#898989] block mb-1">Rule Name</label>
                       <input
                         type="text"
                         value={rlsFormName}
                         onChange={(e) => setRlsFormName(e.target.value)}
                         placeholder="e.g. India Region Only"
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        className="w-full rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Column</label>
+                      <label className="text-[11px] font-medium text-[#898989] block mb-1">Column</label>
                       <select
                         value={rlsFormCol}
                         onChange={(e) => setRlsFormCol(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        className="w-full rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         required
                       >
                         {rlsDataset.columns?.map((c) => (
-                          <option key={c.name} value={c.name}>
+                          <option key={c.name} value={c.name} className="bg-[#141414] text-[#fafafa]">
                             {c.name} ({c.type})
                           </option>
                         ))}
@@ -1941,50 +1975,50 @@ export default function DatasetsPage() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Condition Operator</label>
+                      <label className="text-[11px] font-medium text-[#898989] block mb-1">Condition Operator</label>
                       <select
                         value={rlsFormOp}
                         onChange={(e) => setRlsFormOp(e.target.value as RlsOperator)}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        className="w-full rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       >
-                        <option value="EQUALS">= Equals</option>
-                        <option value="NOT_EQUALS">!= Not Equals</option>
-                        <option value="IN">IN (comma-separated)</option>
-                        <option value="NOT_IN">NOT IN (comma-separated)</option>
-                        <option value="GREATER_THAN">&gt; Greater Than</option>
-                        <option value="LESS_THAN">&lt; Less Than</option>
-                        <option value="CONTAINS">CONTAINS substring</option>
+                        <option value="EQUALS" className="bg-[#141414] text-[#fafafa]">= Equals</option>
+                        <option value="NOT_EQUALS" className="bg-[#141414] text-[#fafafa]">!= Not Equals</option>
+                        <option value="IN" className="bg-[#141414] text-[#fafafa]">IN (comma-separated)</option>
+                        <option value="NOT_IN" className="bg-[#141414] text-[#fafafa]">NOT IN (comma-separated)</option>
+                        <option value="GREATER_THAN" className="bg-[#141414] text-[#fafafa]">&gt; Greater Than</option>
+                        <option value="LESS_THAN" className="bg-[#141414] text-[#fafafa]">&lt; Less Than</option>
+                        <option value="CONTAINS" className="bg-[#141414] text-[#fafafa]">CONTAINS substring</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Filter Value</label>
+                      <label className="text-[11px] font-medium text-[#898989] block mb-1">Filter Value</label>
                       <input
                         type="text"
                         value={rlsFormVal}
                         onChange={(e) => setRlsFormVal(e.target.value)}
                         placeholder="e.g. India or USA"
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        className="w-full rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">Target Workspace Role</label>
+                      <label className="text-[11px] font-medium text-[#898989] block mb-1">Target Workspace Role</label>
                       <select
                         value={rlsFormRole}
                         onChange={(e) => setRlsFormRole(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        className="w-full rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       >
-                        <option value="ALL">All Non-Admin Users</option>
-                        <option value="VIEWER">VIEWER only</option>
-                        <option value="EDITOR">EDITOR only</option>
-                        <option value="MEMBER">MEMBER only</option>
+                        <option value="ALL" className="bg-[#141414] text-[#fafafa]">All Non-Admin Users</option>
+                        <option value="VIEWER" className="bg-[#141414] text-[#fafafa]">VIEWER only</option>
+                        <option value="EDITOR" className="bg-[#141414] text-[#fafafa]">EDITOR only</option>
+                        <option value="MEMBER" className="bg-[#141414] text-[#fafafa]">MEMBER only</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-semibold text-gray-700 block mb-1">
+                      <label className="text-[11px] font-medium text-[#898989] block mb-1">
                         Specific User Email / ID (Optional)
                       </label>
                       <input
@@ -1992,7 +2026,7 @@ export default function DatasetsPage() {
                         value={rlsFormUserEmail}
                         onChange={(e) => setRlsFormUserEmail(e.target.value)}
                         placeholder="Leave blank for all users in role"
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs focus:border-purple-600 focus:outline-none"
+                        className="w-full rounded-xl border border-[#262626] bg-[#121212] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2001,28 +2035,28 @@ export default function DatasetsPage() {
                     <button
                       type="submit"
                       disabled={savingRlsRule}
-                      className="rounded-lg bg-purple-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 transition disabled:opacity-50"
+                      className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all disabled:opacity-50 cursor-pointer"
                     >
                       {savingRlsRule ? "Saving..." : "Add Rule"}
                     </button>
                   </div>
                 </form>
               ) : (
-                <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">
+                <div className="rounded-lg bg-amber-500/10 p-3 text-xs text-amber-300 border border-amber-500/30">
                   ℹ️ Read-only view: You do not have permissions to modify Row-Level Security rules.
                 </div>
               )}
 
               {/* Existing Rules List */}
               <div className="space-y-2">
-                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-[#898989] uppercase tracking-wider font-mono-code">
                   Configured RLS Rules ({rlsRules.length})
                 </h3>
 
                 {loadingRlsRules ? (
-                  <p className="text-xs text-gray-500 py-4 text-center">Loading security rules...</p>
+                  <p className="text-xs text-[#898989] py-4 text-center font-mono-code">Loading security rules...</p>
                 ) : rlsRules.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic py-3 text-center border border-dashed border-gray-200 rounded-lg">
+                  <p className="text-xs text-[#898989] italic py-3 text-center border border-dashed border-[#262626] rounded-xl font-mono-code">
                     No active RLS rules. All workspace members with read access see all rows.
                   </p>
                 ) : (
@@ -2030,37 +2064,37 @@ export default function DatasetsPage() {
                     {rlsRules.map((rule) => (
                       <div
                         key={rule.id}
-                        className="rounded-xl border border-gray-200 bg-white p-3.5 shadow-2xs flex items-center justify-between gap-3 text-xs"
+                        className="rounded-xl border border-[#262626] bg-[#181818] p-3.5 flex items-center justify-between gap-3 text-xs"
                       >
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900 truncate">{rule.name}</span>
+                            <span className="font-semibold text-[#fafafa] truncate">{rule.name}</span>
                             <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold font-mono-code ${
                                 rule.isEnabled
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-600"
+                                  ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400"
+                                  : "bg-[#262626] text-[#898989]"
                               }`}
                             >
                               {rule.isEnabled ? "Active" : "Disabled"}
                             </span>
                           </div>
-                          <p className="text-[11px] text-gray-500 mt-1 font-mono">
-                            <span className="text-purple-700 font-semibold">{rule.columnName}</span>{" "}
+                          <p className="text-[11px] text-[#898989] mt-1 font-mono-code">
+                            <span className="text-[#ff6b35] font-semibold">{rule.columnName}</span>{" "}
                             {rule.operator} &quot;
-                            <span className="font-bold text-gray-800">
+                            <span className="font-semibold text-[#fafafa]">
                               {Array.isArray(rule.ruleValue)
                                 ? (rule.ruleValue as string[]).join(", ")
                                 : String(rule.ruleValue)}
                             </span>
                             &quot;
                             {rule.roleName && (
-                              <span className="ml-2 font-sans text-gray-400">
+                              <span className="ml-2 font-sans text-[#898989]">
                                 (Applies to: {rule.roleName})
                               </span>
                             )}
                             {rule.userId && (
-                              <span className="ml-2 font-sans text-gray-400">
+                              <span className="ml-2 font-sans text-[#898989]">
                                 (User: {rule.userId})
                               </span>
                             )}
@@ -2072,14 +2106,14 @@ export default function DatasetsPage() {
                             <button
                               type="button"
                               onClick={() => void handleToggleRlsRule(rule)}
-                              className="rounded border border-gray-200 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-50"
+                              className="rounded-full border border-[#2e2e2e] bg-[#141414] px-2.5 py-1 text-[11px] font-medium text-[#fafafa] hover:bg-[#1f1f1f] cursor-pointer"
                             >
                               {rule.isEnabled ? "Disable" : "Enable"}
                             </button>
                             <button
                               type="button"
                               onClick={() => void handleDeleteRlsRule(rule.id)}
-                              className="rounded border border-red-200 px-2 py-1 text-[11px] font-medium text-red-600 hover:bg-red-50"
+                              className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-400 hover:bg-rose-500/20 cursor-pointer"
                             >
                               Delete
                             </button>
@@ -2093,14 +2127,14 @@ export default function DatasetsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between border-t border-gray-100 px-6 py-3 bg-gray-50">
-              <span className="text-[11px] text-gray-500">
+            <div className="flex items-center justify-between border-t border-[#262626] px-6 py-3 bg-[#181818]">
+              <span className="text-[11px] text-[#898989]">
                 Row-Level Security rules are automatically enforced across all charts, AI queries, and exports.
               </span>
               <button
                 type="button"
                 onClick={() => setIsRlsModalOpen(false)}
-                className="rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                className="rounded-full border border-[#2e2e2e] bg-[#141414] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:bg-[#1f1f1f] transition cursor-pointer"
               >
                 Close
               </button>
@@ -2108,7 +2142,8 @@ export default function DatasetsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

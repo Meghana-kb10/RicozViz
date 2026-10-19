@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../contexts/auth-context";
 import { useWorkspace } from "../../contexts/workspace-context";
-import { BrandLogo } from "@/components/shell/BrandLogo";
+import { AppShell } from "../../components/shell/AppShell";
 import {
   apiListAlerts,
   apiCreateAlert,
@@ -22,6 +22,24 @@ import {
   type AlertStatus,
   ApiError,
 } from "../../lib/api";
+import {
+  Bell,
+  Plus,
+  RefreshCw,
+  Search,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  Trash2,
+  Edit2,
+  Eye,
+  Play,
+  Pause,
+  Layers,
+  Activity,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
 
 export default function AlertsPage() {
   const { auth, isLoading, logout, hasPermission } = useAuth();
@@ -71,7 +89,7 @@ export default function AlertsPage() {
     try {
       const [fetchedAlerts, fetchedMetrics] = await Promise.all([
         apiListAlerts(currentWorkspace?.id),
-        apiListMetrics(currentWorkspace?.id),
+        apiListMetrics(undefined, currentWorkspace?.id),
       ]);
       setAlerts(fetchedAlerts);
       setMetrics(fetchedMetrics);
@@ -105,6 +123,7 @@ export default function AlertsPage() {
           res.isTriggered ? "TRIGGERED" : "NORMAL"
         }.`
       );
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to evaluate alert");
     } finally {
@@ -119,6 +138,7 @@ export default function AlertsPage() {
       const res = await apiEvaluateAllWorkspaceAlerts(currentWorkspace.id);
       setSuccessMsg(`Evaluated ${res.totalEvaluated} workspace alerts. Triggered: ${res.triggeredCount}.`);
       void loadData();
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to evaluate alerts");
     } finally {
@@ -133,6 +153,7 @@ export default function AlertsPage() {
         prev.map((a) => (a.id === res.id ? { ...a, ...res, status: "OK", lastTriggeredAt: null } : a))
       );
       setSuccessMsg("Alert notification cleared and status reset to OK.");
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to clear alert");
     }
@@ -151,6 +172,7 @@ export default function AlertsPage() {
           (updated.enabled ?? updated.isEnabled) ? "active" : "paused"
         }.`
       );
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to update alert state");
     }
@@ -184,6 +206,7 @@ export default function AlertsPage() {
       await apiDeleteAlert(alert.id);
       setSuccessMsg(`Alert "${alert.name}" deleted successfully.`);
       setAlerts((prev) => prev.filter((a) => a.id !== alert.id));
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to delete alert");
     }
@@ -235,6 +258,7 @@ export default function AlertsPage() {
         setAlerts((prev) => [created, ...prev]);
       }
       setIsModalOpen(false);
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err) {
       setErrorMsg(err instanceof ApiError ? err.message : "Failed to save alert");
     } finally {
@@ -260,167 +284,158 @@ export default function AlertsPage() {
     GREATER_THAN_OR_EQUAL: "≥",
     LESS_THAN_OR_EQUAL: "≤",
     EQUALS: "=",
-    INCREASE_PERCENT: "↑ %",
-    DECREASE_PERCENT: "↓ %",
-    INCREASE_PCT: "↑ %",
-    DECREASE_PCT: "↓ %",
+    INCREASE_PERCENT: "↑",
+    DECREASE_PERCENT: "↓",
+    INCREASE_PCT: "↑",
+    DECREASE_PCT: "↓",
   };
 
-  const filteredAlerts = alerts.filter((a) => {
-    const isEnabled = a.enabled ?? a.isEnabled ?? true;
+  const filteredAlerts = alerts.filter((alert) => {
+    const isAlertEnabled = alert.enabled ?? alert.isEnabled ?? true;
     const matchesSearch =
-      a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (a.description && a.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (a.metric?.name && a.metric.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      alert.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (alert.description && alert.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (alert.metric?.name && alert.metric.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
     const matchesStatus =
       filterStatus === "ALL" ||
-      (filterStatus === "TRIGGERED" && a.status === "TRIGGERED") ||
-      (filterStatus === "OK" && a.status === "OK") ||
-      (filterStatus === "DISABLED" && !isEnabled);
+      (filterStatus === "TRIGGERED" && alert.status === "TRIGGERED" && isAlertEnabled) ||
+      (filterStatus === "OK" && alert.status === "OK" && isAlertEnabled) ||
+      (filterStatus === "DISABLED" && !isAlertEnabled);
+
     return matchesSearch && matchesStatus;
   });
 
+  const activeCount = alerts.filter((a) => (a.enabled ?? a.isEnabled ?? true)).length;
+  const triggeredCount = alerts.filter((a) => a.status === "TRIGGERED" && (a.enabled ?? a.isEnabled ?? true)).length;
+  const monitoredMetricsCount = new Set(alerts.map((a) => a.metricId)).size;
+
   if (isLoading || !auth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center bg-[#121212] text-[#fafafa]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
+          <p className="text-xs font-mono-code text-[#898989]">Evaluating threshold conditions...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-30 shadow-2xs">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/workspace" className="flex items-center gap-2 font-bold text-gray-900 text-lg hover:text-indigo-600 transition">
-              <BrandLogo size={32} />
-              <span>RicozViz</span>
-            </Link>
-            <span className="text-gray-300">/</span>
-            <Link href="/workspace" className="text-sm text-gray-500 hover:text-gray-900">
-              Workspace
-            </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-sm font-semibold text-gray-900">Smart Alerts</span>
-          </div>
+    <AppShell
+      title="Smart Alerts & Monitoring"
+      subtitle="Configure automated threshold monitors, anomaly triggers, and live telemetry dispatches."
+      breadcrumbs={[
+        { label: "Data Studio", href: "/datasets" },
+        { label: "Alerts & Triggers" },
+      ]}
+      actions={
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => void handleEvaluateAll()}
+            disabled={evaluatingAll || alerts.length === 0}
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs font-mono-code text-[#fafafa] hover:bg-[#202020] disabled:opacity-50 transition cursor-pointer"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${evaluatingAll ? "animate-spin text-[#ff6b35]" : ""}`} />
+            <span>{evaluatingAll ? "Scanning..." : "Evaluate All"}</span>
+          </button>
 
-          <div className="flex items-center gap-4">
-            <Link href="/metrics" className="text-xs font-medium text-gray-600 hover:text-indigo-600 transition hidden sm:inline">
-              Metrics & KPIs →
-            </Link>
-            <Link href="/dashboards" className="text-xs font-medium text-gray-600 hover:text-indigo-600 transition hidden sm:inline">
-              Dashboards →
-            </Link>
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">{auth.user.name}</p>
-              <p className="text-xs text-gray-500">
-                {auth.role} · {auth.organization.name}
-              </p>
-            </div>
+          {canCreate && (
             <button
-              onClick={() => {
-                void logout();
-                router.replace("/login");
-              }}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100"
+              onClick={openCreateModal}
+              id="create-alert-btn"
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition cursor-pointer"
             >
-              Sign out
+              <Plus className="h-4 w-4" />
+              <span>Create Alert</span>
             </button>
-          </div>
+          )}
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl w-full px-4 py-8 sm:px-6 flex-1">
-        {/* Info Banner on Notification Delivery */}
-        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-xs text-blue-900 flex items-start gap-3">
-          <span className="text-lg">ℹ️</span>
-          <div>
-            <p className="font-bold">Real-Time Metric Evaluation & Log Engine Active</p>
-            <p className="text-blue-700 mt-0.5">
-              Alert conditions evaluate live against your dataset query engine and record execution logs in internal notification history. External SMTP email delivery requires configuring your organization email provider credentials.
-            </p>
-          </div>
-        </div>
-
+      }
+    >
+      <div className="space-y-6 max-w-7xl mx-auto">
         {/* Alerts */}
         {errorMsg && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 flex justify-between items-center">
-            <span>{errorMsg}</span>
-            <button onClick={() => setErrorMsg(null)} className="text-red-500 hover:text-red-800 text-xs font-bold">
+          <div className="rounded-xl border border-red-500/30 bg-red-950/40 p-4 text-xs font-mono-code text-red-300 flex justify-between items-center">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-red-400 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+            <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-red-200 text-xs font-bold cursor-pointer">
               ✕
             </button>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex justify-between items-center">
-            <span>{successMsg}</span>
-            <button onClick={() => setSuccessMsg(null)} className="text-green-500 hover:text-green-800 text-xs font-bold">
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-xs font-mono-code text-emerald-300 flex justify-between items-center">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+            <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200 text-xs font-bold cursor-pointer">
               ✕
             </button>
           </div>
         )}
 
-        {/* Title Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Smart Data Alerts</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Automated anomaly & threshold monitoring for mission-critical business KPIs.
-            </p>
+        {/* 4-KPI Mesh Ribbon */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-[#242424] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] text-xs font-mono-code mb-2">
+              <span>CONFIGURED RULES</span>
+              <Bell className="h-4 w-4 text-[#ff6b35]" />
+            </div>
+            <div className="text-2xl font-bold font-mono-code text-[#fafafa]">{alerts.length}</div>
+            <div className="text-[11px] text-[#898989] mt-1 font-mono-code">Monitored criteria</div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            {alerts.length > 0 && (
-              <button
-                type="button"
-                onClick={() => void handleEvaluateAll()}
-                disabled={evaluatingAll}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-white px-3.5 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 shadow-2xs transition disabled:opacity-50"
-              >
-                {evaluatingAll ? (
-                  <>
-                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                    <span>Evaluating All...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>⚡</span>
-                    <span>Evaluate All Alerts</span>
-                  </>
-                )}
-              </button>
-            )}
+          <div className="rounded-xl border border-[#242424] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] text-xs font-mono-code mb-2">
+              <span>ACTIVE MONITORS</span>
+              <Activity className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-bold font-mono-code text-emerald-400">{activeCount}</div>
+            <div className="text-[11px] text-[#898989] mt-1 font-mono-code">Automated evaluation</div>
+          </div>
 
-            {canCreate && (
-              <button
-                onClick={openCreateModal}
-                id="create-alert-btn"
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
-              >
-                <span>+ Create Alert</span>
-              </button>
-            )}
+          <div className="rounded-xl border border-[#242424] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] text-xs font-mono-code mb-2">
+              <span>TRIGGERED ANOMALIES</span>
+              <ShieldAlert className="h-4 w-4 text-rose-400" />
+            </div>
+            <div className="text-2xl font-bold font-mono-code text-rose-400">{triggeredCount}</div>
+            <div className="text-[11px] text-[#898989] mt-1 font-mono-code">Requiring attention</div>
+          </div>
+
+          <div className="rounded-xl border border-[#242424] bg-[#141414] p-4">
+            <div className="flex items-center justify-between text-[#898989] text-xs font-mono-code mb-2">
+              <span>MONITORED KPIS</span>
+              <Layers className="h-4 w-4 text-sky-400" />
+            </div>
+            <div className="text-2xl font-bold font-mono-code text-[#fafafa]">{monitoredMetricsCount}</div>
+            <div className="text-[11px] text-[#898989] mt-1 font-mono-code">Linked semantic metrics</div>
           </div>
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <input
-            type="text"
-            placeholder="Search alerts by name, description, or monitored metric..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-indigo-500 focus:outline-none shadow-2xs"
-          />
+        <div className="flex flex-col sm:flex-row gap-3 border-b border-[#242424] pb-4">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-[#898989] absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search alerts by name, description, or monitored metric..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-lg border border-[#242424] bg-[#141414] pl-9 pr-3 py-1.5 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+            />
+          </div>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none shadow-2xs"
+            className="rounded-lg border border-[#242424] bg-[#141414] px-3 py-1.5 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
           >
             <option value="ALL">All Statuses ({alerts.length})</option>
             <option value="TRIGGERED">Triggered Anomalies</option>
@@ -431,15 +446,17 @@ export default function AlertsPage() {
 
         {/* Alerts Grid */}
         {loading ? (
-          <div className="py-20 text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-            <p className="mt-3 text-sm text-gray-500">Loading alerts...</p>
+          <div className="py-20 text-center text-xs font-mono-code text-[#898989]">
+            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent mb-3" />
+            <p>Scanning trigger evaluation matrix...</p>
           </div>
         ) : filteredAlerts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-12 text-center">
-            <span className="text-4xl mb-3 block">🔔</span>
-            <h3 className="text-base font-bold text-gray-800">No Alerts Configured</h3>
-            <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+          <div className="rounded-2xl border border-dashed border-[#2e2e2e] bg-[#141414]/50 p-16 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#ff6b35]/10 text-[#ff6b35] text-2xl mb-4 border border-[#ff6b35]/20">
+              <Bell className="h-7 w-7" />
+            </div>
+            <h3 className="text-base font-medium text-[#fafafa]">No Alerts Configured</h3>
+            <p className="mt-1 text-xs text-[#898989] font-mono-code max-w-md mx-auto">
               {metrics.length === 0
                 ? "You need at least one business metric before setting up alerts. Create a metric first."
                 : "Keep your team informed by setting threshold triggers when metrics exceed or fall below critical values."}
@@ -447,16 +464,17 @@ export default function AlertsPage() {
             {metrics.length === 0 ? (
               <Link
                 href="/metrics"
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition"
+                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition cursor-pointer"
               >
                 Go to Metrics & KPIs →
               </Link>
             ) : canCreate ? (
               <button
                 onClick={openCreateModal}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition"
+                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition cursor-pointer"
               >
-                + Create First Alert
+                <Plus className="h-4 w-4" />
+                <span>Create First Alert</span>
               </button>
             ) : null}
           </div>
@@ -465,138 +483,146 @@ export default function AlertsPage() {
             {filteredAlerts.map((alert) => {
               const isEvaluating = !!evaluatingMap[alert.id];
               const historyCount = alert.history?.length || 0;
-
               const isAlertEnabled = alert.enabled ?? alert.isEnabled ?? true;
+
               return (
                 <div
                   key={alert.id}
-                  className={`rounded-2xl border p-5 shadow-xs transition flex flex-col justify-between ${
+                  className={`rounded-xl border p-5 shadow-sm transition flex flex-col justify-between group ${
                     !isAlertEnabled
-                      ? "border-gray-200 bg-gray-50/50 opacity-80"
+                      ? "border-[#242424] bg-[#141414]/60 opacity-60"
                       : alert.status === "TRIGGERED"
-                      ? "border-rose-300 bg-rose-50/30 ring-1 ring-rose-200"
-                      : "border-gray-200 bg-white hover:border-indigo-300"
+                      ? "border-rose-500/40 bg-rose-950/20 shadow-[0_0_20px_rgba(244,63,94,0.1)]"
+                      : "border-[#242424] bg-[#141414] hover:border-[#ff6b35]/40"
                   }`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-bold text-gray-900 text-base leading-snug">{alert.name}</h3>
-                      <div className="flex items-center gap-1.5">
+                      <h3 className="font-semibold text-[#fafafa] text-base leading-snug group-hover:text-[#ff6b35] transition-colors truncate">
+                        {alert.name}
+                      </h3>
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {!isAlertEnabled ? (
-                          <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600 uppercase">
+                          <span className="inline-flex items-center rounded-md bg-[#181818] border border-[#2e2e2e] px-2 py-0.5 text-[10px] font-mono-code font-bold text-[#898989] uppercase">
                             Paused
                           </span>
                         ) : alert.status === "TRIGGERED" ? (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 uppercase animate-pulse">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-rose-950/60 border border-rose-500/40 px-2 py-0.5 text-[10px] font-mono-code font-bold text-rose-300 uppercase animate-pulse">
                             <span>●</span> Triggered
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-mono-code font-bold text-emerald-300 uppercase">
                             <span>●</span> OK
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {alert.description && (
-                      <p className="text-xs text-gray-500 mb-3 line-clamp-2">{alert.description}</p>
+                    {alert.description ? (
+                      <p className="text-xs text-[#898989] mb-3 line-clamp-2">{alert.description}</p>
+                    ) : (
+                      <p className="text-xs text-[#666666] italic mb-3">No description provided</p>
                     )}
 
                     {/* Condition Box */}
-                    <div className="rounded-xl bg-gray-50/90 border border-gray-100 p-3 mb-4 space-y-1.5 text-xs text-gray-700 font-mono">
+                    <div className="rounded-lg bg-[#181818] border border-[#262626] p-3 mb-4 space-y-1.5 text-xs text-[#898989] font-mono-code">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Target Metric:</span>
-                        <span className="font-bold text-gray-900 truncate max-w-[150px]">
+                        <span className="text-[#666666]">Target Metric:</span>
+                        <span className="font-semibold text-[#fafafa] truncate max-w-[150px]">
                           {alert.metric?.name || "Metric"}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-400">Trigger Rule:</span>
-                        <span className="font-bold text-indigo-700">
+                        <span className="text-[#666666]">Trigger Rule:</span>
+                        <span className="font-semibold text-[#ff6b35]">
                           {conditionSymbols[alert.condition]} {Number(alert.threshold).toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between text-[11px]">
-                        <span className="text-gray-400">Last Checked:</span>
-                        <span className="text-gray-500">
-                          {alert.lastEvaluatedAt ? new Date(alert.lastEvaluatedAt).toLocaleTimeString() : "Never"}
+                        <span className="text-[#666666]">Last Checked:</span>
+                        <span className="text-[#898989]">
+                          {alert.lastEvaluatedAt
+                            ? new Date(alert.lastEvaluatedAt).toLocaleTimeString()
+                            : "Never"}
                         </span>
                       </div>
+                      {alert.lastValue !== undefined && alert.lastValue !== null && (
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-[#666666]">Last Evaluated:</span>
+                          <span className="font-bold text-[#fafafa]">
+                            {Number(alert.lastValue).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="border-t border-gray-100 pt-3 flex items-center justify-between gap-2">
+                  <div className="border-t border-[#242424] pt-3.5 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => void handleEvaluate(alert.id)}
-                        disabled={isEvaluating || !isAlertEnabled}
-                        className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition disabled:opacity-50"
+                        disabled={isEvaluating}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#2e2e2e] bg-[#181818] px-2.5 py-1.5 text-xs font-mono-code text-[#fafafa] hover:bg-[#222222] disabled:opacity-50 transition cursor-pointer"
+                        title="Evaluate condition immediately"
                       >
-                        {isEvaluating ? (
-                          <>
-                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                            <span>Checking...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>⚡</span>
-                            <span>Check</span>
-                          </>
-                        )}
+                        <RefreshCw className={`h-3 w-3 ${isEvaluating ? "animate-spin text-[#ff6b35]" : ""}`} />
+                        <span>{isEvaluating ? "..." : "Check"}</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setHistoryAlert(alert)}
-                        className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#2e2e2e] bg-[#181818] px-2 py-1.5 text-xs font-mono-code text-[#898989] hover:text-[#fafafa] hover:bg-[#222222] transition cursor-pointer"
+                        title="View evaluation logs"
                       >
-                        History ({historyCount})
+                        <Eye className="h-3 w-3" />
+                        <span>{historyCount}</span>
                       </button>
 
                       {alert.status === "TRIGGERED" && (
                         <button
                           type="button"
                           onClick={() => void handleClearAlert(alert.id)}
-                          className="rounded-lg border border-rose-300 bg-rose-50 px-2 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition"
-                          title="Acknowledge and reset alert"
+                          className="rounded-lg border border-rose-500/30 bg-rose-950/40 px-2 py-1.5 text-[10px] font-mono-code font-bold text-rose-300 hover:bg-rose-900/50 transition cursor-pointer"
                         >
-                          ✓ Clear
+                          Clear
                         </button>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      {canEdit && (
-                        <button
-                          type="button"
-                          onClick={() => void handleToggleEnable(alert)}
-                          className={`rounded-lg px-2 py-1.5 text-xs font-medium transition ${
-                            isAlertEnabled
-                              ? "text-amber-700 hover:bg-amber-50 border border-amber-200"
-                              : "text-emerald-700 hover:bg-emerald-50 border border-emerald-200"
-                          }`}
-                        >
-                          {isAlertEnabled ? "Pause" : "Enable"}
-                        </button>
-                      )}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleEnable(alert)}
+                        className={`rounded-lg p-1.5 text-xs font-mono-code transition cursor-pointer ${
+                          isAlertEnabled
+                            ? "text-emerald-400 hover:bg-emerald-950/40"
+                            : "text-[#898989] hover:bg-[#222222]"
+                        }`}
+                        title={isAlertEnabled ? "Pause monitor" : "Activate monitor"}
+                      >
+                        {isAlertEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                      </button>
+
                       {canEdit && (
                         <button
                           type="button"
                           onClick={() => openEditModal(alert)}
-                          className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 transition"
+                          className="rounded-lg p-1.5 text-xs font-mono-code text-[#898989] hover:text-[#fafafa] hover:bg-[#1f1f1f] transition cursor-pointer"
                         >
-                          Edit
+                          <Edit2 className="h-3.5 w-3.5" />
                         </button>
                       )}
+
                       {canDelete && (
                         <button
                           type="button"
                           onClick={() => void handleDelete(alert)}
-                          className="rounded-lg border border-red-200 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition"
+                          className="rounded-lg p-1.5 text-xs font-mono-code text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition cursor-pointer"
                         >
-                          ✕
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </div>
@@ -606,27 +632,33 @@ export default function AlertsPage() {
             })}
           </div>
         )}
-      </main>
+      </div>
 
       {/* CREATE / EDIT MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-gray-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">
-                {editingAlert ? "Edit Alert Configuration" : "Configure Smart Alert"}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[#262626] bg-[#141414] p-6 shadow-2xl max-h-[90vh] overflow-y-auto text-[#fafafa]">
+            <div className="flex items-center justify-between pb-4 border-b border-[#242424]">
+              <div>
+                <h2 className="text-lg font-bold text-[#fafafa]">
+                  {editingAlert ? "Edit Alert Condition" : "Create New Smart Alert"}
+                </h2>
+                <p className="text-xs text-[#898989] font-mono-code mt-0.5">
+                  Automated telemetry checks run on metric updates.
+                </p>
+              </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-sm font-bold"
+                className="text-[#898989] hover:text-[#fafafa] cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={(e) => void handleFormSubmit(e)} className="space-y-4">
+            <form onSubmit={(e) => void handleFormSubmit(e)} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                   Alert Name *
                 </label>
                 <input
@@ -635,12 +667,12 @@ export default function AlertsPage() {
                   placeholder="e.g. Revenue Drop Alert, Customer Churn Warning"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                   Description
                 </label>
                 <textarea
@@ -648,19 +680,19 @@ export default function AlertsPage() {
                   placeholder="Explain when this alert triggers and what action to take..."
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                   Monitored KPI / Metric *
                 </label>
                 <select
                   disabled={!!editingAlert}
                   value={formMetricId}
                   onChange={(e) => setFormMetricId(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none disabled:bg-gray-100"
+                  className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code disabled:opacity-50"
                 >
                   {metrics.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -672,13 +704,13 @@ export default function AlertsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                     Trigger Condition *
                   </label>
                   <select
                     value={formCondition}
                     onChange={(e) => setFormCondition(e.target.value as AlertCondition)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                   >
                     <option value="GREATER_THAN">{conditionLabels.GREATER_THAN}</option>
                     <option value="LESS_THAN">{conditionLabels.LESS_THAN}</option>
@@ -691,7 +723,7 @@ export default function AlertsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
                     Threshold Value *
                   </label>
                   <input
@@ -701,7 +733,7 @@ export default function AlertsPage() {
                     placeholder="e.g. 100000"
                     value={formThreshold}
                     onChange={(e) => setFormThreshold(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none font-mono"
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
                   />
                 </div>
               </div>
@@ -712,25 +744,25 @@ export default function AlertsPage() {
                   id="enable-toggle"
                   checked={formIsEnabled}
                   onChange={(e) => setFormIsEnabled(e.target.checked)}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="rounded border-[#2e2e2e] bg-[#181818] text-[#ff6b35] focus:ring-[#ff6b35] accent-[#ff6b35]"
                 />
-                <label htmlFor="enable-toggle" className="text-xs font-semibold text-gray-700 cursor-pointer">
+                <label htmlFor="enable-toggle" className="text-xs font-mono-code text-[#898989] cursor-pointer">
                   Activate alert immediately upon creation
                 </label>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-[#242424]">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition"
+                  className="rounded-lg border border-[#2e2e2e] bg-[#181818] px-4 py-2 text-xs font-mono-code text-[#898989] hover:text-[#fafafa] hover:bg-[#202020] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition disabled:opacity-50"
+                  className="rounded-lg bg-[#ff6b35] px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? "Saving..." : editingAlert ? "Update Alert" : "Create Alert"}
                 </button>
@@ -742,20 +774,21 @@ export default function AlertsPage() {
 
       {/* ALERT HISTORY MODAL */}
       {historyAlert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl border border-gray-200 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-[#262626] bg-[#141414] p-6 shadow-2xl max-h-[85vh] flex flex-col text-[#fafafa]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#242424]">
               <div>
-                <h3 className="text-base font-bold text-gray-900">
+                <h3 className="text-base font-bold text-[#fafafa]">
                   Execution History: {historyAlert.name}
                 </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-[#898989] font-mono-code mt-0.5">
                   Logged evaluations and trigger snapshots
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setHistoryAlert(null)}
-                className="text-gray-400 hover:text-gray-600 text-sm font-bold"
+                className="text-[#898989] hover:text-[#fafafa] cursor-pointer"
               >
                 ✕
               </button>
@@ -763,44 +796,44 @@ export default function AlertsPage() {
 
             <div className="flex-1 overflow-y-auto py-4">
               {!historyAlert.history || historyAlert.history.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 text-xs">
+                <div className="p-8 text-center text-[#898989] font-mono-code text-xs">
                   No evaluations recorded yet for this alert. Click &quot;Check&quot; on the alert card to run an evaluation.
                 </div>
               ) : (
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-500 font-semibold border-b border-gray-200">
+                  <thead className="bg-[#181818] text-[#898989] font-mono-code border-b border-[#242424]">
                     <tr>
-                      <th className="px-3 py-2">Timestamp</th>
-                      <th className="px-3 py-2">Evaluated Value</th>
-                      <th className="px-3 py-2">Threshold</th>
-                      <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Notification</th>
+                      <th className="px-3 py-2 font-semibold">Timestamp</th>
+                      <th className="px-3 py-2 font-semibold">Evaluated Value</th>
+                      <th className="px-3 py-2 font-semibold">Threshold</th>
+                      <th className="px-3 py-2 font-semibold">Status</th>
+                      <th className="px-3 py-2 font-semibold">Notification</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-[#242424]">
                     {historyAlert.history.map((h: AlertHistoryData) => (
-                      <tr key={h.id} className="hover:bg-gray-50/50">
-                        <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
+                      <tr key={h.id} className="hover:bg-[#181818]/60 transition-colors">
+                        <td className="px-3 py-2 text-[#898989] font-mono-code whitespace-nowrap">
                           {new Date(h.evaluatedAt || h.triggeredAt).toLocaleString()}
                         </td>
-                        <td className="px-3 py-2 font-mono font-bold text-gray-900">
+                        <td className="px-3 py-2 font-mono-code font-bold text-[#fafafa]">
                           {Number(h.metricValue).toLocaleString()}
                         </td>
-                        <td className="px-3 py-2 font-mono text-gray-500">
+                        <td className="px-3 py-2 font-mono-code text-[#ff6b35]">
                           {conditionSymbols[historyAlert.condition]} {Number(h.threshold).toLocaleString()}
                         </td>
                         <td className="px-3 py-2">
                           {h.triggered ? (
-                            <span className="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                            <span className="inline-flex rounded-full bg-rose-950/60 border border-rose-500/40 px-2 py-0.5 text-[10px] font-mono-code font-bold text-rose-300">
                               TRIGGERED
                             </span>
                           ) : (
-                            <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                            <span className="inline-flex rounded-full bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-mono-code font-bold text-emerald-300">
                               OK
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-gray-400 text-[11px] truncate max-w-[160px]">
+                        <td className="px-3 py-2 text-[#898989] font-mono-code text-[11px] truncate max-w-[160px]">
                           {h.message || (h.notified ? "Recorded in log" : "Normal")}
                         </td>
                       </tr>
@@ -810,11 +843,11 @@ export default function AlertsPage() {
               )}
             </div>
 
-            <div className="pt-3 border-t border-gray-100 flex justify-end">
+            <div className="pt-3 border-t border-[#242424] flex justify-end">
               <button
                 type="button"
                 onClick={() => setHistoryAlert(null)}
-                className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition"
+                className="rounded-lg border border-[#2e2e2e] bg-[#181818] px-4 py-2 text-xs font-mono-code text-[#898989] hover:text-[#fafafa] hover:bg-[#202020] cursor-pointer"
               >
                 Close
               </button>
@@ -822,6 +855,6 @@ export default function AlertsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Inter, IBM_Plex_Mono, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../contexts/auth-context";
 import { WorkspaceProvider } from "../contexts/workspace-context";
@@ -78,7 +78,7 @@ export default function RootLayout({
               (function() {
                 try {
                   var stored = localStorage.getItem('ricozviz-theme');
-                  var isDark = stored === 'dark' || ((!stored || stored === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  var isDark = stored !== 'light';
                   if (isDark) {
                     document.documentElement.classList.add('dark');
                     document.documentElement.style.colorScheme = 'dark';
@@ -92,9 +92,12 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] selection:bg-[#147D78] selection:text-white font-sans">
+      <body
+        suppressHydrationWarning
+        className="antialiased min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))] selection:bg-[#ff6b35] selection:text-white font-sans"
+      >
         <ScrollProgressBar />
-        <ThemeProvider>
+        <ThemeProvider defaultTheme="dark">
           <AuthProvider>
             <WorkspaceProvider>{children}</WorkspaceProvider>
           </AuthProvider>

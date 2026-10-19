@@ -254,9 +254,9 @@ export default function SharedDashboardPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3 text-sm text-gray-500">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center bg-[#121212]">
+        <div className="flex flex-col items-center gap-3 text-xs text-[#888888] font-mono">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
           <span>Loading Shared Dashboard...</span>
         </div>
       </div>
@@ -265,19 +265,19 @@ export default function SharedDashboardPage({
 
   if (errorMsg || !dashboard) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-        <div className="max-w-md w-full rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-lg">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600 mx-auto mb-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#121212] p-6">
+        <div className="max-w-md w-full rounded-2xl border border-[#262626] bg-[#141414] p-8 text-center shadow-2xl">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 mx-auto mb-4">
             <Lock className="h-6 w-6" />
           </div>
-          <h2 className="text-base font-bold text-gray-900">Shared Dashboard Unavailable</h2>
-          <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+          <h2 className="text-base font-semibold text-white">Shared Dashboard Unavailable</h2>
+          <p className="mt-2 text-xs text-[#888888] leading-relaxed">
             {errorMsg || "The link you followed may be invalid, expired, or deactivated by the dashboard owner."}
           </p>
-          <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-center">
+          <div className="mt-6 pt-5 border-t border-[#242424] flex items-center justify-center">
             <Link
               href="/login"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+              className="text-xs font-semibold text-[#ff6b35] hover:text-[#ff8a5c]"
             >
               Sign in to RicozViz →
             </Link>
@@ -291,8 +291,8 @@ export default function SharedDashboardPage({
     <div
       className={`min-h-screen flex flex-col antialiased ${getFontFamilyClass(dashboardTheme.fontFamily)}`}
       style={{
-        backgroundColor: dashboardTheme.backgroundColor || "#f8fafc",
-        color: dashboardTheme.textColor || "#0f172a",
+        backgroundColor: dashboardTheme.backgroundColor || "#121212",
+        color: dashboardTheme.textColor || "#fafafa",
       }}
     >
       {/* Print Stylesheet */}
@@ -330,10 +330,10 @@ export default function SharedDashboardPage({
       `}</style>
 
       {/* TOP BAR (Hidden on print) */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-20 no-print">
+      <header className="border-b border-[#242424] bg-[#121212] sticky top-0 z-20 no-print">
         <div className="mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 font-bold text-gray-900">
+            <Link href="/" className="flex items-center gap-2 font-bold text-white cursor-pointer">
               {dashboardBranding.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -344,15 +344,15 @@ export default function SharedDashboardPage({
               ) : (
                 <BrandLogo size={28} />
               )}
-              <span className="text-sm tracking-tight">
-                {dashboardBranding.title ? "RicozViz" : "RicozViz"}
+              <span className="text-sm font-semibold tracking-tight text-white">
+                ricoz<span className="text-[#ff6b35]">viz</span>
               </span>
             </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-xs font-semibold text-gray-900 truncate max-w-xs sm:max-w-md">
+            <span className="text-[#333333]">/</span>
+            <span className="text-xs font-semibold text-white truncate max-w-xs sm:max-w-md">
               {dashboardBranding.title || dashboard.name}
             </span>
-            <span className="inline-flex items-center gap-1 rounded bg-indigo-50 text-[10px] font-bold text-indigo-700 px-2 py-0.5 border border-indigo-200">
+            <span className="inline-flex items-center gap-1 rounded bg-[#ff6b35]/15 text-[10px] font-bold font-mono text-[#ff6b35] px-2 py-0.5 border border-[#ff6b35]/30">
               <Lock className="h-2.5 w-2.5" />
               <span>Read-Only Share</span>
             </span>
@@ -360,36 +360,36 @@ export default function SharedDashboardPage({
 
           <div className="flex items-center gap-2">
             {/* Auto-Refresh & Manual Visualizations Refresh Controls */}
-            <div className="flex items-center gap-1 bg-gray-100/90 border border-gray-200 rounded-lg p-1 text-xs">
+            <div className="flex items-center gap-1 bg-[#181818] border border-[#262626] rounded-lg p-1 text-xs">
               <button
                 type="button"
                 onClick={handleManualRefresh}
                 disabled={isRefreshingCharts}
                 title="Refresh Visualizations Now"
-                className="inline-flex items-center gap-1 rounded bg-white px-2 py-1 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 transition disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded bg-[#222222] border border-[#2c2c2c] px-2 py-1 text-xs font-medium text-[#dedede] hover:bg-[#282828] hover:text-white transition disabled:opacity-50 cursor-pointer"
               >
-                <RefreshCw className={`h-3 w-3 ${isRefreshingCharts ? "animate-spin text-indigo-600" : "text-gray-500"}`} />
+                <RefreshCw className={`h-3 w-3 ${isRefreshingCharts ? "animate-spin text-[#ff6b35]" : "text-[#888888]"}`} />
                 <span className="hidden md:inline">Refresh</span>
               </button>
               <select
                 value={autoRefreshInterval}
                 onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
                 title="Auto-refresh interval"
-                className="bg-transparent text-[11px] font-medium text-gray-600 focus:outline-none cursor-pointer py-0.5"
+                className="bg-transparent text-[11px] font-medium text-[#a0a0a0] focus:outline-none cursor-pointer py-0.5"
               >
-                <option value={0}>Auto: Off</option>
-                <option value={30}>Auto: 30s</option>
-                <option value={60}>Auto: 1m</option>
-                <option value={300}>Auto: 5m</option>
+                <option value={0} className="bg-[#181818] text-[#dedede]">Auto: Off</option>
+                <option value={30} className="bg-[#181818] text-[#dedede]">Auto: 30s</option>
+                <option value={60} className="bg-[#181818] text-[#dedede]">Auto: 1m</option>
+                <option value={300} className="bg-[#181818] text-[#dedede]">Auto: 5m</option>
               </select>
-              <span className="text-[10px] text-gray-400 pl-1 border-l border-gray-300 hidden xl:inline" title="Last updated time">
+              <span className="text-[10px] text-[#777777] font-mono pl-1 border-l border-[#2e2e2e] hidden xl:inline" title="Last updated time">
                 Updated {lastUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
               </span>
             </div>
 
             {/* Filter Count Badge */}
             {dashboardFilters.length > 0 && (
-              <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+              <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-[#ff6b35] bg-[#ff6b35]/15 px-2.5 py-0.5 rounded-full border border-[#ff6b35]/30">
                 <Filter className="h-3 w-3" />
                 {dashboardFilters.length} active
               </span>
@@ -398,15 +398,15 @@ export default function SharedDashboardPage({
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs hover:bg-gray-50 transition"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#2c2c2c] bg-[#1a1a1a] px-3 py-1.5 text-xs font-medium text-[#dedede] hover:bg-[#222222] hover:text-white transition cursor-pointer"
               title="Print dashboard or save as PDF"
             >
-              <Printer className="h-3.5 w-3.5 text-gray-500" />
+              <Printer className="h-3.5 w-3.5 text-[#888888]" />
               <span>Print / Export PDF</span>
             </button>
             <Link
               href="/login"
-              className="inline-flex items-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 transition"
+              className="inline-flex items-center rounded-lg bg-[#ff6b35] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#c2410c] transition cursor-pointer"
             >
               Log in
             </Link>
@@ -561,7 +561,7 @@ export default function SharedDashboardPage({
                         }}
                         title="Export Current Chart Data (CSV)"
                         disabled={!queryState?.data?.rows || queryState?.data?.rows.length === 0}
-                        className="rounded p-1 text-gray-400 hover:text-emerald-600 hover:bg-gray-100 text-xs transition disabled:opacity-30 disabled:hover:text-gray-400"
+                        className="rounded p-1 text-[#888888] hover:text-emerald-400 hover:bg-[#242424] text-xs transition disabled:opacity-30 disabled:hover:text-[#888888] cursor-pointer"
                       >
                         <Download className="h-3.5 w-3.5" />
                       </button>
@@ -570,26 +570,26 @@ export default function SharedDashboardPage({
                         onClick={() => void executeChartQuery(chart, dashboardFilters, true)}
                         title="Refresh Query"
                         disabled={queryState?.loading}
-                        className="rounded p-1 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 text-xs transition"
+                        className="rounded p-1 text-[#888888] hover:text-[#ff6b35] hover:bg-[#242424] text-xs transition cursor-pointer"
                       >
-                        <RefreshCw className={`h-3.5 w-3.5 ${queryState?.loading ? "animate-spin text-indigo-600" : ""}`} />
+                        <RefreshCw className={`h-3.5 w-3.5 ${queryState?.loading ? "animate-spin text-[#ff6b35]" : ""}`} />
                       </button>
                     </div>
                   </div>
 
                   {/* Active Filter Indicators */}
                   {applicableFilters.length > 0 && (
-                    <div className="px-4 py-1.5 bg-indigo-50/40 border-b border-indigo-100 flex flex-wrap items-center gap-1.5 text-[11px] no-print">
+                    <div className="px-4 py-1.5 bg-[#ff6b35]/10 border-b border-[#ff6b35]/25 flex flex-wrap items-center gap-1.5 text-[11px] no-print">
                       {applicableFilters.map((af) => (
                         <span
                           key={af.id}
-                          className="inline-flex items-center gap-1 rounded bg-white text-gray-700 border border-indigo-200 px-2 py-0.5 shadow-2xs font-medium text-[10px]"
+                          className="inline-flex items-center gap-1 rounded bg-[#1a1a1a] text-[#dedede] border border-[#2a2a2a] px-2 py-0.5 shadow-2xs font-medium text-[10px]"
                         >
                           <span>Filtered: {af.field} {af.operator} {String(af.value)}</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveFilter(af.id)}
-                            className="text-gray-400 hover:text-gray-700 font-bold ml-1"
+                            className="text-[#888888] hover:text-white font-bold ml-1 cursor-pointer"
                           >
                             ×
                           </button>
@@ -616,12 +616,12 @@ export default function SharedDashboardPage({
                   </div>
 
                   {/* Card Footer */}
-                  <div className="px-4 py-2 bg-gray-50/70 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 font-mono">
+                  <div className="px-4 py-2 bg-[#161616] border-t border-[#242424] flex items-center justify-between text-[11px] text-[#888888] font-mono">
                     <span className="truncate max-w-[160px] flex items-center gap-1">
-                      <Database className="h-3 w-3 text-gray-400 shrink-0" />
+                      <Database className="h-3 w-3 text-[#ff6b35] shrink-0" />
                       <span>{chart.datasetName || "Dataset"}</span>
                     </span>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-[10px] text-[#777777]">
                       {queryState?.data?.rowCount !== undefined
                         ? `${queryState.data.rowCount} rows`
                         : "Ready"}
