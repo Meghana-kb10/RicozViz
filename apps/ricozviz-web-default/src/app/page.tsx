@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import HeroBentoSection from "@/components/landing/HeroBentoSection";
 import InteractiveWorkbench from "@/components/landing/InteractiveWorkbench";
 import CapabilityGrid from "@/components/landing/CapabilityGrid";
@@ -11,6 +11,22 @@ import ComprehensiveFooter from "@/components/landing/ComprehensiveFooter";
 export default function HomePage() {
   const [selectedConnector, setSelectedConnector] =
     useState<string>("PostgreSQL");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#121212] text-[#fafafa] flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#242424] border-t-[#ff6b35]" />
+          <span className="text-xs font-mono-code text-[#898989]">Loading RicozViz OS...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#121212] text-[#fafafa]">
