@@ -4,7 +4,6 @@ A modular, enterprise-grade Turborepo master template managed with **pnpm**, des
 
 > **💡 Boilerplate Notice**: `apps/next` and `apps/vite` are reference boilerplates. To add new applications (e.g. `customer`, `partner`, `admin`, `merchant`), simply duplicate either boilerplate, rename it, and configure its port!
 
-
 ---
 
 
