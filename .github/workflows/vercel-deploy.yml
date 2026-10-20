@@ -1,324 +1,108 @@
 name: Deploy Apps to Vercel
 
 on:
-    push:
-        branches:
-            - main
-            - develop
-    workflow_dispatch:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
 
 permissions:
-    contents: read
+  contents: read
 
 jobs:
-    deploy:
-        name: Deploy apps to Vercel
-        runs-on: ubuntu-latest
+  deploy:
+    name: Deploy ${{ matrix.app.name }} to Vercel
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - name: ricozviz-web
+            dir: apps/ricozviz-web-default
+            project: viz
 
-        env:
-            VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-            VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-            CI: "1"
-            TURBO_TELEMETRY_DISABLED: "1"
-            NEXT_TELEMETRY_DISABLED: "1"
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      CI: "1"
+      TURBO_TELEMETRY_DISABLED: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-            - name: Setup pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 10.26.0
-                  run_install: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.0
+          run_install: false
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 22
-                  cache: pnpm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
 
-            - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-            - name: Deploy all Vercel apps
-              shell: bash
-              run: |
-                  set -euo pipefail
+      - name: Pull Vercel environment information
+        working-directory: ${{ matrix.app.dir }}
+        run: |
+          pnpm dlx vercel@latest pull \
+            --yes \
+            --environment=production \
+            --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_ORG_ID" \
+            --project="${{ secrets.VERCEL_PROJECT_ID || secrets.VERCEL_WEB_PROJECT_ID || matrix.app.project }}"
 
-                  REPO_NAME="${GITHUB_REPOSITORY##*/}"
+      - name: Build project artifacts
+        working-directory: ${{ matrix.app.dir }}
+        run: |
+          pnpm dlx vercel@latest build \
+            --prod \
+            --yes \
+            --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_ORG_ID" \
+            --project="${{ secrets.VERCEL_PROJECT_ID || secrets.VERCEL_WEB_PROJECT_ID || matrix.app.project }}"
 
-                  echo "=========================================="
-                  echo "Repository : ${REPO_NAME}"
-                  echo "Vercel Org : ${VERCEL_ORG_ID}"
-                  echo "=========================================="
+      - name: Deploy project artifacts to Vercel
+        working-directory: ${{ matrix.app.dir }}
+        run: |
+          MAX_RETRIES=3
+          RETRY_DELAY=15
+          PROJECT_TARGET="${{ secrets.VERCEL_PROJECT_ID || secrets.VERCEL_WEB_PROJECT_ID || matrix.app.project }}"
 
-                  for APP_DIR in apps/*; do
-                    # ------------------------------------------------------
-                    # Only process directories with package.json
-                    # ------------------------------------------------------
-                    if [ ! -d "${APP_DIR}" ] || [ ! -f "${APP_DIR}/package.json" ]; then
-                      continue
-                    fi
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            echo "🚀 [Attempt $attempt/$MAX_RETRIES] Deploying to Vercel ($PROJECT_TARGET)..."
+            
+            DEBUG_FLAG=""
+            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+              DEBUG_FLAG="--debug"
+            fi
 
-                    APP_NAME="$(basename "${APP_DIR}")"
-                    PACKAGE_JSON="${APP_DIR}/package.json"
+            if pnpm dlx vercel@latest deploy \
+              --prebuilt \
+              --archive=tgz \
+              --prod \
+              --yes \
+              $DEBUG_FLAG \
+              --token="$VERCEL_TOKEN" \
+              --scope="$VERCEL_ORG_ID" \
+              --project="$PROJECT_TARGET"; then
+              echo "✅ Deployment successful on attempt $attempt"
+              exit 0
+            fi
 
-                    # ------------------------------------------------------
-                    # Backend is deployed separately
-                    # ------------------------------------------------------
-                    if [ "${APP_NAME}" = "backend" ]; then
-                      echo ""
-                      echo "⏭️  Skipping ${APP_DIR}"
-                      continue
-                    fi
+            if [ "$attempt" -lt "$MAX_RETRIES" ]; then
+              echo "⚠️ Deployment attempt $attempt failed. Waiting ${RETRY_DELAY}s before retrying..."
+              sleep $RETRY_DELAY
+            fi
+          done
 
-                    # ------------------------------------------------------
-                    # Templates should not be deployed
-                    # ------------------------------------------------------
-                    if [ "${APP_NAME}" = "next" ] || [ "${APP_NAME}" = "vite" ]; then
-                      echo ""
-                      echo "⏭️  Skipping ${APP_DIR}"
-                      continue
-                    fi
-
-                    # ------------------------------------------------------
-                    # Resolve Vercel project name
-                    #
-                    # apps/foo_default -> repo name
-                    # apps/foo-default -> repo name
-                    # apps/foo         -> foo
-                    # ------------------------------------------------------
-                    if [[ "${APP_NAME}" == *_default || "${APP_NAME}" == *-default ]]; then
-                      VERCEL_PROJECT_NAME="${REPO_NAME}"
-                    else
-                      VERCEL_PROJECT_NAME="${APP_NAME}"
-                    fi
-
-                    # ------------------------------------------------------
-                    # Read package metadata
-                    # ------------------------------------------------------
-                    PACKAGE_NAME="$(
-                      jq -r '.name // empty' "${PACKAGE_JSON}"
-                    )"
-
-                    if [ -z "${PACKAGE_NAME}" ]; then
-                      echo ""
-                      echo "❌ package.json has no \"name\":"
-                      echo "   ${PACKAGE_JSON}"
-                      exit 1
-                    fi
-
-                    # ------------------------------------------------------
-                    # Detect framework
-                    #
-                    # Priority:
-                    #   1. next dependency
-                    #   2. vite dependency
-                    #   3. framework field
-                    # ------------------------------------------------------
-                    FRAMEWORK="$(
-                      jq -r '
-                        if (.dependencies.next // .devDependencies.next // .peerDependencies.next) then
-                          "nextjs"
-                        elif (.dependencies.vite // .devDependencies.vite // .peerDependencies.vite) then
-                          "vite"
-                        elif .vercel.framework then
-                          .vercel.framework
-                        else
-                          ""
-                        end
-                      ' "${PACKAGE_JSON}"
-                    )"
-
-                    if [ -z "${FRAMEWORK}" ]; then
-                      echo ""
-                      echo "❌ Unable to detect framework"
-                      echo "   App:     ${APP_DIR}"
-                      echo "   Package: ${PACKAGE_NAME}"
-                      echo ""
-                      echo "Expected a Next.js or Vite dependency."
-                      exit 1
-                    fi
-
-                    # ------------------------------------------------------
-                    # Resolve build command
-                    #
-                    # Keep Turbo as the build orchestrator, but let Vercel
-                    # know which framework is being built.
-                    # ------------------------------------------------------
-                    BUILD_COMMAND="cd ../.. && pnpm turbo run build --filter=${PACKAGE_NAME}... --no-daemon --ui=stream"
-
-                    echo ""
-                    echo "=========================================="
-                    echo "Application    : ${APP_DIR}"
-                    echo "Package        : ${PACKAGE_NAME}"
-                    echo "Framework      : ${FRAMEWORK}"
-                    echo "Vercel Project : ${VERCEL_PROJECT_NAME}"
-                    echo "Build Command  : ${BUILD_COMMAND}"
-                    echo "=========================================="
-
-                    # ------------------------------------------------------
-                    # Find the existing Vercel project.
-                    # ------------------------------------------------------
-                    PROJECT_RESPONSE="$(
-                      curl \
-                        --silent \
-                        --show-error \
-                        --fail \
-                        --get \
-                        "https://api.vercel.com/v9/projects/${VERCEL_PROJECT_NAME}" \
-                        -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-                        -H "Content-Type: application/json" \
-                        --data-urlencode "teamId=${VERCEL_ORG_ID}"
-                    )"
-
-                    VERCEL_PROJECT_ID="$(
-                      echo "${PROJECT_RESPONSE}" |
-                        jq -r '.id // empty'
-                    )"
-
-                    if [ -z "${VERCEL_PROJECT_ID}" ]; then
-                      echo ""
-                      echo "❌ Vercel project not found"
-                      echo "   Project: ${VERCEL_PROJECT_NAME}"
-                      echo "   Org:     ${VERCEL_ORG_ID}"
-                      exit 1
-                    fi
-
-                    echo "Project ID: ${VERCEL_PROJECT_ID}"
-
-                    # ------------------------------------------------------
-                    # Clean Vercel state from previous app
-                    # ------------------------------------------------------
-                    rm -rf .vercel
-
-                    rm -f .env.local
-                    rm -f .env.production.local
-                    rm -f .env.preview.local
-
-                    export VERCEL_PROJECT_ID="${VERCEL_PROJECT_ID}"
-
-                    # ------------------------------------------------------
-                    # Pull production environment variables + project settings
-                    # ------------------------------------------------------
-                    echo ""
-                    echo "Pulling Vercel project settings..."
-
-                    pnpm dlx vercel@latest pull \
-                      --yes \
-                      --environment=production \
-                      --token="${VERCEL_TOKEN}"
-
-                    if [ ! -f ".vercel/project.json" ]; then
-                      echo ""
-                      echo "❌ .vercel/project.json was not created"
-                      exit 1
-                    fi
-
-                    # ------------------------------------------------------
-                    # Override local Vercel configuration.
-                    #
-                    # IMPORTANT:
-                    # These changes only affect the CI checkout.
-                    # Nothing is written back to the Vercel project.
-                    # ------------------------------------------------------
-                    echo ""
-                    echo "Applying temporary local Vercel configuration..."
-
-                    tmp_project_json="$(mktemp)"
-
-                    jq \
-                      --arg rootDirectory "${APP_DIR}" \
-                      --arg framework "${FRAMEWORK}" \
-                      --arg buildCommand "${BUILD_COMMAND}" \
-                      '
-                        .settings.rootDirectory = $rootDirectory
-                        | .settings.framework = $framework
-                        | .settings.buildCommand = $buildCommand
-                      ' \
-                      .vercel/project.json > "${tmp_project_json}"
-
-                    mv "${tmp_project_json}" .vercel/project.json
-
-                    echo ""
-                    echo "Local Vercel configuration:"
-                    jq '{
-                      projectId,
-                      orgId,
-                      settings: {
-                        framework,
-                        buildCommand,
-                        rootDirectory,
-                        nodeVersion
-                      }
-                    }' .vercel/project.json
-
-                    # ------------------------------------------------------
-                    # Build using Vercel Build Output API
-                    # ------------------------------------------------------
-                    echo ""
-                    echo "=========================================="
-                    echo "Building ${APP_DIR}"
-                    echo "Framework: ${FRAMEWORK}"
-                    echo "=========================================="
-
-                    timeout 1800 pnpm dlx vercel@latest build \
-                      --prod \
-                      --yes \
-                      --token="${VERCEL_TOKEN}"
-
-                    if [ ! -d ".vercel/output" ]; then
-                      echo ""
-                      echo "❌ Vercel build output was not generated"
-                      echo ""
-                      echo "Expected:"
-                      echo "  .vercel/output/"
-                      exit 1
-                    fi
-
-                    echo ""
-                    echo "✅ Build output generated"
-
-                    # ------------------------------------------------------
-                    # Deploy prebuilt Vercel output
-                    # ------------------------------------------------------
-                    echo ""
-                    echo "=========================================="
-                    echo "Deploying ${APP_DIR}"
-                    echo "Framework: ${FRAMEWORK}"
-                    echo "=========================================="
-
-                    DEPLOYMENT_URL="$(
-                      timeout 300 pnpm dlx vercel@latest deploy \
-                        --prebuilt \
-                        --archive=tgz \
-                        --no-wait \
-                        --prod \
-                        --yes \
-                        --token="${VERCEL_TOKEN}"
-                    )"
-
-                    echo ""
-                    echo "✅ Deployment successful"
-                    echo "   App:       ${APP_DIR}"
-                    echo "   Framework: ${FRAMEWORK}"
-                    echo "   Project:   ${VERCEL_PROJECT_NAME}"
-                    echo "   URL:       ${DEPLOYMENT_URL}"
-
-                    # ------------------------------------------------------
-                    # Clean temporary Vercel state before next application
-                    # ------------------------------------------------------
-                    rm -rf .vercel
-
-                    rm -f .env.local
-                    rm -f .env.production.local
-                    rm -f .env.preview.local
-
-                    unset VERCEL_PROJECT_ID
-
-                    echo ""
-                    echo "✅ Finished ${APP_DIR}"
-                  done
+          echo "❌ Vercel deployment failed after $MAX_RETRIES attempts."
+          exit 1
