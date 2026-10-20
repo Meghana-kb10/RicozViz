@@ -292,8 +292,10 @@ jobs:
                     echo "=========================================="
 
                     DEPLOYMENT_URL="$(
-                      timeout 900 pnpm dlx vercel@latest deploy \
+                      timeout 300 pnpm dlx vercel@latest deploy \
                         --prebuilt \
+                        --archive=tgz \
+                        --no-wait \
                         --prod \
                         --yes \
                         --token="${VERCEL_TOKEN}"
