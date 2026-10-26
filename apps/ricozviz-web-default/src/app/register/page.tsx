@@ -337,7 +337,7 @@ export default function RegisterPage() {
 
       {/* Footer Info */}
       <footer className="relative z-10 w-full py-4 text-center text-[11px] font-mono-code text-[#898989] border-t border-[#2e2e2e]/50">
-        Enterprise In-Memory OLAP · SAML 2.0 Auto-Discovery · End-to-End Encryption
+        Enterprise In-Memory OLAP · Hardware HSM Enclave · End-to-End Encryption
       </footer>
     </div>
   );
