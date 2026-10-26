@@ -221,7 +221,7 @@ export default function DashboardsPage() {
               setModalError(null);
               setIsCreateModalOpen(true);
             }}
-            className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-2 text-xs font-medium text-[#fafafa] transition-all hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] cursor-pointer inline-flex items-center gap-1.5"
+            className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-2 text-xs font-medium text-[#fafafa] transition-all hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] cursor-pointer inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>New Dashboard</span>
@@ -331,7 +331,7 @@ export default function DashboardsPage() {
                   key={s}
                   type="button"
                   onClick={() => setStatusFilter(s)}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-normal transition-colors cursor-pointer ${
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-normal transition-colors cursor-pointer shrink-0 whitespace-nowrap ${
                     active
                       ? "border-[#fafafa] bg-[#1c1c1c] text-[#fafafa] font-medium"
                       : "border-[#2e2e2e] bg-transparent text-[#898989] hover:border-[#393939] hover:text-[#fafafa]"

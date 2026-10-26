@@ -801,7 +801,7 @@ function VisualizationsStudioContent() {
         { label: "Visualizations Studio" },
       ]}
       actions={
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Tab switcher */}
           <div className="flex items-center bg-[#181818] p-1 rounded-full border border-[#262626] text-xs">
             <button
@@ -832,7 +832,7 @@ function VisualizationsStudioContent() {
               <button
                 type="button"
                 onClick={() => openAddToDashboard()}
-                className="rounded-full border border-[#262626] bg-[#1a1a1a] text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-medium text-[#fafafa] hover:bg-[#242424] transition-all cursor-pointer"
+                className="rounded-full border border-[#262626] bg-[#1a1a1a] text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 font-medium text-[#fafafa] hover:bg-[#242424] transition-all cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 text-[#ff6b35]" />
                 <span>Add to Dashboard</span>
@@ -841,7 +841,7 @@ function VisualizationsStudioContent() {
                 type="button"
                 onClick={handleSaveVisualization}
                 disabled={isSaving}
-                className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] text-xs py-1.5 px-4 inline-flex items-center gap-1.5 font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer disabled:opacity-50"
+                className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] text-xs py-1.5 px-4 inline-flex items-center gap-1.5 font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap"
               >
                 <Save className="h-3.5 w-3.5" />
                 <span>{isSaving ? "Saving…" : editingVizId ? "Update" : "Save Visualization"}</span>
@@ -872,9 +872,9 @@ function VisualizationsStudioContent() {
 
       {/* TAB 1: STUDIO BUILDER */}
       {activeTab === "builder" && (
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
           {/* LEFT CONFIGURATION SIDEBAR */}
-          <aside className="w-96 border-r border-[#262626] bg-[#141414] flex flex-col h-[calc(100vh-57px)] overflow-y-auto">
+          <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-[#262626] bg-[#141414] flex flex-col lg:h-[calc(100vh-57px)] overflow-y-auto">
             <div className="p-5 border-b border-[#262626] flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-[#fafafa] uppercase tracking-wider font-mono-code">
@@ -1470,7 +1470,7 @@ function VisualizationsStudioContent() {
           </aside>
 
           {/* MAIN PREVIEW CANVAS */}
-          <main className="flex-1 flex flex-col h-[calc(100vh-57px)] overflow-hidden bg-[#121212] p-6">
+          <main className="flex-1 min-w-0 flex flex-col lg:h-[calc(100vh-57px)] overflow-y-auto bg-[#121212] p-4 sm:p-6">
             {/* Title & Metadata Top Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 bg-[#141414] p-4 rounded-2xl border border-[#262626] shadow-sm">
               <div className="flex-1 max-w-xl">
@@ -1490,7 +1490,7 @@ function VisualizationsStudioContent() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center bg-[#181818] p-1 rounded-full border border-[#262626] text-xs font-mono-code">
                   <button
                     onClick={() => setPreviewTab("chart")}
@@ -1752,7 +1752,7 @@ function VisualizationsStudioContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-2xl bg-[#141414] border border-[#262626] p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#262626]">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="h-8 w-8 rounded-xl bg-[#ff6b35]/15 border border-[#ff6b35]/30 text-[#ff6b35] flex items-center justify-center">
                   <Share2 className="h-4 w-4" />
                 </div>
@@ -1780,12 +1780,12 @@ function VisualizationsStudioContent() {
                 <p className="text-xs text-[#898989]">
                   Anyone with this link can view the &quot;{sharingVizTitle}&quot; chart in live read-only mode without logging in.
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <input
                     type="text"
                     readOnly
                     value={shareUrl}
-                    className="flex-1 text-xs font-mono-code bg-[#121212] border border-[#262626] rounded-xl px-3 py-2 text-[#fafafa] select-all focus:outline-none"
+                    className="flex-1 min-w-[180px] text-xs font-mono-code bg-[#121212] border border-[#262626] rounded-xl px-3 py-2 text-[#fafafa] select-all focus:outline-none"
                   />
                   <button
                     type="button"
@@ -1796,7 +1796,7 @@ function VisualizationsStudioContent() {
                         setTimeout(() => setCopiedShare(false), 2000);
                       }
                     }}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-3.5 py-2 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-3.5 py-2 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer shrink-0 whitespace-nowrap"
                   >
                     {copiedShare ? (
                       <>

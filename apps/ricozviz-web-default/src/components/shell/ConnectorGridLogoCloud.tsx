@@ -383,7 +383,7 @@ export function ConnectorGridLogoCloud() {
         </div>
 
         {/* Marquee / Grid of Authentic Brand Logos */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-10 gap-3">
           {ENTERPRISE_CONNECTORS.map((connector) => {
             const Icon = connector.icon;
             const isCurrent = activeConnector.id === connector.id;
@@ -425,7 +425,7 @@ export function ConnectorGridLogoCloud() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex flex-wrap items-center rounded-lg bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] p-1 font-mono text-xs">
+          <div className="flex items-center overflow-x-auto no-scrollbar rounded-lg bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151] p-1 font-mono text-xs max-w-full">
             {[
               { id: "all", label: "All Connectors" },
               { id: "warehouse", label: "Cloud Warehouses" },
@@ -436,7 +436,7 @@ export function ConnectorGridLogoCloud() {
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
                 type="button"
-                className={`px-3 py-1 rounded-md transition cursor-pointer font-medium ${
+                className={`px-3 py-1 rounded-md transition cursor-pointer font-medium whitespace-nowrap shrink-0 ${
                   selectedCategory === cat.id
                     ? "bg-[#147D78] dark:bg-[#4F9D8E] text-white shadow-xs"
                     : "text-[#596775] dark:text-[#9CA3AF] hover:text-[#172B3A] dark:hover:text-[#E5E7EB]"
@@ -521,11 +521,11 @@ export function ConnectorGridLogoCloud() {
               <ActiveIcon className="h-6 w-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-base font-heading font-bold text-[#172B3A] dark:text-[#E5E7EB]">
                   {activeConnector.name} Enterprise Connector
                 </h4>
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">
                   Ready
                 </span>
               </div>
@@ -557,7 +557,7 @@ export function ConnectorGridLogoCloud() {
         </div>
 
         {/* Live Diagnostics Metrics */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+        <div className="mt-4 grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
           <div className="p-3 rounded-lg bg-white dark:bg-[#1F2937] border border-[#DADFD9] dark:border-[#374151]">
             <span className="text-[10px] text-[#596775] dark:text-[#9CA3AF] block uppercase">
               Driver Protocol

@@ -31,8 +31,8 @@ export default function ComprehensiveFooter() {
               Universal SQL pushdown and cloud warehouse connectors, Natural Language to Chart AI,
               10+ interactive Recharts visualizations, and secure expiring embeds.
             </p>
-            <div className="flex items-center gap-[10px] text-[12px] font-mono-code text-[#898989]">
-              <span className="flex h-[8px] w-[8px] rounded-full bg-emerald-400" />
+            <div className="flex flex-wrap items-center gap-[10px] text-[12px] font-mono-code text-[#898989]">
+              <span className="flex h-[8px] w-[8px] rounded-full bg-emerald-400 shrink-0" />
               <Link href="/status" className="text-emerald-400 hover:underline">
                 All Systems Operational
               </Link>
@@ -42,11 +42,11 @@ export default function ComprehensiveFooter() {
           </div>
 
           <div className="flex flex-col justify-between rounded-[14px] border border-[#2e2e2e] bg-[#171717] p-[20px] lg:col-span-7">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[14px] font-medium text-[#fafafa]">
                 Ready to build interactive dashboards?
               </span>
-              <span className="font-mono-code text-[11px] text-emerald-400">✓ Instant Setup</span>
+              <span className="font-mono-code text-[11px] text-emerald-400 shrink-0 whitespace-nowrap">✓ Instant Setup</span>
             </div>
             <p className="mt-[6px] text-[13px] text-[#898989]">
               Connect your databases in seconds, synthesize charts with AI, and embed governed canvases.

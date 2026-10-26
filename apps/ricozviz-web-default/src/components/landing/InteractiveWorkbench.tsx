@@ -489,14 +489,14 @@ export default function InteractiveWorkbench({
             {/* Main IDE Stage */}
             <div className="flex flex-1 flex-col bg-[#121212]">
               {/* Top Breadcrumb Bar */}
-              <div className="flex h-[44px] items-center justify-between border-b border-[#242424] px-[20px]">
-                <div className="flex items-center gap-[10px] text-[11px] text-[#b4b4b4]">
+              <div className="flex h-[44px] items-center justify-between gap-2 border-b border-[#242424] px-[16px] sm:px-[20px] overflow-hidden">
+                <div className="flex min-w-0 items-center gap-[8px] sm:gap-[10px] text-[11px] text-[#b4b4b4] overflow-hidden">
                   <span className="text-[#fafafa]">RicozViz Studio</span>
-                  <span className="rounded-full border border-[#2e2e2e] bg-[#1c1c1c] px-[7px] py-[1px] text-[10px] text-[#898989]">
+                  <span className="shrink-0 rounded-full border border-[#2e2e2e] bg-[#1c1c1c] px-[7px] py-[1px] text-[10px] text-[#898989] whitespace-nowrap">
                     Active
                   </span>
                   <span className="text-[#4d4d4d]">/</span>
-                  <span>{selectedConnector}</span>
+                  <span className="truncate">{selectedConnector}</span>
                   <span className="text-[#4d4d4d]">/</span>
                   <span className="hidden text-[#898989] sm:inline">
                     ⑂ {selectedTable}
@@ -507,7 +507,7 @@ export default function InteractiveWorkbench({
                   <button
                     type="button"
                     onClick={() => setStreamingEnabled((s) => !s)}
-                    className="rounded-full border border-[#2e2e2e] bg-[#171717] px-[10px] py-[3px] text-[11px] text-[#b4b4b4] hover:border-[#393939] hover:text-[#fafafa] cursor-pointer"
+                    className="shrink-0 whitespace-nowrap rounded-full border border-[#2e2e2e] bg-[#171717] px-[10px] py-[3px] text-[11px] text-[#b4b4b4] hover:border-[#393939] hover:text-[#fafafa] cursor-pointer"
                   >
                     {streamingEnabled
                       ? `Stream Live · ${streamTick.toLocaleString("en-US")}`
@@ -565,7 +565,7 @@ export default function InteractiveWorkbench({
                     </div>
 
                     <div className="flex min-h-[240px] flex-col justify-between rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[18px]">
-                      <div className="flex items-center justify-between text-[12px]">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
                         <div>
                           <span className="font-medium text-[#fafafa]">
                             {selectedTable}
@@ -578,7 +578,7 @@ export default function InteractiveWorkbench({
                         <button
                           type="button"
                           onClick={handleRunParameterizedSql}
-                          className="rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[12px] py-[4px] text-[11px] font-medium text-[#fafafa] hover:bg-[#c2410c] cursor-pointer"
+                          className="shrink-0 whitespace-nowrap rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[12px] py-[4px] text-[11px] font-medium text-[#fafafa] hover:bg-[#c2410c] cursor-pointer"
                         >
                           {isRunningQuery ? "Executing SQL..." : "Execute Query"}
                         </button>
@@ -707,7 +707,7 @@ export default function InteractiveWorkbench({
                         )}
 
                         {chartType === "heatmap" && (
-                          <div className="grid w-full grid-cols-8 gap-[6px]">
+                          <div className="grid w-full grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-[6px]">
                             {Array.from({ length: 24 }).map((_, cellIdx) => {
                               const intensity =
                                 (cellIdx * 17 +
@@ -875,7 +875,8 @@ export default function InteractiveWorkbench({
                         <span>RESULT_SET ({visibleRows.length} rows)</span>
                         <span>SQL_EXECUTION_SUCCESS</span>
                       </div>
-                      <table className="w-full text-left text-[12px]">
+                      <div className="w-full overflow-x-auto">
+                      <table className="w-full text-left text-[12px] min-w-[420px]">
                         <thead>
                           <tr className="border-b border-[#242424] text-[#898989]">
                             <th className="pb-[8px] font-normal">Source</th>
@@ -905,6 +906,7 @@ export default function InteractiveWorkbench({
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -975,7 +977,7 @@ export default function InteractiveWorkbench({
                           <code>{activeAi.sqlQuery}</code>
                         </pre>
 
-                        <div className="mt-[14px] grid grid-cols-3 gap-[8px]">
+                        <div className="mt-[14px] grid grid-cols-1 sm:grid-cols-3 gap-[8px]">
                           <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
                             <span className="block text-[10px] font-mono-code text-[#898989]">Chart Visual</span>
                             <span className="mt-[2px] block text-[13px] font-medium text-[#fafafa]">{activeAi.chartType}</span>
@@ -991,13 +993,13 @@ export default function InteractiveWorkbench({
                         </div>
                       </div>
 
-                      <div className="mt-[16px] flex items-center justify-between border-t border-[#242424] pt-[12px]">
+                      <div className="mt-[16px] flex flex-wrap items-center justify-between gap-2 border-t border-[#242424] pt-[12px]">
                         <span className="font-mono-code text-[11px] text-[#898989]">
                           Natural Language to Chart AI Pipeline
                         </span>
                         <a
                           href="/dashboards"
-                          className="rounded-full border border-[#393939] px-[12px] py-[4px] text-[11px] text-[#fafafa] hover:border-[#ff6b35] transition-colors"
+                          className="shrink-0 whitespace-nowrap rounded-full border border-[#393939] px-[12px] py-[4px] text-[11px] text-[#fafafa] hover:border-[#ff6b35] transition-colors"
                         >
                           Open in Dashboard Studio →
                         </a>

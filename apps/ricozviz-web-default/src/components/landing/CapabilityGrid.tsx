@@ -210,7 +210,7 @@ export default function CapabilityGrid() {
                   {PIPELINE_STAGES[selectedStageIdx].metric}
                 </span>
               </div>
-              <div className="grid grid-cols-5 gap-[8px] p-[16px]">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-[8px] p-[12px] sm:p-[16px]">
                 {PIPELINE_STAGES.map((stg, idx) => {
                   const active = selectedStageIdx === idx;
                   return (
@@ -218,7 +218,9 @@ export default function CapabilityGrid() {
                       key={stg.id}
                       type="button"
                       onClick={() => setSelectedStageIdx(idx)}
-                      className={`flex h-[88px] flex-col justify-between rounded-[8px] border p-[10px] text-left transition-colors cursor-pointer ${
+                      className={`flex h-[76px] sm:h-[88px] flex-col justify-between rounded-[8px] border p-[8px] sm:p-[10px] text-left transition-colors cursor-pointer ${
+                        idx === PIPELINE_STAGES.length - 1 ? "col-span-2 sm:col-span-1" : ""
+                      } ${
                         active
                           ? "border-[#393939] bg-[#1c1c1c]"
                           : "border-[#242424] bg-[#161616] hover:border-[#2e2e2e]"
@@ -229,7 +231,7 @@ export default function CapabilityGrid() {
                           active ? "bg-[#ff6b35]" : "bg-[#2e2e2e]"
                         }`}
                       />
-                      <span className="font-mono-code text-[10px] text-[#b4b4b4]">
+                      <span className="font-mono-code text-[10px] text-[#b4b4b4] truncate">
                         {stg.label}
                       </span>
                     </button>
@@ -266,7 +268,7 @@ export default function CapabilityGrid() {
                 </span>
               </div>
               <div className="grid grid-cols-12 gap-[10px] p-[16px]">
-                <div className="col-span-4 space-y-[6px]">
+                <div className="col-span-12 sm:col-span-4 space-y-[6px]">
                   {["query_exec", "dataset_export", "user_invited"].map((item, i) => (
                     <button
                       key={item}
@@ -287,7 +289,7 @@ export default function CapabilityGrid() {
                     </button>
                   ))}
                 </div>
-                <div className="col-span-8 flex flex-col justify-between rounded-[8px] border border-[#242424] bg-[#161616] p-[12px] font-mono-code text-[10px] text-[#898989]">
+                <div className="col-span-12 sm:col-span-8 flex flex-col justify-between rounded-[8px] border border-[#242424] bg-[#161616] p-[12px] font-mono-code text-[10px] text-[#898989] min-h-[80px]">
                   <div className="text-[#fafafa]">
                     {activeAuditIdx === 0 &&
                       "audit:9f8a · SQL Query Executed on PostgreSQL"}
@@ -343,7 +345,7 @@ export default function CapabilityGrid() {
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-[10px] p-[16px]">
+              <div className="grid grid-cols-3 gap-[6px] sm:gap-[10px] p-[12px] sm:p-[16px]">
                 {[
                   { title: "Admin Role", active: identityMode === "roles" },
                   { title: "Org Isolation", active: true },
@@ -366,7 +368,7 @@ export default function CapabilityGrid() {
                         idx === 1 ? "bg-[#ff6b35]" : "bg-[#393939]"
                       }`}
                     />
-                    <span className="font-mono-code text-[10px] text-[#b4b4b4]">
+                    <span className="font-mono-code text-[9.5px] sm:text-[10px] text-[#b4b4b4] truncate">
                       {col.title}
                     </span>
                   </button>

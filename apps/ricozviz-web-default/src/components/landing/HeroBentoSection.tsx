@@ -252,7 +252,7 @@ export default function HeroBentoSection({
             <div className="grid grid-cols-1 items-end gap-[24px] lg:grid-cols-2">
               <h1
                 style={{ animationDelay: "60ms" }}
-                className="animate-fade-in-up text-[38px] font-normal leading-[1.06] tracking-[-0.02em] text-[#fafafa] sm:text-[48px] lg:text-[52px] lg:whitespace-nowrap"
+                className="animate-fade-in-up text-[34px] font-normal leading-[1.08] tracking-[-0.02em] text-[#fafafa] sm:text-[44px] lg:text-[46px] xl:text-[52px] xl:whitespace-nowrap"
               >
                 <span className="block">Query in milliseconds</span>
                 <span className="block text-[#ff6b35]">Visualize without limits</span>
@@ -298,7 +298,7 @@ export default function HeroBentoSection({
           <BentoSpotlightCard
             onClick={() => setOlapPulse((p) => !p)}
             delay="300ms"
-            className="md:col-span-12 lg:col-span-6 lg:flex-row h-[400px]"
+            className="md:col-span-12 lg:col-span-6 lg:flex-row min-h-[380px] h-auto lg:h-[400px]"
           >
             <div className="relative z-10 flex h-full w-full flex-col justify-between lg:max-w-[240px]">
               <div>
@@ -502,8 +502,8 @@ export default function HeroBentoSection({
                 </svg>
 
                 {/* Floating query execution throughput tag */}
-                <div className="absolute -bottom-2 right-0 rounded-full border border-[#2e2e2e] bg-[#121212]/95 backdrop-blur-xs px-[10px] py-[3px] text-[10px] font-mono-code text-[#898989] group-hover:border-[#ff6b35]/60 group-hover:text-[#fafafa] transition-colors flex items-center gap-[6px]">
-                  <span className="h-[5px] w-[5px] rounded-full bg-emerald-400 animate-pulse" />
+                <div className="absolute -bottom-2 right-0 rounded-full border border-[#2e2e2e] bg-[#121212]/95 backdrop-blur-xs px-[10px] py-[3px] text-[10px] font-mono-code text-[#898989] group-hover:border-[#ff6b35]/60 group-hover:text-[#fafafa] transition-colors flex items-center gap-[6px] shrink-0 whitespace-nowrap">
+                  <span className="h-[5px] w-[5px] rounded-full bg-emerald-400 animate-pulse shrink-0" />
                   <span>Sub-Second Query Pushdown</span>
                 </div>
               </div>
@@ -514,7 +514,7 @@ export default function HeroBentoSection({
           <BentoSpotlightCard
             onClick={() => setAiPromptExpanded((v) => !v)}
             delay="380ms"
-            className="md:col-span-6 lg:col-span-3 h-[400px]"
+            className="md:col-span-6 lg:col-span-3 min-h-[380px] h-auto lg:h-[400px]"
           >
             <div>
               <div className="flex items-center gap-[8px] text-[#fafafa]">
@@ -577,12 +577,12 @@ export default function HeroBentoSection({
             </div>
 
             {/* AI Assistant Active Telemetry Footer */}
-            <div className="mt-[10px] flex items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
-              <span className="flex items-center gap-[5px]">
-                <span className="h-[5px] w-[5px] rounded-full bg-[#ff6b35] group-hover:animate-ping" />
+            <div className="mt-[10px] flex items-center justify-between gap-1 border-t border-[#222222] pt-[8px] text-[10px] sm:text-[11px] font-mono-code text-[#898989]">
+              <span className="flex items-center gap-[5px] shrink-0 whitespace-nowrap">
+                <span className="h-[5px] w-[5px] rounded-full bg-[#ff6b35] group-hover:animate-ping shrink-0" />
                 <span className="group-hover:text-[#fafafa] transition-colors">NL-to-Chart AI</span>
               </span>
-              <span className="rounded bg-[#1c1c1c] px-[7px] py-[2px] text-[10px] text-[#ff6b35] border border-[#2e2e2e] group-hover:border-[#ff6b35]/40 transition-colors">
+              <span className="rounded bg-[#1c1c1c] px-[7px] py-[2px] text-[10px] text-[#ff6b35] border border-[#2e2e2e] group-hover:border-[#ff6b35]/40 transition-colors shrink-0 whitespace-nowrap">
                 Auto-SQL
               </span>
             </div>
@@ -592,7 +592,7 @@ export default function HeroBentoSection({
           <BentoSpotlightCard
             onClick={() => setStreamIdx((i) => (i + 1) % STREAM_TOPICS.length)}
             delay="460ms"
-            className="md:col-span-6 lg:col-span-3 h-[400px]"
+            className="md:col-span-6 lg:col-span-3 min-h-[380px] h-auto lg:h-[400px]"
           >
             <div>
               <div className="flex items-center gap-[8px] text-[#fafafa]">
@@ -622,10 +622,10 @@ export default function HeroBentoSection({
 
             <div className="relative flex flex-col items-center pt-[12px]">
               {/* Terminal command pill with live beacon */}
-              <div className="z-10 flex items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#121212] px-[14px] py-[6px] font-mono-code text-[11px] group-hover:border-[#ff6b35]/60 group-hover:shadow-[0_0_16px_rgba(255,107,53,0.3)] transition-all">
-                <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] group-hover:animate-ping" />
-                <span className="text-[#898989]">$ alert</span>
-                <span className="text-[#ff6b35] font-semibold truncate max-w-[170px]">{currentStream.cmd}</span>
+              <div className="z-10 flex max-w-full items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#121212] px-[12px] sm:px-[14px] py-[6px] font-mono-code text-[11px] group-hover:border-[#ff6b35]/60 group-hover:shadow-[0_0_16px_rgba(255,107,53,0.3)] transition-all min-w-0">
+                <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] group-hover:animate-ping shrink-0" />
+                <span className="text-[#898989] shrink-0 whitespace-nowrap">$ alert</span>
+                <span className="text-[#ff6b35] font-semibold truncate max-w-[130px] sm:max-w-[170px] min-w-0">{currentStream.cmd}</span>
               </div>
 
               {/* Wireframe globe with alive hover glow and streaming packet flow */}
@@ -728,19 +728,19 @@ export default function HeroBentoSection({
             </div>
 
             {/* Alert status telemetry footer */}
-            <div className="mt-auto flex w-full items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
-              <span className="flex items-center gap-[6px] text-emerald-400">
-                <span className="h-[6px] w-[6px] rounded-full bg-emerald-400 animate-ping" />
+            <div className="mt-auto flex w-full items-center justify-between gap-1 border-t border-[#222222] pt-[8px] text-[10px] sm:text-[11px] font-mono-code text-[#898989]">
+              <span className="flex items-center gap-[5px] text-emerald-400 shrink-0 whitespace-nowrap">
+                <span className="h-[5px] w-[5px] rounded-full bg-emerald-400 animate-ping shrink-0" />
                 <span>Webhooks &amp; Email</span>
               </span>
-              <span className="group-hover:text-[#fafafa] transition-colors">Scheduled Monitors Active</span>
+              <span className="group-hover:text-[#fafafa] transition-colors whitespace-nowrap truncate text-right">Monitors Active</span>
             </div>
           </BentoSpotlightCard>
 
           {/* CARD 4 (3 Cols): Dashboard Builder */}
           <BentoSpotlightCard
             delay="540ms"
-            className="md:col-span-6 lg:col-span-3 h-[400px]"
+            className="md:col-span-6 lg:col-span-3 min-h-[380px] h-auto lg:h-[400px]"
           >
             <div>
               <div className="flex items-center gap-[8px] text-[#fafafa]">
@@ -897,9 +897,9 @@ export default function HeroBentoSection({
             </div>
 
             {/* Micro-Studio Status Footer */}
-            <div className="mt-auto flex items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
-              <span className="group-hover:text-[#fafafa] transition-colors">10+ Recharts Visualizers</span>
-              <span className="text-[#ff6b35]">Interactive Studio</span>
+            <div className="mt-auto flex items-center justify-between gap-1 border-t border-[#222222] pt-[8px] text-[10px] sm:text-[11px] font-mono-code text-[#898989]">
+              <span className="group-hover:text-[#fafafa] transition-colors truncate">10+ Recharts Visualizers</span>
+              <span className="text-[#ff6b35] shrink-0 whitespace-nowrap">Interactive Studio</span>
             </div>
           </BentoSpotlightCard>
 
@@ -907,7 +907,7 @@ export default function HeroBentoSection({
           <BentoSpotlightCard
             onClick={() => setCollabPing((p) => !p)}
             delay="620ms"
-            className="md:col-span-6 lg:col-span-3 h-[400px]"
+            className="md:col-span-6 lg:col-span-3 min-h-[380px] h-auto lg:h-[400px]"
           >
             <div>
               <div className="flex items-center gap-[8px] text-[#fafafa]">
@@ -1019,29 +1019,29 @@ export default function HeroBentoSection({
               </svg>
 
               {/* Live Presence Pill with Radar Ping */}
-              <div className="relative z-10 flex items-center gap-[6px] rounded-full border border-[#4d4d4d] bg-[#242424]/90 backdrop-blur-xs px-[14px] py-[6px] group-hover:border-[#ff6b35]/60 group-hover:shadow-[0_0_16px_rgba(255,107,53,0.3)] transition-all">
-                <span className="h-[5px] w-[5px] rounded-full bg-[#ff6b35] animate-ping" />
-                <span className="text-[11px] font-mono-code text-[#fafafa]">
+              <div className="relative z-10 flex max-w-full items-center gap-[6px] rounded-full border border-[#4d4d4d] bg-[#242424]/90 backdrop-blur-xs px-[12px] sm:px-[14px] py-[6px] group-hover:border-[#ff6b35]/60 group-hover:shadow-[0_0_16px_rgba(255,107,53,0.3)] transition-all min-w-0">
+                <span className="h-[5px] w-[5px] rounded-full bg-[#ff6b35] animate-ping shrink-0" />
+                <span className="text-[11px] font-mono-code text-[#fafafa] shrink-0 whitespace-nowrap">
                   Org Isolated
                 </span>
-                <span className="text-[10px] text-[#ff6b35] font-mono-code font-semibold">(RBAC Enforced)</span>
+                <span className="text-[10px] text-[#ff6b35] font-mono-code font-semibold shrink-0 whitespace-nowrap">(RBAC Enforced)</span>
               </div>
             </div>
 
             {/* Realtime collaboration footer */}
-            <div className="mt-auto flex items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
-              <span className="flex items-center gap-[5px]">
-                <span className="h-[5px] w-[5px] rounded-full bg-emerald-400" />
-                <span className="group-hover:text-[#fafafa] transition-colors">Multi-Tenant Workspaces</span>
+            <div className="mt-auto flex items-center justify-between gap-1 border-t border-[#222222] pt-[8px] text-[10px] sm:text-[11px] font-mono-code text-[#898989]">
+              <span className="flex items-center gap-[5px] shrink-0 whitespace-nowrap">
+                <span className="h-[5px] w-[5px] rounded-full bg-emerald-400 shrink-0" />
+                <span className="group-hover:text-[#fafafa] transition-colors">Workspaces</span>
               </span>
-              <span className="text-[#898989]">Admin &amp; Member Roles</span>
+              <span className="text-[#898989] shrink-0 whitespace-nowrap">Admin &amp; Member RBAC</span>
             </div>
           </BentoSpotlightCard>
 
           {/* CARD 6 (3 Cols): Data Quality & Audit Ledger */}
           <BentoSpotlightCard
             delay="700ms"
-            className="md:col-span-6 lg:col-span-3 h-[400px]"
+            className="md:col-span-6 lg:col-span-3 min-h-[380px] h-auto lg:h-[400px]"
           >
             <div>
               <div className="flex items-center gap-[8px] text-[#fafafa]">
@@ -1144,13 +1144,13 @@ export default function HeroBentoSection({
                 </svg>
               </div>
 
-              <div className="mt-[4px] flex flex-col gap-[6px] text-[12px] text-[#fafafa]">
-                <div className="flex items-center gap-[8px]">
-                  <span className="h-[6px] w-[6px] rounded-full bg-emerald-400" />
+              <div className="mt-[4px] flex flex-col gap-[6px] text-[11px] sm:text-[12px] text-[#fafafa]">
+                <div className="flex items-center gap-[8px] whitespace-nowrap">
+                  <span className="h-[6px] w-[6px] rounded-full bg-emerald-400 shrink-0" />
                   <span>Schema Profiling Active</span>
                 </div>
-                <div className="flex items-center gap-[8px]">
-                  <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35]" />
+                <div className="flex items-center gap-[8px] whitespace-nowrap">
+                  <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] shrink-0" />
                   <span>Activity Audit Logged</span>
                 </div>
               </div>
@@ -1160,7 +1160,7 @@ export default function HeroBentoSection({
           {/* CARD 7 (3 Cols): Signed Embeds & REST APIs */}
           <BentoSpotlightCard
             delay="780ms"
-            className="md:col-span-6 lg:col-span-3 h-[400px]"
+            className="md:col-span-6 lg:col-span-3 min-h-[380px] h-auto lg:h-[400px]"
           >
             <div>
               <div className="flex items-center gap-[8px] text-[#fafafa]">
@@ -1210,7 +1210,7 @@ export default function HeroBentoSection({
                     <span className="shrink-0 rounded-[5px] border border-[#2e2e2e] bg-[#141414] px-[7px] py-[3px] font-mono-code text-[10px] text-[#898989] group-hover/row:border-[#ff6b35]/60 group-hover/row:text-[#fafafa] transition-colors">
                       ⊞ {row.table}
                     </span>
-                    <span className="flex-1 border-b border-dashed border-[#2e2e2e] group-hover/row:border-[#ff6b35]/50 group-hover/row:border-solid transition-all" />
+                    <span className="flex-1 border-b border-dashed border-[#2e2e2e] group-hover/row:border-[#ff6b35]/50 group-hover/row:border-solid transition-all min-w-[8px]" />
                     <span
                       className={`shrink-0 rounded-full border px-[8px] py-[2px] font-mono-code text-[10px] transition-colors flex items-center gap-[4px] ${isSelected
                         ? "border-[#ff6b35] bg-[#ff6b35]/15 text-[#ff6b35] font-semibold"
@@ -1226,9 +1226,9 @@ export default function HeroBentoSection({
             </div>
 
             {/* Embedded SDK & Uptime Footer */}
-            <div className="mt-auto flex items-center justify-between border-t border-[#222222] pt-[8px] text-[11px] font-mono-code text-[#898989]">
-              <span className="text-[#fafafa]">Signed Iframe Tokens</span>
-              <span className="text-emerald-400 font-semibold">REST API Ready</span>
+            <div className="mt-auto flex items-center justify-between gap-1 border-t border-[#222222] pt-[8px] text-[10px] sm:text-[11px] font-mono-code text-[#898989]">
+              <span className="text-[#fafafa] shrink-0 whitespace-nowrap">Signed Embed Tokens</span>
+              <span className="text-emerald-400 font-semibold shrink-0 whitespace-nowrap">REST API Ready</span>
             </div>
           </BentoSpotlightCard>
         </div>

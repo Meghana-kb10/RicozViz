@@ -25,6 +25,8 @@ import {
   Command,
   Sun,
   Moon,
+  Menu,
+  X,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 
@@ -50,6 +52,7 @@ export function AppShell({
   const router = useRouter();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
   const userInitials = auth?.user?.name
@@ -98,7 +101,15 @@ export function AppShell({
       <header className="sticky top-0 z-40 border-b border-[#242424] bg-[#121212]/95 backdrop-blur-md">
         <div className="flex h-14 items-center justify-between px-4 sm:px-6">
           {/* Left: Brand Identity & Mobile Collapse */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen(true)}
+              aria-label="Open navigation menu"
+              className="md:hidden p-1.5 rounded-lg border border-[#242424] bg-[#171717] text-[#898989] hover:text-[#fafafa] hover:border-[#333333] transition cursor-pointer shrink-0"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
             <Link href="/" className="flex items-center gap-2.5 group">
               <BrandLogo size={28} priority className="group-hover:scale-105 transition-transform" />
               <div className="flex flex-col leading-none">
@@ -113,16 +124,16 @@ export function AppShell({
 
             {/* Workspace Identifier Pill */}
             {currentWorkspace && (
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1c1c1c] border border-[#2e2e2e] text-[11px] font-medium text-[#898989]">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-semibold text-[#fafafa]">{currentWorkspace.name}</span>
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1c1c1c] border border-[#2e2e2e] text-[11px] font-medium text-[#898989] shrink-0 whitespace-nowrap">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="font-semibold text-[#fafafa] max-w-[120px] truncate">{currentWorkspace.name}</span>
                 <span className="font-mono text-[10px] text-[#898989]">({currentWorkspace.role})</span>
               </div>
             )}
           </div>
 
           {/* Center: Command Palette Search */}
-          <div className="hidden md:flex flex-1 max-w-md mx-6">
+          <div className="hidden md:flex flex-1 min-w-0 max-w-xs xl:max-w-md mx-3 lg:mx-6">
             <div
               className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-full border transition-all duration-150 ${
                 searchFocused
@@ -147,7 +158,7 @@ export function AppShell({
           {/* Right: Live Engine Indicator & User Profile */}
           <div className="flex items-center gap-3">
             {/* Live Engine Indicator */}
-            <div className="hidden lg:flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+            <div className="hidden xl:flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Query Pushdown Active</span>
             </div>
@@ -171,8 +182,8 @@ export function AppShell({
             {auth?.user && (
               <div className="flex items-center gap-2.5 pl-2 border-l border-[#242424]">
                 <div className="hidden sm:block text-right leading-tight">
-                  <p className="text-xs font-medium text-[#fafafa]">{auth.user.name}</p>
-                  <p className="text-[10px] font-mono text-[#898989]">
+                  <p className="text-xs font-medium text-[#fafafa] max-w-[120px] truncate">{auth.user.name}</p>
+                  <p className="text-[10px] font-mono text-[#898989] max-w-[120px] truncate">
                     {auth.role} · {auth.organization.name}
                   </p>
                 </div>
@@ -313,7 +324,7 @@ export function AppShell({
                   )}
                 </div>
 
-                {actions && <div className="flex items-center gap-2.5 shrink-0">{actions}</div>}
+                {actions && <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">{actions}</div>}
               </div>
             </div>
           )}
@@ -322,6 +333,86 @@ export function AppShell({
           <div className="flex-1 p-6 sm:p-8 bg-[#121212]">{children}</div>
         </main>
       </div>
+
+      {/* Mobile Navigation Drawer */}
+      {isMobileNavOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileNavOpen(false)}
+          />
+          <div className="relative flex flex-col justify-between w-72 max-w-[80vw] h-full bg-[#141414] border-r border-[#242424] p-4 z-10 shadow-2xl overflow-y-auto">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-[#242424] mb-4">
+                <div className="flex items-center gap-2">
+                  <BrandLogo size={24} />
+                  <span className="text-sm font-medium text-[#fafafa]">
+                    ricoz<span className="text-[#ff6b35]">viz</span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="p-1.5 rounded-lg text-[#898989] hover:text-[#fafafa] hover:bg-[#1f1f1f] transition cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {navGroups.map((group) => (
+                  <div key={group.group}>
+                    <p className="px-3 mb-2 text-[10px] font-mono uppercase tracking-wider text-[#666666]">
+                      {group.group}
+                    </p>
+                    <nav className="space-y-1">
+                      {group.items.map((item) => {
+                        const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setIsMobileNavOpen(false)}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-all ${
+                              isActive
+                                ? "bg-[#ff6b35]/15 border border-[#ff6b35]/40 text-[#fafafa] font-medium"
+                                : "text-[#898989] hover:text-[#fafafa] hover:bg-[#1a1a1a]"
+                            }`}
+                          >
+                            <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#ff6b35]" : "text-[#898989]"}`} />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </nav>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {auth?.user && (
+              <div className="pt-4 border-t border-[#242424] flex items-center justify-between">
+                <div className="min-w-0 pr-2">
+                  <p className="text-xs font-medium text-[#fafafa] truncate">{auth.user.name}</p>
+                  <p className="text-[10px] font-mono text-[#898989] truncate">{auth.organization.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void logout();
+                    router.replace("/login");
+                  }}
+                  className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

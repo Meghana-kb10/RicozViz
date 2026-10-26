@@ -794,7 +794,7 @@ export default function DatasetsPage() {
               <Link
                 href="/datasets/demo"
                 id="explore-demo-datasets-btn"
-                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#393939] hover:text-[#fafafa] transition-colors shrink-0 whitespace-nowrap"
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
                 <span>Demo Datasets</span>
@@ -803,7 +803,7 @@ export default function DatasetsPage() {
                 id="blend-datasets-btn"
                 type="button"
                 onClick={openBlendModal}
-                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#ff6b35]/40 hover:text-[#ff6b35] transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs font-medium text-[#dedede] hover:border-[#ff6b35]/40 hover:text-[#ff6b35] transition-colors cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <Layers className="h-3.5 w-3.5 text-[#ff6b35]" />
                 <span>Blend Datasets</span>
@@ -812,7 +812,7 @@ export default function DatasetsPage() {
                 id="add-dataset-btn"
                 type="button"
                 onClick={openCreateModal}
-                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-4 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] shadow-[0_0_20px_rgba(255,107,53,0.18)] transition-all cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Create Dataset</span>

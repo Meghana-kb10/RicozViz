@@ -1535,7 +1535,7 @@ export default function DashboardDetailPage({
                 <button
                   type="button"
                   onClick={() => handleOpenNewStudio()}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-3.5 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] transition shadow-[0_0_16px_rgba(255,107,53,0.18)] cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-3.5 py-1.5 text-xs font-medium text-[#fafafa] hover:border-[#ff6b35] hover:bg-[#c2410c] transition shadow-[0_0_16px_rgba(255,107,53,0.18)] cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>New Chart</span>
@@ -1545,7 +1545,7 @@ export default function DashboardDetailPage({
                   type="button"
                   onClick={handleSaveDashboard}
                   disabled={savingDashboard}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 transition cursor-pointer disabled:opacity-70"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 transition cursor-pointer disabled:opacity-70 whitespace-nowrap shrink-0"
                 >
                   <Save className="h-3.5 w-3.5" />
                   <span>{savingDashboard ? "Saving..." : "Save"}</span>
@@ -1555,7 +1555,7 @@ export default function DashboardDetailPage({
                   type="button"
                   onClick={() => setIsAppearanceModalOpen(true)}
                   title="Customize Theme & Branding"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1.5 text-xs font-normal text-[#dedede] hover:bg-[#222222] hover:text-[#fafafa] hover:border-[#ff6b35]/40 transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#2e2e2e] bg-[#1a1a1a] px-3 py-1.5 text-xs font-normal text-[#dedede] hover:bg-[#222222] hover:text-[#fafafa] hover:border-[#ff6b35]/40 transition cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <Palette className="h-3.5 w-3.5 text-[#ff6b35]" />
                   <span className="hidden md:inline">Appearance</span>

@@ -270,8 +270,8 @@ export default function ParticleCtaSection() {
         <div className="flex flex-col items-center text-center">
           {/* Top Pill Terminal Badge */}
           <div className="mb-[20px] inline-flex items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#171717]/90 px-[14px] py-[5px] backdrop-blur-xs">
-            <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35]" />
-            <span className="font-mono-code text-[11px] text-[#898989]">
+            <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] shrink-0" />
+            <span className="font-mono-code text-[11px] text-[#898989] shrink-0 whitespace-nowrap">
               ENTERPRISE_ANALYTICS // MULTI_SOURCE_AI
             </span>
           </div>
@@ -292,19 +292,19 @@ export default function ParticleCtaSection() {
           <div className="mt-[32px] flex flex-wrap items-center justify-center gap-[12px]">
             <a
               href="/register"
-              className="inline-flex h-[42px] items-center justify-center rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[24px] text-[14px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c]"
+              className="inline-flex h-[42px] items-center justify-center rounded-full border border-[#ff6b35]/70 bg-[#9a3412] px-[24px] text-[14px] font-medium text-[#fafafa] transition-colors hover:border-[#ff6b35] hover:bg-[#c2410c] shrink-0 whitespace-nowrap"
             >
               Start free in 60s
             </a>
             <a
               href="/login"
-              className="inline-flex h-[42px] items-center justify-center rounded-full border border-[#393939] bg-[#1c1c1c] px-[22px] text-[14px] font-normal text-[#fafafa] transition-colors hover:border-[#4d4d4d] hover:bg-[#242424] cursor-pointer"
+              className="inline-flex h-[42px] items-center justify-center rounded-full border border-[#393939] bg-[#1c1c1c] px-[22px] text-[14px] font-normal text-[#fafafa] transition-colors hover:border-[#4d4d4d] hover:bg-[#242424] cursor-pointer shrink-0 whitespace-nowrap"
             >
               Sign In to Workspace
             </a>
             <a
               href="/dashboards"
-              className="inline-flex h-[42px] items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#161616] px-[20px] text-[13px] text-[#b4b4b4] transition-colors hover:border-[#393939] hover:text-[#fafafa] cursor-pointer"
+              className="inline-flex h-[42px] items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#161616] px-[20px] text-[13px] text-[#b4b4b4] transition-colors hover:border-[#393939] hover:text-[#fafafa] cursor-pointer shrink-0 whitespace-nowrap"
             >
               <span>Explore Demo Dashboards</span>
               <span className="text-[#ff6b35]">→</span>

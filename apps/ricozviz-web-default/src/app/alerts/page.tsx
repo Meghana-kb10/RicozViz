@@ -330,12 +330,12 @@ export default function AlertsPage() {
         { label: "Alerts & Triggers" },
       ]}
       actions={
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => void handleEvaluateAll()}
             disabled={evaluatingAll || alerts.length === 0}
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs font-mono-code text-[#fafafa] hover:bg-[#202020] disabled:opacity-50 transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs font-mono-code text-[#fafafa] hover:bg-[#202020] disabled:opacity-50 transition cursor-pointer shrink-0 whitespace-nowrap"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${evaluatingAll ? "animate-spin text-[#ff6b35]" : ""}`} />
             <span>{evaluatingAll ? "Scanning..." : "Evaluate All"}</span>
@@ -346,7 +346,7 @@ export default function AlertsPage() {
               onClick={openCreateModal}
               id="create-alert-btn"
               type="button"
-              className="inline-flex items-center gap-2 rounded-lg bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#ff6b35] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#c2410c] transition cursor-pointer shrink-0 whitespace-nowrap"
             >
               <Plus className="h-4 w-4" />
               <span>Create Alert</span>
@@ -558,7 +558,7 @@ export default function AlertsPage() {
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="border-t border-[#242424] pt-3.5 flex items-center justify-between gap-2">
+                  <div className="border-t border-[#242424] pt-3.5 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"

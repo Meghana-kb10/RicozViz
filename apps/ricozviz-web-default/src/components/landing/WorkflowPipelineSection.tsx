@@ -232,9 +232,9 @@ export default function WorkflowPipelineSection() {
         </div>
 
         <div className="flex items-center gap-[8px]">
-          <span className="flex items-center gap-[6px] rounded-full border border-[#2e2e2e] bg-[#171717] px-[14px] py-[6px] text-[12px] font-mono-code text-[#b4b4b4]">
-            <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] animate-pulse" />
-            Zero Data Movement
+          <span className="flex items-center gap-[6px] rounded-full border border-[#2e2e2e] bg-[#171717] px-[14px] py-[6px] text-[12px] font-mono-code text-[#b4b4b4] shrink-0 whitespace-nowrap">
+            <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] animate-pulse shrink-0" />
+            <span>Zero Data Movement</span>
           </span>
         </div>
       </div>
@@ -253,6 +253,8 @@ export default function WorkflowPipelineSection() {
                 setMetricPulse(Number((6.5 + Math.random() * 3.5).toFixed(1)));
               }}
               className={`group relative flex flex-col items-start rounded-[16px] border p-[18px] text-left transition-all duration-200 cursor-pointer overflow-hidden ${
+                step.id === PIPELINE_STEPS[PIPELINE_STEPS.length - 1].id ? "col-span-2 sm:col-span-1" : ""
+              } ${
                 isActive
                   ? "border-[#ff6b35] bg-[#1c1c1c] shadow-[0_8px_30px_rgba(255,107,53,0.16)] -translate-y-1"
                   : "border-[#2e2e2e] bg-[#171717] hover:border-[#393939] hover:bg-[#1a1a1a] hover:-translate-y-0.5"
@@ -372,7 +374,7 @@ export default function WorkflowPipelineSection() {
           {/* RIGHT 7 COLS: Rich Visual Canvas (Zero Code Clutter) */}
           <div className="flex flex-col rounded-[16px] border border-[#2e2e2e] bg-[#121212] p-[20px] sm:p-[24px] lg:col-span-7 shadow-inner">
             {/* Visual Canvas Header */}
-            <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-[14px]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2e2e2e] pb-[14px]">
               <div className="flex items-center gap-[10px]">
                 <div className="flex gap-[5px]">
                   <span className="h-[7px] w-[7px] rounded-full bg-[#393939]" />
@@ -384,8 +386,8 @@ export default function WorkflowPipelineSection() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-[6px] rounded-full border border-emerald-500/30 bg-emerald-500/10 px-[10px] py-[2px] font-mono-code text-[11px] text-emerald-400">
-                <span className="h-[6px] w-[6px] rounded-full bg-emerald-400 animate-pulse" />
+              <div className="flex items-center gap-[6px] rounded-full border border-emerald-500/30 bg-emerald-500/10 px-[10px] py-[2px] font-mono-code text-[11px] text-emerald-400 shrink-0 whitespace-nowrap">
+                <span className="h-[6px] w-[6px] rounded-full bg-emerald-400 animate-pulse shrink-0" />
                 <span>Live Active</span>
               </div>
             </div>
@@ -440,10 +442,10 @@ export default function WorkflowPipelineSection() {
                         key={idx}
                         className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[10px] transition-all hover:border-[#ff6b35]/50"
                       >
-                        <div className="flex items-center justify-between text-[11px] font-mono-code mb-[6px]">
-                          <span className="text-[#fafafa] font-semibold">{col.col}</span>
-                          <span className="text-[#898989]">{col.type}</span>
-                          <span className="text-emerald-400">{col.nulls}</span>
+                        <div className="flex items-center justify-between gap-2 text-[11px] font-mono-code mb-[6px]">
+                          <span className="text-[#fafafa] font-semibold truncate min-w-0">{col.col}</span>
+                          <span className="text-[#898989] truncate">{col.type}</span>
+                          <span className="text-emerald-400 shrink-0 whitespace-nowrap">{col.nulls}</span>
                         </div>
                         <div className="h-[4px] w-full rounded-full bg-[#242424] overflow-hidden">
                           <div
@@ -605,7 +607,7 @@ export default function WorkflowPipelineSection() {
             </div>
 
             {/* Bottom 3-Column Visual Metrics Strip */}
-            <div className="grid grid-cols-3 gap-[10px] border-t border-[#2e2e2e] pt-[14px]">
+            <div className="grid grid-cols-1 min-[440px]:grid-cols-3 gap-[10px] border-t border-[#2e2e2e] pt-[14px]">
               {currentStep.visualStats.map((st, idx) => (
                 <div key={idx} className="rounded-[10px] border border-[#2e2e2e] bg-[#171717] p-[10px]">
                   <span className="block text-[10px] font-mono-code uppercase text-[#898989]">
