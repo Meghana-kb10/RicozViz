@@ -7,6 +7,20 @@ const nextConfig = {
     '@repo/utils',
     '@repo/validation'
   ],
+  async redirects() {
+    return [
+      {
+        source: '/dashboard',
+        destination: '/dashboards',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/:path*',
+        destination: '/dashboards/:path*',
+        permanent: true,
+      },
+    ];
+  },
   webpack(config) {
     // Shared packages use Node ESM `.js` specifiers for their TypeScript sources.
     config.resolve.extensionAlias = {

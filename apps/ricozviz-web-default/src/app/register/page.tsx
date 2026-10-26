@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, type FormEvent } from "react";
+import React, { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/auth-context";
@@ -13,7 +13,7 @@ function FieldError({ message }: { message?: string }) {
 }
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { auth, isLoading: isAuthLoading, register } = useAuth();
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -23,6 +23,27 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  // If already authenticated, redirect immediately to dashboard
+  useEffect(() => {
+    if (!isAuthLoading && auth) {
+      void router.replace("/dashboards");
+    }
+  }, [auth, isAuthLoading, router]);
+
+  // While verifying session or if already authenticated, do not show register page
+  if (isAuthLoading || auth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#121212] text-[#fafafa]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
+          <p className="text-xs font-mono-code text-[#898989]">
+            {auth ? "Redirecting to dashboard..." : "Verifying session..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -50,7 +71,7 @@ export default function RegisterPage() {
 
     try {
       await register({ name, email, password, organizationName });
-      router.push("/workspace");
+      router.push("/dashboards");
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.details) {
@@ -168,10 +189,11 @@ export default function RegisterPage() {
                     placeholder="Elena Rostova"
                     disabled={isLoading}
                     suppressHydrationWarning
-                    className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["name"]
+                    className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${
+                      fieldErrors["name"]
                         ? "border-red-500/60 bg-red-950/20"
                         : "border-[#393939]"
-                      }`}
+                    }`}
                   />
                   <FieldError message={fieldErrors["name"]?.[0]} />
                 </div>
@@ -191,10 +213,11 @@ export default function RegisterPage() {
                     placeholder="Acme Enterprise"
                     disabled={isLoading}
                     suppressHydrationWarning
-                    className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["organizationName"]
+                    className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${
+                      fieldErrors["organizationName"]
                         ? "border-red-500/60 bg-red-950/20"
                         : "border-[#393939]"
-                      }`}
+                    }`}
                   />
                   <FieldError message={fieldErrors["organizationName"]?.[0]} />
                 </div>
@@ -217,10 +240,11 @@ export default function RegisterPage() {
                   placeholder="architect@enterprise.io"
                   disabled={isLoading}
                   suppressHydrationWarning
-                  className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["email"]
+                  className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${
+                    fieldErrors["email"]
                       ? "border-red-500/60 bg-red-950/20"
                       : "border-[#393939]"
-                    }`}
+                  }`}
                 />
                 <FieldError message={fieldErrors["email"]?.[0]} />
               </div>
@@ -242,10 +266,11 @@ export default function RegisterPage() {
                   placeholder="••••••••••••"
                   disabled={isLoading}
                   suppressHydrationWarning
-                  className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${fieldErrors["password"]
+                  className={`w-full rounded-[10px] border px-3.5 py-2.5 text-sm font-normal text-[#fafafa] placeholder-[#898989] bg-[#121212] outline-none transition focus:border-[#ff6b35] disabled:opacity-50 ${
+                    fieldErrors["password"]
                       ? "border-red-500/60 bg-red-950/20"
                       : "border-[#393939]"
-                    }`}
+                  }`}
                 />
                 <FieldError message={fieldErrors["password"]?.[0]} />
               </div>

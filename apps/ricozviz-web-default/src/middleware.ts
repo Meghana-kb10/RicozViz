@@ -16,6 +16,8 @@ const PROTECTED_ROUTES = [
   "/audit",
 ];
 
+const AUTH_ROUTES = ["/login", "/register"];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -24,13 +26,25 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const authCookie = request.cookies.get("ricozviz_auth");
+  const isAuthenticated = Boolean(authCookie?.value);
+
+  // If user is already authenticated and visits login/register, redirect to dashboard
+  const isAuthRoute = AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  if (isAuthRoute && isAuthenticated) {
+    const dashboardUrl = new URL("/dashboards", request.url);
+    return NextResponse.redirect(dashboardUrl);
+  }
+
   const isProtected = PROTECTED_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
   if (isProtected) {
-    const authCookie = request.cookies.get("ricozviz_auth");
-    if (!authCookie || !authCookie.value) {
+    if (!isAuthenticated) {
       const loginUrl = new URL("/login", request.url);
       return NextResponse.redirect(loginUrl);
     }
@@ -41,6 +55,8 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/login",
+    "/register",
     "/dashboards/:path*",
     "/visualizations/:path*",
     "/datasets/:path*",
