@@ -547,28 +547,29 @@ export default function HeroBentoSection({
               <div className="pointer-events-none absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#ff6b35] to-transparent opacity-0 group-hover:opacity-100 animate-laser-sweep shadow-[0_0_12px_#ff6b35] z-20" />
 
               {[
-                { text: "plot monthly ARR growth", clear: true, tag: "SQL" },
-                { text: "cohort churn rate", clear: true, tag: "CHART" },
-                { text: "top 10 customer LTV", clear: true, tag: "VISUAL" },
-                { text: "q3 margin breakdown", clear: false, tag: "AI" },
-                { text: "orders by country", clear: true, tag: "BAR" },
-                { text: "conversion funnel drop", clear: false, tag: "AUTO" },
+                { text: "monthly ARR", fullPrompt: "plot monthly ARR growth", clear: true, tag: "SQL" },
+                { text: "cohort churn", fullPrompt: "cohort churn rate", clear: true, tag: "CHART" },
+                { text: "customer LTV", fullPrompt: "top 10 customer LTV", clear: true, tag: "VISUAL" },
+                { text: "margin breakdown", fullPrompt: "q3 margin breakdown", clear: false, tag: "AI" },
+                { text: "orders by geo", fullPrompt: "orders by country", clear: true, tag: "BAR" },
+                { text: "funnel drop-off", fullPrompt: "conversion funnel drop", clear: false, tag: "AUTO" },
               ].map((cell, idx) => {
                 const isVisible = cell.clear || aiPromptExpanded;
                 return (
                   <div
                     key={idx}
-                    className="relative flex h-[50px] flex-col items-center justify-center rounded-[8px] border border-[#2e2e2e] bg-[#121212] px-[8px] font-mono-code text-[11px] text-[#898989] group-hover:border-[#393939] transition-all duration-300 hover:border-[#ff6b35]/60 hover:bg-[#181818]"
+                    title={cell.fullPrompt}
+                    className="relative flex h-[50px] min-w-0 w-full overflow-hidden flex-col items-center justify-center rounded-[8px] border border-[#2e2e2e] bg-[#121212] px-1.5 font-mono-code text-[11px] text-[#898989] group-hover:border-[#393939] transition-all duration-300 hover:border-[#ff6b35]/60 hover:bg-[#181818]"
                   >
                     <span
-                      className={`truncate transition-all duration-300 ${isVisible
+                      className={`block w-full max-w-full text-center truncate transition-all duration-300 text-[10.5px] leading-tight ${isVisible
                         ? "blur-none text-[#fafafa]"
                         : "blur-[4px] select-none text-[#4d4d4d] group-hover:blur-none group-hover:text-[#ff8252]"
                         }`}
                     >
                       {cell.text}
                     </span>
-                    <span className="text-[9px] text-[#555555] group-hover:text-[#ff6b35]/70 transition-colors">
+                    <span className="block w-full max-w-full text-center truncate text-[9px] text-[#555555] group-hover:text-[#ff6b35]/70 transition-colors shrink-0 whitespace-nowrap">
                       {isVisible ? `[READY ${cell.tag}]` : `[SYNTH ${cell.tag}]`}
                     </span>
                   </div>
@@ -1205,7 +1206,7 @@ export default function HeroBentoSection({
                     key={row.table}
                     type="button"
                     onClick={() => setActiveRouteIdx(idx)}
-                    className="flex w-full items-center justify-between gap-[6px] cursor-pointer group/row transition-all duration-200"
+                    className="flex w-full min-w-0 items-center justify-between gap-[6px] cursor-pointer group/row transition-all duration-200"
                   >
                     <span className="shrink-0 rounded-[5px] border border-[#2e2e2e] bg-[#141414] px-[7px] py-[3px] font-mono-code text-[10px] text-[#898989] group-hover/row:border-[#ff6b35]/60 group-hover/row:text-[#fafafa] transition-colors">
                       ⊞ {row.table}
@@ -1217,7 +1218,7 @@ export default function HeroBentoSection({
                         : "border-[#2e2e2e] bg-[#1a1a1a] text-[#898989] group-hover/row:text-[#fafafa] group-hover/row:border-[#ff6b35]/40"
                         }`}
                     >
-                      <span>.../v1/<strong className="font-normal text-[#fafafa]">{row.slug}</strong></span>
+                      <span className="truncate">.../v1/<strong className="font-normal text-[#fafafa]">{row.slug}</strong></span>
                       <span className="rounded bg-[#121212] px-[4px] py-[1px] text-[8px] text-emerald-400">{row.latency}</span>
                     </span>
                   </button>
