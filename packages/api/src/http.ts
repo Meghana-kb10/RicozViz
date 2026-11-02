@@ -30,6 +30,8 @@ export class HttpClient {
   private onRequest?: (url: string, init: RequestInit) => RequestInit | Promise<RequestInit>;
   private onResponse?: <T>(response: ApiResponse<T>) => ApiResponse<T> | Promise<ApiResponse<T>>;
   private onError?: (error: unknown) => void;
+  private autoRefresh: boolean;
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor(options: ApiClientOptions = {}) {
     this.baseUrl = (options.baseUrl || 'http://localhost:4000').replace(/\/+$/, '');
@@ -57,6 +59,7 @@ export class HttpClient {
     this.onRequest = options.onRequest;
     this.onResponse = options.onResponse;
     this.onError = options.onError;
+    this.autoRefresh = options.autoRefresh ?? true;
   }
 
   public setToken(token: string | null, refreshToken?: string): void {
@@ -97,6 +100,54 @@ export class HttpClient {
     return url.toString();
   }
 
+  /**
+   * Executes a single token refresh against the backend refresh endpoint.
+   * Deduplicates concurrent refresh attempts by returning the in-flight Promise.
+   */
+  private async executeRefresh(): Promise<string | null> {
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const refreshUrl = `${this.baseUrl}/api/v1/auth/refresh`;
+        const res = await this.fetchFn(refreshUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: '{}',
+          credentials: 'include'
+        });
+
+        if (!res.ok) {
+          throw new Error(`Refresh failed with status ${res.status}`);
+        }
+
+        const data: any = await res.json();
+        const newToken = data?.data?.accessToken || data?.accessToken;
+        if (!newToken) {
+          throw new Error('Refresh response missing access token');
+        }
+
+        this.setToken(newToken);
+        return newToken;
+      } catch {
+        this.clearTokens();
+        if (this.onUnauthorized) {
+          await this.onUnauthorized();
+        }
+        return null;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
   public async request<T = unknown>(endpoint: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
     const url = this.buildUrl(endpoint, options.query);
 
@@ -113,7 +164,7 @@ export class HttpClient {
       }
     }
 
-    const { body, query, skipAuth, headers: customHeaders, ...fetchOptions } = options;
+    const { body, query, skipAuth, headers: customHeaders, _isRetry, ...fetchOptions } = options;
 
     let init: RequestInit = {
       ...fetchOptions,
@@ -131,6 +182,24 @@ export class HttpClient {
 
     try {
       const res = await this.fetchFn(url, init);
+
+      // Automatic 401 refresh with concurrency queuing
+      if (res.status === 401 && this.autoRefresh && !options.skipAuth && !options._isRetry) {
+        const isAuthRoute =
+          endpoint.includes('/auth/login') ||
+          endpoint.includes('/auth/register') ||
+          endpoint.includes('/auth/refresh');
+
+        if (!isAuthRoute) {
+          const newToken = await this.executeRefresh();
+          if (newToken) {
+            return this.request<T>(endpoint, {
+              ...options,
+              _isRetry: true
+            });
+          }
+        }
+      }
 
       if (res.status === 401 && this.onUnauthorized) {
         await this.onUnauthorized();

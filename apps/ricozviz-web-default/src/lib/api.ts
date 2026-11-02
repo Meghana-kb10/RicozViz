@@ -20,7 +20,10 @@ export {
   getAccessToken,
   setAccessToken,
   clearAccessToken,
-  apiFetch
+  apiFetch,
+  setOnAuthFailure,
+  triggerAuthFailure,
+  executeRicozVizRefresh
 } from '@repo/api';
 
 // ---- Auth --------------------------------------------------------------------

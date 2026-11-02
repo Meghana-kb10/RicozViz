@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "test": "tsx src/auth-refresh.test.ts",
     "check-types": "tsc --noEmit",
     "build": "tsc --noEmit"
   },

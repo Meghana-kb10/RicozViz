@@ -76,7 +76,11 @@ export {
   setAccessToken,
   clearAccessToken,
   apiFetch,
-  toQueryString
+  toQueryString,
+  setOnAuthFailure,
+  triggerAuthFailure,
+  executeRicozVizRefresh,
+  type AuthFailureHandler
 } from './ricozviz/client.js';
 
 // ---- Endpoints ----

@@ -23,6 +23,7 @@ import {
   setAccessToken,
   clearAccessToken,
   getAccessToken,
+  setOnAuthFailure,
   type UserData,
   type OrganizationData,
 } from "../lib/api";
@@ -57,6 +58,16 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [auth, setAuth] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Synchronize React auth state with automatic 401 refresh failures in @repo/api
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      setAuth(null);
+    });
+    return () => {
+      setOnAuthFailure(null);
+    };
+  }, []);
 
   // ---- Restore session on mount ----
   useEffect(() => {

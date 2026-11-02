@@ -29,14 +29,19 @@ export function middleware(request: NextRequest) {
   const authCookie = request.cookies.get("ricozviz_auth");
   const isAuthenticated = Boolean(authCookie?.value);
 
-  // If user is already authenticated and visits login/register, redirect to dashboard
+  // If user is already authenticated and visits login/register, redirect to dashboard or returnUrl
   const isAuthRoute = AUTH_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
   if (isAuthRoute && isAuthenticated) {
-    const dashboardUrl = new URL("/dashboards", request.url);
-    return NextResponse.redirect(dashboardUrl);
+    const rawReturnUrl = request.nextUrl.searchParams.get("returnUrl");
+    let target = "/dashboards";
+    if (rawReturnUrl && rawReturnUrl.startsWith("/") && !rawReturnUrl.startsWith("//")) {
+      target = rawReturnUrl;
+    }
+    const destinationUrl = new URL(target, request.url);
+    return NextResponse.redirect(destinationUrl);
   }
 
   const isProtected = PROTECTED_ROUTES.some(
@@ -46,6 +51,8 @@ export function middleware(request: NextRequest) {
   if (isProtected) {
     if (!isAuthenticated) {
       const loginUrl = new URL("/login", request.url);
+      const returnUrl = pathname + request.nextUrl.search;
+      loginUrl.searchParams.set("returnUrl", returnUrl);
       return NextResponse.redirect(loginUrl);
     }
   }

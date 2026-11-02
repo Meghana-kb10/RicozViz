@@ -21,6 +21,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
   query?: Record<string, unknown>;
   skipAuth?: boolean;
+  _isRetry?: boolean;
 }
 
 export interface ApiClientOptions {
@@ -34,6 +35,7 @@ export interface ApiClientOptions {
   onRequest?: (url: string, init: RequestInit) => RequestInit | Promise<RequestInit>;
   onResponse?: <T>(response: ApiResponse<T>) => ApiResponse<T> | Promise<ApiResponse<T>>;
   onError?: (error: unknown) => void;
+  autoRefresh?: boolean;
 }
 
 export type {

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, type FormEvent } from "react";
+import React, { useState, useEffect, Suspense, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../../contexts/auth-context";
 import { ApiError } from "../../lib/api";
 import { ArrowLeft, Lock, AlertCircle, ArrowRight } from "lucide-react";
@@ -12,9 +12,23 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-1.5 text-xs font-mono-code text-red-400">{message}</p>;
 }
 
-export default function LoginPage() {
+/** Sanitize return URL to prevent open redirect vulnerabilities. */
+function getSafeReturnUrl(rawUrl: string | null): string {
+  if (!rawUrl) return "/dashboards";
+  const trimmed = rawUrl.trim();
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.includes("://")) {
+    return trimmed;
+  }
+  return "/dashboards";
+}
+
+function LoginFormContent() {
   const { auth, isLoading: isAuthLoading, login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const returnUrlParam = searchParams.get("returnUrl");
+  const targetDestination = getSafeReturnUrl(returnUrlParam);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,12 +36,12 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-  // If already authenticated, redirect immediately to dashboard
+  // If already authenticated, redirect immediately to target destination
   useEffect(() => {
     if (!isAuthLoading && auth) {
-      void router.replace("/dashboards");
+      void router.replace(targetDestination);
     }
-  }, [auth, isAuthLoading, router]);
+  }, [auth, isAuthLoading, router, targetDestination]);
 
   // While verifying session or if already authenticated, do not show login page
   if (isAuthLoading || auth) {
@@ -36,7 +50,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
           <p className="text-xs font-mono-code text-[#898989]">
-            {auth ? "Redirecting to dashboard..." : "Verifying session..."}
+            {auth ? "Redirecting to workspace..." : "Verifying session..."}
           </p>
         </div>
       </div>
@@ -64,7 +78,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push("/dashboards");
+      router.push(targetDestination);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.details) {
@@ -260,5 +274,22 @@ export default function LoginPage() {
         Cryptographic Row-Level Security · Hardware HSM Enclave · RFC 6962 SHA-256 Ledger
       </footer>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#121212] text-[#fafafa]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ff6b35] border-t-transparent" />
+            <p className="text-xs font-mono-code text-[#898989]">Loading login…</p>
+          </div>
+        </div>
+      }
+    >
+      <LoginFormContent />
+    </Suspense>
   );
 }
