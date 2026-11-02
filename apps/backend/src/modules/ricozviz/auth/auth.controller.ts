@@ -27,7 +27,10 @@ export class AuthController {
   /** POST /api/v1/auth/login */
   async login(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const input = loginSchema.parse(request.body);
-    const { payload, refreshToken }: SessionResult<unknown> = await loginUser(input);
+    const { payload, refreshToken }: SessionResult<unknown> = await loginUser(input, {
+      ip: request.ip,
+      userAgent: typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : undefined
+    });
 
     reply.setCookie(REFRESH_TOKEN_COOKIE, refreshToken, refreshCookieOptions());
     sendSuccess(reply, payload);
@@ -43,7 +46,10 @@ export class AuthController {
   /** POST /api/v1/auth/refresh */
   async refresh(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const cookieToken = request.cookies?.[REFRESH_TOKEN_COOKIE];
-    const { payload, refreshToken }: SessionResult<unknown> = await refreshSession(cookieToken);
+    const { payload, refreshToken }: SessionResult<unknown> = await refreshSession(cookieToken, {
+      ip: request.ip,
+      userAgent: typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : undefined
+    });
 
     // Rotate the refresh cookie on every successful refresh.
     reply.setCookie(REFRESH_TOKEN_COOKIE, refreshToken, refreshCookieOptions());
@@ -52,7 +58,8 @@ export class AuthController {
 
   /** POST /api/v1/auth/logout */
   async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const result = await logoutSession(request.ricozvizUser);
+    const cookieToken = request.cookies?.[REFRESH_TOKEN_COOKIE];
+    const result = await logoutSession(request.ricozvizUser, cookieToken);
 
     reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: '/api/v1/auth' });
     sendSuccess(reply, result);

@@ -17,6 +17,9 @@ export interface AppConfig {
   jwtRefreshSecret: string;
   jwtAccessExpiresIn: string;
   jwtRefreshExpiresIn: string;
+  credentialEncKey: string;
+  credentialEncKeyVersion: number;
+  credentialEncKeysPrevious?: string;
   allowedOrigin?: string;
   webAppUrl: string;
   maxUploadSizeBytes: number;
@@ -24,16 +27,14 @@ export interface AppConfig {
 
 /** Zod contract for the RicozViz specific environment variables. */
 const ricozEnvSchema = z.object({
-  JWT_ACCESS_SECRET: z
-    .string()
-    .min(32, 'JWT_ACCESS_SECRET must be at least 32 characters')
-    .default('ricozviz-dev-access-secret-change-me-please-32ch'),
-  JWT_REFRESH_SECRET: z
-    .string()
-    .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters')
-    .default('ricozviz-dev-refresh-secret-change-me-please-32ch'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').optional(),
+  JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters').optional(),
+  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters').optional(),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+  CREDENTIAL_ENC_KEY: z.string().min(32, 'CREDENTIAL_ENC_KEY must be at least 32 characters or 64 hex characters').optional(),
+  CREDENTIAL_ENC_KEY_VERSION: z.coerce.number().int().positive().default(1),
+  CREDENTIAL_ENC_KEYS_PREVIOUS: z.string().optional(),
   ALLOWED_ORIGIN: z.string().optional(),
   WEB_APP_URL: z.string().url().default('http://localhost:3000'),
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().int().positive().default(15 * 1024 * 1024)
@@ -75,17 +76,40 @@ export function loadEnv(cwd: string = process.cwd()): AppConfig {
     }
   }
 
-  const corsOriginRaw = process.env.CORS_ORIGIN || process.env.ALLOWED_ORIGIN || '*';
-  const corsOrigin = corsOriginRaw.includes(',')
-    ? corsOriginRaw.split(',').map((origin) => origin.trim())
-    : corsOriginRaw === '*'
-      ? true
-      : corsOriginRaw;
-
   const parsed = ricozEnvSchema.safeParse(process.env);
   if (!parsed.success) {
     console.error('Invalid environment configuration:', parsed.error.flatten().fieldErrors);
     throw new Error('Invalid RicozViz environment configuration');
+  }
+
+  const effectiveJwtAccessSecret = parsed.data.JWT_ACCESS_SECRET || parsed.data.JWT_SECRET;
+  const effectiveJwtRefreshSecret = parsed.data.JWT_REFRESH_SECRET || parsed.data.JWT_SECRET;
+  const effectiveCredentialKey = parsed.data.CREDENTIAL_ENC_KEY;
+
+  if (!effectiveJwtAccessSecret || !effectiveJwtRefreshSecret || !effectiveCredentialKey) {
+    const missing: string[] = [];
+    if (!effectiveJwtAccessSecret) missing.push('JWT_ACCESS_SECRET (or JWT_SECRET)');
+    if (!effectiveJwtRefreshSecret) missing.push('JWT_REFRESH_SECRET (or JWT_SECRET)');
+    if (!effectiveCredentialKey) missing.push('CREDENTIAL_ENC_KEY');
+    console.error(`\n❌ [FATAL] Missing required security environment variables: ${missing.join(', ')}.`);
+    console.error(`Please configure them in your .env file or environment. Refer to .env.example for guidance.\n`);
+    throw new Error(`Startup failed: Missing required environment variables: ${missing.join(', ')}`);
+  }
+
+  // Strict CORS: In production, reject wildcard '*'
+  const corsOriginRaw = process.env.CORS_ORIGIN || process.env.ALLOWED_ORIGIN || (nodeEnv === 'production' ? 'http://localhost:3000' : '*');
+  let corsOrigin: boolean | string | string[];
+  if (corsOriginRaw.includes(',')) {
+    corsOrigin = corsOriginRaw.split(',').map((origin) => origin.trim());
+  } else if (corsOriginRaw === '*') {
+    if (nodeEnv === 'production') {
+      console.warn('⚠️ [SECURITY WARNING] Wildcard CORS (*) is disabled in production. Defaulting to webAppUrl.');
+      corsOrigin = parsed.data.WEB_APP_URL || 'http://localhost:3000';
+    } else {
+      corsOrigin = true;
+    }
+  } else {
+    corsOrigin = corsOriginRaw;
   }
 
   return {
@@ -96,10 +120,13 @@ export function loadEnv(cwd: string = process.cwd()): AppConfig {
     mongodbUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/core_mono',
     mongodbDbName: process.env.MONGODB_DB_NAME || process.env.DB_NAME,
     corsOrigin,
-    jwtAccessSecret: parsed.data.JWT_ACCESS_SECRET,
-    jwtRefreshSecret: parsed.data.JWT_REFRESH_SECRET,
+    jwtAccessSecret: effectiveJwtAccessSecret,
+    jwtRefreshSecret: effectiveJwtRefreshSecret,
     jwtAccessExpiresIn: parsed.data.JWT_ACCESS_EXPIRES_IN,
     jwtRefreshExpiresIn: parsed.data.JWT_REFRESH_EXPIRES_IN,
+    credentialEncKey: effectiveCredentialKey,
+    credentialEncKeyVersion: parsed.data.CREDENTIAL_ENC_KEY_VERSION,
+    credentialEncKeysPrevious: parsed.data.CREDENTIAL_ENC_KEYS_PREVIOUS,
     allowedOrigin: parsed.data.ALLOWED_ORIGIN,
     webAppUrl: parsed.data.WEB_APP_URL,
     maxUploadSizeBytes: parsed.data.MAX_UPLOAD_SIZE_BYTES

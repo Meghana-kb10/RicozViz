@@ -24,6 +24,8 @@ export interface IUserDocument extends Document {
   avatarUrl?: string | null;
   status?: string;
   tokenVersion?: number;
+  failedLoginAttempts?: number;
+  lockUntil?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +70,14 @@ const UserSchema = new Schema<IUserDocument>(
     tokenVersion: {
       type: Number,
       default: 0
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0
+    },
+    lockUntil: {
+      type: Date,
+      default: null
     },
     role: {
       type: String,

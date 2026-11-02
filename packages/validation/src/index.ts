@@ -104,3 +104,6 @@ export {
 // Backward compatibility aliases
 export { loginRequestSchema as loginSchema } from './auth/index';
 export type { LoginRequestInput as LoginInputType } from './auth/index';
+
+// RicozViz enterprise validation schemas
+export * from './ricozviz/index';

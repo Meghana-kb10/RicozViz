@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
     "start": "node dist/index.js",
-    "test": "tsx src/utils/response.test.ts && tsx src/modules/ricozviz/governance/governance.test.ts && tsx src/modules/ricozviz/governance/rls-simulator.test.ts && tsx src/modules/ricozviz/audit/audit-preview.test.ts && tsx src/modules/ricozviz/dataset/duckdb-dataset.test.ts && tsx src/modules/ricozviz/ai/ai.test.ts && tsx src/modules/ricozviz/flow.test.ts",
+    "test": "tsx src/utils/response.test.ts && tsx src/modules/ricozviz/governance/governance.test.ts && tsx src/modules/ricozviz/governance/rls-simulator.test.ts && tsx src/modules/ricozviz/audit/audit-preview.test.ts && tsx src/modules/ricozviz/dataset/duckdb-dataset.test.ts && tsx src/modules/ricozviz/ai/ai.test.ts && tsx src/modules/ricozviz/flow.test.ts && tsx src/modules/ricozviz/security-hardening.test.ts",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,7 +15,9 @@
     "@duckdb/node-api": "2.0.0-r.1",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.3.0",
+    "@fastify/helmet": "^13.2.0",
     "@fastify/multipart": "^9.3.0",
+    "@fastify/rate-limit": "^11.2.1",
     "@repo/api": "workspace:*",
     "@repo/database": "workspace:*",
     "@repo/types": "workspace:*",

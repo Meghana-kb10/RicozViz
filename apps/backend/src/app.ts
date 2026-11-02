@@ -1,6 +1,8 @@
 import fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { config } from './config/env.js';
 import { registerErrorHandler } from './plugins/error-handler.js';
 import { registerRequestLogging } from './plugins/logger.js';
@@ -15,7 +17,24 @@ export async function buildApp(): Promise<FastifyInstance> {
     bodyLimit: config.maxUploadSizeBytes
   });
 
-  // Enable CORS
+  // 1. HTTP Security Headers via Helmet
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  });
+
+  // 2. Global Rate Limiter (100 req/min default per IP)
+  await app.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
+    errorResponseBuilder: (_req, context) => ({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: `Rate limit exceeded. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`
+    })
+  });
+
+  // 3. Strict CORS Allowlist
   await app.register(cors, {
     origin: config.corsOrigin,
     credentials: true,

@@ -18,6 +18,8 @@ export const COLLECTIONS = {
   ORGANIZATION_MEMBERS: 'organization_members',
   WORKSPACES: 'workspaces',
   WORKSPACE_MEMBERS: 'workspace_members',
+  REFRESH_TOKENS: 'refresh_tokens',
+  CREDENTIAL_VAULT: 'credential_vault',
 
   // ---- Data layer ----
   DATA_SOURCES: 'data_sources',

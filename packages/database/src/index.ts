@@ -60,6 +60,10 @@ export { ChartModel } from './models/chart.model';
 export type { IChartDocument } from './models/chart.model';
 export { MetricModel, AlertModel, AlertHistoryModel } from './models/metric.model';
 export type { IMetricDocument, IAlertDocument, IAlertHistoryDocument } from './models/metric.model';
+export { CredentialVaultModel } from './models/credential-vault.model';
+export type { ICredentialVaultDocument } from './models/credential-vault.model';
+export { RefreshTokenModel } from './models/refresh-token.model';
+export type { IRefreshTokenDocument } from './models/refresh-token.model';
 export {
   ReportModel,
   ReportExecutionModel,
@@ -79,6 +83,7 @@ export type { IAiUsage, IAiUsageDocument, AiUsageStatus } from './models/ai-usag
 
 // ---- Model helpers ----
 export { defineModel, objectIdRef, objectIdRefOptional, toObjectId, idToString } from './models/model.util';
+export { buildTenantFilter, assertTenantAccess, type TenantContext } from './tenant';
 
 // ---- Serializers ----
 export { serializeUser, serializeUsers } from './serializers/user.serializer';

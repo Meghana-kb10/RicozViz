@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import { AppError } from '../utils/errors.js';
@@ -10,6 +11,7 @@ export interface RicozVizAccessTokenPayload extends AccessTokenPayload {
 export interface RefreshTokenPayload {
   sub: string;
   tokenVersion: number;
+  familyId?: string;
   type: 'refresh';
 }
 
@@ -22,11 +24,15 @@ export function signAccessToken(payload: Omit<RicozVizAccessTokenPayload, 'type'
   return jwt.sign({ ...payload, type: 'access' }, config.jwtAccessSecret, options);
 }
 
-export function signRefreshToken(userId: string, tokenVersion: number): string {
+export function signRefreshToken(userId: string, tokenVersion: number, familyId?: string): string {
   const options: SignOptions = {
     expiresIn: config.jwtRefreshExpiresIn as SignOptions['expiresIn']
   };
-  return jwt.sign({ sub: userId, tokenVersion, type: 'refresh' }, config.jwtRefreshSecret, options);
+  return jwt.sign(
+    { sub: userId, tokenVersion, familyId, jti: crypto.randomUUID(), type: 'refresh' },
+    config.jwtRefreshSecret,
+    options
+  );
 }
 
 // ---- Token verification ------------------------------------------------------

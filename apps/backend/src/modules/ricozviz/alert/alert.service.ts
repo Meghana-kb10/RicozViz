@@ -36,6 +36,7 @@ import type { AuditRequestMeta } from '../visualization/visualization.service.js
 import { formatMetricValue } from '../metric/metric.service.js';
 import { dispatchAlertNotifications } from './notification.service.js';
 import type { NotificationDispatchResult } from './notification.service.js';
+import { credentialService } from '../data-source/credential.service.js';
 
 export const VALID_CONDITIONS: AlertConditionExtended[] = [
   ALERT_CONDITION.GREATER_THAN,
@@ -363,7 +364,9 @@ function baseAlertPayload(alert: AlertRow): Record<string, unknown> {
     lastTriggeredAt: alert.lastTriggeredAt ? alert.lastTriggeredAt.toISOString() : null,
     lastValue: alert.lastValue ?? null,
     recipients: (alert as any).recipients || [],
-    slackWebhookUrl: (alert as any).slackWebhookUrl || null,
+    slackWebhookUrl: (alert as any).slackWebhookUrl
+      ? credentialService.maskSecret((alert as any).slackWebhookUrl)
+      : null,
     createdById: alert.createdById.toString(),
     createdAt: alert.createdAt.toISOString(),
     updatedAt: alert.updatedAt.toISOString()

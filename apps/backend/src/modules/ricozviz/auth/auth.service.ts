@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { z } from 'zod';
@@ -10,6 +11,7 @@ import {
   PermissionModel,
   WorkspaceModel,
   WorkspaceMemberModel,
+  RefreshTokenModel,
   ensureSystemRolesAndPermissions,
   toObjectId,
   serializeDoc,
@@ -190,7 +192,7 @@ export async function getMembership(
   };
 }
 
-/** Sign an access/refresh pair for a member. */
+/** Sign an access/refresh pair for a member with rotation and DB hashing. */
 export async function issueTokens(input: {
   userId: string;
   email: string;
@@ -199,7 +201,12 @@ export async function issueTokens(input: {
   roleName: string;
   permissions: string[];
   tokenVersion: number;
+  familyId?: string;
+  ip?: string | null;
+  userAgent?: string | null;
 }): Promise<IssuedTokens> {
+  const familyId = input.familyId || crypto.randomUUID();
+
   const accessToken = signAccessToken({
     sub: input.userId,
     email: input.email,
@@ -209,9 +216,31 @@ export async function issueTokens(input: {
     permissions: input.permissions
   });
 
+  const rawRefreshToken = signRefreshToken(input.userId, input.tokenVersion, familyId);
+  const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
+
+  const userObjectId = toObjectId(input.userId);
+  if (userObjectId) {
+    try {
+      await RefreshTokenModel.create({
+        userId: userObjectId,
+        tokenHash,
+        familyId,
+        expiresAt: new Date(Date.now() + SEVEN_DAYS_MS),
+        isRevoked: false,
+        createdByIp: input.ip ?? null,
+        userAgent: input.userAgent ?? null
+      });
+    } catch (err) {
+      logger.warn('[AuthService] RefreshToken DB persistence notice', {
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
+  }
+
   return {
     accessToken,
-    refreshToken: signRefreshToken(input.userId, input.tokenVersion),
+    refreshToken: rawRefreshToken,
     permissions: input.permissions
   };
 }
@@ -401,26 +430,68 @@ export async function register(input: RegisterInput): Promise<SessionResult<Regi
 // LOGIN — POST /api/v1/auth/login
 // ============================================================
 
-export async function login(input: LoginInput): Promise<SessionResult<RicozVizAuthResponse>> {
+export async function login(
+  input: LoginInput,
+  meta?: { ip?: string; userAgent?: string }
+): Promise<SessionResult<RicozVizAuthResponse>> {
   const email = input.email.toLowerCase();
 
   const user = await UserModel.findOne({ email }).select('+passwordHash').exec();
+
+  // 1. Account Lockout Check
+  if (user && user.lockUntil && user.lockUntil.getTime() > Date.now()) {
+    const remainingMinutes = Math.max(1, Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000));
+    await logAuditEvent({
+      organizationId: user._id.toString(),
+      userId: user._id.toString(),
+      action: 'LOGIN_BLOCKED_LOCKOUT',
+      resourceType: 'User',
+      resourceId: user._id.toString(),
+      status: 'FAILURE',
+      metadata: { email, remainingMinutes }
+    });
+    const err = AppError.forbidden(`Account is temporarily locked due to repeated failed login attempts. Try again in ${remainingMinutes} minute(s).`);
+    (err as unknown as { statusCode: number }).statusCode = 423;
+    throw err;
+  }
 
   const passwordMatch = await bcrypt.compare(input.password, user?.passwordHash ?? DUMMY_HASH);
 
   if (!user || !passwordMatch) {
     if (user) {
+      const attempts = (user.failedLoginAttempts ?? 0) + 1;
+      const shouldLock = attempts >= 5;
+      const lockUntil = shouldLock ? new Date(Date.now() + 15 * 60 * 1000) : null;
+      await UserModel.updateOne(
+        { _id: user._id },
+        { $set: { failedLoginAttempts: attempts, lockUntil } }
+      ).exec();
+
       await logAuditEvent({
         organizationId: user._id.toString(),
         userId: user._id.toString(),
-        action: 'LOGIN_FAILED',
+        action: shouldLock ? 'ACCOUNT_LOCKED' : 'LOGIN_FAILED',
         resourceType: 'User',
         resourceId: user._id.toString(),
         status: 'FAILURE',
-        metadata: { email }
+        metadata: { email, attempts, locked: shouldLock }
       });
+
+      if (shouldLock) {
+        const err = AppError.forbidden('Account has been locked for 15 minutes due to 5 consecutive failed login attempts.');
+        (err as unknown as { statusCode: number }).statusCode = 423;
+        throw err;
+      }
     }
     throw AppError.unauthorized('Invalid email or password');
+  }
+
+  // Reset lockout counters on successful password verification
+  if ((user.failedLoginAttempts ?? 0) > 0 || user.lockUntil) {
+    await UserModel.updateOne(
+      { _id: user._id },
+      { $set: { failedLoginAttempts: 0, lockUntil: null } }
+    ).exec();
   }
 
   if (user.status !== USER_STATUS.ACTIVE) {
@@ -442,7 +513,9 @@ export async function login(input: LoginInput): Promise<SessionResult<RicozVizAu
     roleId: role.id,
     roleName: role.name,
     permissions: membership.permissions,
-    tokenVersion
+    tokenVersion,
+    ip: meta?.ip,
+    userAgent: meta?.userAgent
   });
 
   await logAuditEvent({
@@ -522,7 +595,8 @@ export async function me(userId: string, organizationId: string): Promise<RicozV
 // ============================================================
 
 export async function refresh(
-  cookieToken?: string
+  cookieToken?: string,
+  meta?: { ip?: string; userAgent?: string }
 ): Promise<SessionResult<RicozVizRefreshResponse>> {
   if (!cookieToken) {
     throw AppError.unauthorized('No refresh token provided');
@@ -540,6 +614,30 @@ export async function refresh(
     throw AppError.unauthorized('Refresh token has been invalidated');
   }
 
+  // 1. Verify token hash in DB to enforce single-use refresh token rotation
+  const tokenHash = crypto.createHash('sha256').update(cookieToken).digest('hex');
+  const storedToken = await RefreshTokenModel.findOne({ tokenHash });
+
+  if (storedToken) {
+    if (storedToken.isRevoked) {
+      // Replay attack detected! Invalidate all tokens in the family to protect account
+      logger.warn('[AuthService] Revoked refresh token reuse detected! Invalidating token family', {
+        userId: user._id.toString(),
+        familyId: storedToken.familyId
+      });
+      await RefreshTokenModel.updateMany({ familyId: storedToken.familyId }, { isRevoked: true }).exec();
+      await UserModel.updateOne({ _id: user._id }, { $inc: { tokenVersion: 1 } }).exec();
+      throw AppError.unauthorized('Refresh token has already been used (possible token replay attack)');
+    }
+
+    if (storedToken.expiresAt.getTime() < Date.now()) {
+      throw AppError.unauthorized('Refresh token expired');
+    }
+
+    // Mark current token as revoked so it cannot be used again
+    await RefreshTokenModel.updateOne({ _id: storedToken._id }, { isRevoked: true }).exec();
+  }
+
   const membership = await getMembership(user._id.toString());
   if (!membership) {
     throw AppError.unauthorized('No active organization membership');
@@ -547,6 +645,7 @@ export async function refresh(
 
   const { organization, role } = membership;
 
+  // Issue new rotated token pair under the same family
   const tokens = await issueTokens({
     userId: user._id.toString(),
     email: user.email,
@@ -554,7 +653,10 @@ export async function refresh(
     roleId: role.id,
     roleName: role.name,
     permissions: membership.permissions,
-    tokenVersion: payload.tokenVersion
+    tokenVersion: payload.tokenVersion,
+    familyId: storedToken?.familyId || payload.familyId,
+    ip: meta?.ip,
+    userAgent: meta?.userAgent
   });
 
   return {
@@ -568,12 +670,20 @@ export async function refresh(
 // ============================================================
 
 export async function logout(
-  principal?: { userId: string; organizationId: string }
+  principal?: { userId: string; organizationId: string },
+  cookieToken?: string
 ): Promise<{ message: string }> {
+  // 1. Invalidate specific refresh token if present
+  if (cookieToken) {
+    const tokenHash = crypto.createHash('sha256').update(cookieToken).digest('hex');
+    await RefreshTokenModel.updateOne({ tokenHash }, { isRevoked: true }).exec().catch(() => {});
+  }
+
+  // 2. Invalidate all user sessions and refresh tokens in DB
   if (principal) {
     const userObjectId = toObjectId(principal.userId);
     if (userObjectId) {
-      // Incrementing tokenVersion invalidates every previously issued refresh token.
+      await RefreshTokenModel.updateMany({ userId: userObjectId }, { isRevoked: true }).exec().catch(() => {});
       await UserModel.updateOne({ _id: userObjectId }, { $inc: { tokenVersion: 1 } })
         .exec()
         .catch((err: unknown) => {

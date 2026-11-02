@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { resourceIdParamSchema } from '@repo/validation';
 import { getPrincipal } from '../../../plugins/ricozviz-auth.js';
-import { AppError } from '../../../utils/errors.js';
 import { sendSuccess } from '../../../utils/response.js';
 import {
   createDataSourceSchema,
@@ -15,10 +15,6 @@ import {
   testRawConnection,
   type DataSourceRequestContext
 } from './data-source.service.js';
-
-interface DataSourceParams {
-  id: string;
-}
 
 interface DataSourceQuery {
   workspaceId?: string;
@@ -40,10 +36,7 @@ function requestContext(request: FastifyRequest): DataSourceRequestContext {
 }
 
 function requireDataSourceId(request: FastifyRequest): string {
-  const { id } = request.params as DataSourceParams;
-  if (!id) {
-    throw AppError.badRequest('Data source ID is required');
-  }
+  const { id } = resourceIdParamSchema.parse(request.params);
   return id;
 }
 

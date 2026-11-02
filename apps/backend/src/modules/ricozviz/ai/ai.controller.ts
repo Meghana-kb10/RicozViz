@@ -1,5 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { z } from 'zod';
+import {
+  askAnalystSchema,
+  dashboardSummarySchema,
+  insightsSchema,
+  nlToChartSchema
+} from '@repo/validation';
 import {
   askDataAnalyst,
   generateDashboardSummary,
@@ -9,42 +14,6 @@ import {
 import { nlToChart } from './ai.service.js';
 import { getPrincipal } from '../../../plugins/ricozviz-auth.js';
 import { sendSuccess } from '../../../utils/response.js';
-
-// ------------------------------------------------------------
-// Validation Schemas (messages are contractual)
-// ------------------------------------------------------------
-
-const filterSchema = z.object({
-  column: z.string().min(1),
-  operator: z.string().default('='),
-  value: z.unknown()
-});
-
-const askAnalystSchema = z.object({
-  datasetId: z.string().min(1, 'datasetId is required'),
-  question: z.string().min(1, 'question is required'),
-  filters: z.array(filterSchema).optional(),
-  dashboardId: z.string().optional()
-});
-
-const nlToChartSchema = z.object({
-  datasetId: z.string().min(1, 'datasetId is required'),
-  prompt: z.string().min(1, 'prompt is required'),
-  filters: z.array(filterSchema).optional()
-});
-
-const insightsSchema = z.object({
-  datasetId: z.string().min(1, 'datasetId is required'),
-  dimension: z.string().optional(),
-  measure: z.string().optional(),
-  filters: z.array(filterSchema).optional(),
-  data: z.array(z.record(z.unknown())).optional()
-});
-
-const dashboardSummarySchema = z.object({
-  dashboardId: z.string().min(1, 'dashboardId is required'),
-  activeFilters: z.array(filterSchema).optional()
-});
 
 export class AiController {
   /** POST /api/v1/ai/ask — AI Data Analyst grounded Q&A */
@@ -118,7 +87,7 @@ export class AiController {
       principal.roleName,
       {
         dashboardId: body.dashboardId,
-        activeFilters: toDatasetQueryFilters(body.activeFilters)
+        activeFilters: toDatasetQueryFilters(body.activeFilters ?? body.filters)
       }
     );
 

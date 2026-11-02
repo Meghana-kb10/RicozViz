@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { createAlertSchema, updateAlertSchema } from '@repo/validation';
 import {
   clearAlert,
   createAlert,
@@ -9,9 +10,7 @@ import {
   listAlerts,
   updateAlert,
   type AlertListQuery,
-  type AlertPrincipal,
-  type CreateAlertBody,
-  type UpdateAlertBody
+  type AlertPrincipal
 } from './alert.service.js';
 import type { AuditRequestMeta } from '../visualization/visualization.service.js';
 import { getPrincipal } from '../../../plugins/ricozviz-auth.js';
@@ -41,16 +40,16 @@ function readPrincipal(request: FastifyRequest): AlertPrincipal {
 }
 
 function requireParam(value: string | undefined, message: string): string {
-  if (!value) {
+  if (!value || typeof value !== 'string' || value.trim().length === 0) {
     throw AppError.badRequest(message);
   }
-  return value;
+  return value.trim();
 }
 
 export class AlertController {
   /** POST /api/v1/alerts */
   async create(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const body = (request.body ?? {}) as CreateAlertBody;
+    const body = createAlertSchema.parse(request.body);
 
     const result = await createAlert(body, readPrincipal(request), readAuditMeta(request));
     sendSuccess(reply, result, 201);
@@ -73,7 +72,7 @@ export class AlertController {
 
   /** GET /api/v1/alerts/:id */
   async getOne(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const { id } = request.params as AlertParams;
+    const { id } = (request.params ?? {}) as AlertParams;
 
     const result = await getAlert(requireParam(id, 'Alert ID is required'), readPrincipal(request));
     sendSuccess(reply, result);
@@ -81,8 +80,8 @@ export class AlertController {
 
   /** PATCH /api/v1/alerts/:id */
   async update(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const { id } = request.params as AlertParams;
-    const body = (request.body ?? {}) as UpdateAlertBody;
+    const { id } = (request.params ?? {}) as AlertParams;
+    const body = updateAlertSchema.parse(request.body);
 
     const result = await updateAlert(
       requireParam(id, 'Alert ID is required'),
@@ -96,7 +95,7 @@ export class AlertController {
 
   /** DELETE /api/v1/alerts/:id */
   async remove(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const { id } = request.params as AlertParams;
+    const { id } = (request.params ?? {}) as AlertParams;
 
     const result = await deleteAlert(
       requireParam(id, 'Alert ID is required'),
@@ -109,7 +108,7 @@ export class AlertController {
 
   /** POST /api/v1/alerts/:id/evaluate */
   async evaluate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const { id } = request.params as AlertParams;
+    const { id } = (request.params ?? {}) as AlertParams;
 
     const result = await evaluateAlert(
       requireParam(id, 'Alert ID is required'),
@@ -122,7 +121,7 @@ export class AlertController {
 
   /** POST /api/v1/alerts/:id/clear */
   async clear(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const { id } = request.params as AlertParams;
+    const { id } = (request.params ?? {}) as AlertParams;
 
     const result = await clearAlert(
       requireParam(id, 'Alert ID is required'),
@@ -135,7 +134,7 @@ export class AlertController {
 
   /** POST /api/v1/alerts/workspace/:workspaceId/evaluate-all */
   async evaluateAll(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const { workspaceId } = request.params as AlertParams;
+    const { workspaceId } = (request.params ?? {}) as AlertParams;
 
     const result = await evaluateAllWorkspaceAlerts(
       requireParam(workspaceId, 'Workspace ID is required'),
