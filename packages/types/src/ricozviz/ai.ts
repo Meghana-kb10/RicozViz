@@ -49,8 +49,11 @@ export interface NlToChartResponse {
   };
   data: Array<Record<string, unknown>>;
   columns: QueryResultColumn[];
-  rowCount: number;
-}
+    rowCount: number;
+    sql?: string;
+    xField?: string;
+    yField?: string;
+  }
 
 export interface NlToChartParams {
   datasetId: string;

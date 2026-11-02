@@ -1407,7 +1407,7 @@ export default function DashboardDetailPage({
           </div>
 
           {/* Right Controls: Streamlined Mode Toggle, Sync, Actions, Profile */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 max-w-full overflow-x-auto no-scrollbar">
             {/* View Mode Switch (Studio / Preview) */}
             <div className="flex rounded-full bg-[#191919] border border-[#2a2a2a] p-0.5 text-xs font-medium">
               <button

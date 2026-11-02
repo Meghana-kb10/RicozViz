@@ -404,7 +404,7 @@ export default function CapabilityGrid() {
                   1.2ms latency · 0 ETL
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-[10px] p-[16px]">
+              <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-[8px] sm:gap-[10px] p-[12px] sm:p-[16px]">
                 {["Email Digest", "Webhook 200", "Workspace"].map(
                   (label, idx) => {
                     const active = activeAlertChannel === idx;

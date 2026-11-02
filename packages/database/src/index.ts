@@ -67,6 +67,7 @@ export {
   DashboardTemplateModel,
   AuditLogModel
 } from './models/insight.model';
+export { AiUsageModel } from './models/ai-usage.model';
 export type {
   IReportDocument,
   IReportExecutionDocument,
@@ -74,6 +75,7 @@ export type {
   IDashboardTemplateDocument,
   IAuditLogDocument
 } from './models/insight.model';
+export type { IAiUsage, IAiUsageDocument, AiUsageStatus } from './models/ai-usage.model';
 
 // ---- Model helpers ----
 export { defineModel, objectIdRef, objectIdRefOptional, toObjectId, idToString } from './models/model.util';

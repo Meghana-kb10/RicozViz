@@ -1,12 +1,12 @@
 export { aiRoutes } from './ai.routes.js';
 export { AiController, aiController } from './ai.controller.js';
+export { nlToChart } from './ai.service.js';
 export {
   QUERY_LIMITS,
   ALLOWED_FILTER_OPERATORS,
   FILTER_OPERATOR_ALIASES,
   ALLOWED_AGGREGATIONS,
   askDataAnalyst,
-  nlToChart,
   generateDatasetInsights,
   generateDashboardSummary,
   calculateDescriptiveStats,

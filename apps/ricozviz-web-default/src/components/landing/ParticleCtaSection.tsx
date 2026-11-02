@@ -269,9 +269,9 @@ export default function ParticleCtaSection() {
       <div className="relative z-10 mx-auto max-w-[1200px] px-[24px]">
         <div className="flex flex-col items-center text-center">
           {/* Top Pill Terminal Badge */}
-          <div className="mb-[20px] inline-flex items-center gap-[8px] rounded-full border border-[#2e2e2e] bg-[#171717]/90 px-[14px] py-[5px] backdrop-blur-xs">
+          <div className="mb-[20px] max-w-full inline-flex items-center gap-[6px] sm:gap-[8px] rounded-full border border-[#2e2e2e] bg-[#171717]/90 px-[10px] sm:px-[14px] py-[5px] backdrop-blur-xs min-w-0">
             <span className="h-[6px] w-[6px] rounded-full bg-[#ff6b35] shrink-0" />
-            <span className="font-mono-code text-[11px] text-[#898989] shrink-0 whitespace-nowrap">
+            <span className="font-mono-code text-[9.5px] sm:text-[11px] text-[#898989] truncate">
               ENTERPRISE_ANALYTICS // MULTI_SOURCE_AI
             </span>
           </div>

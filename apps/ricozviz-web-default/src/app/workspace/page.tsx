@@ -215,7 +215,7 @@ export default function WorkspacePage() {
         { label: "Workspaces" },
       ]}
       actions={
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Workspace Switcher Selector */}
           <select
             id="workspace-switcher"
@@ -227,7 +227,7 @@ export default function WorkspacePage() {
                 selectWorkspace(e.target.value);
               }
             }}
-            className="rounded-lg border border-[#2e2e2e] bg-[#141414] px-3 py-1.5 text-xs font-mono-code font-semibold text-[#fafafa] outline-none transition focus:border-[#ff6b35]"
+            className="flex-1 sm:flex-initial max-w-[200px] truncate rounded-lg border border-[#2e2e2e] bg-[#141414] px-3 py-1.5 text-xs font-mono-code font-semibold text-[#fafafa] outline-none transition focus:border-[#ff6b35]"
           >
             {workspaces.map((ws) => (
               <option key={ws.id} value={ws.id}>

@@ -245,7 +245,7 @@ export function DashboardFilterBar({
 
             {/* Filter Creation Popover */}
             {isAddOpen && (
-              <div className="absolute top-full left-0 mt-2 w-80 rounded-xl border border-[#2a2a2a] bg-[#171717] p-3.5 shadow-2xl z-30 text-[#fafafa]">
+              <div className="absolute top-full left-0 mt-2 w-80 max-w-[calc(100vw-32px)] rounded-xl border border-[#2a2a2a] bg-[#171717] p-3.5 shadow-2xl z-30 text-[#fafafa]">
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#242424]">
                   <span className="text-xs font-medium text-[#fafafa] flex items-center gap-1.5">
                     <Filter className="h-3.5 w-3.5 text-[#ff6b35]" />

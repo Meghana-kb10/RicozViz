@@ -712,7 +712,7 @@ export default function DatasetsPage() {
 
   return (
     <AppShell>
-      <div className="flex-1 space-y-6 p-6 md:p-8 max-w-7xl mx-auto w-full">
+      <div className="flex-1 space-y-6 max-w-7xl mx-auto w-full">
         {/* Alerts */}
         {errorMsg && (
           <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs font-mono text-rose-300 flex justify-between items-center">

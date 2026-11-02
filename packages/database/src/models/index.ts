@@ -60,6 +60,8 @@ export type { IExportJobDocument } from './insight.model';
 export { DashboardTemplateModel } from './insight.model';
 export type { IDashboardTemplateDocument } from './insight.model';
 export { AuditLogModel } from './insight.model';
+export { AiUsageModel } from './ai-usage.model';
+export type { IAiUsageDocument, AiUsageStatus } from './ai-usage.model';
 export type { IAuditLogDocument } from './insight.model';
 
 export { defineModel, objectIdRef, objectIdRefOptional, toObjectId, idToString } from './model.util';

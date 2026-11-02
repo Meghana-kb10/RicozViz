@@ -794,13 +794,13 @@ export default function AlertsPage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-4">
+            <div className="flex-1 overflow-y-auto overflow-x-auto py-4">
               {!historyAlert.history || historyAlert.history.length === 0 ? (
                 <div className="p-8 text-center text-[#898989] font-mono-code text-xs">
                   No evaluations recorded yet for this alert. Click &quot;Check&quot; on the alert card to run an evaluation.
                 </div>
               ) : (
-                <table className="w-full text-left text-xs">
+                <table className="min-w-[500px] w-full text-left text-xs">
                   <thead className="bg-[#181818] text-[#898989] font-mono-code border-b border-[#242424]">
                     <tr>
                       <th className="px-3 py-2 font-semibold">Timestamp</th>

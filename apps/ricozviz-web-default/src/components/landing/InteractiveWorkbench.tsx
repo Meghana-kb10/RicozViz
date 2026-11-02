@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { apiNlToChart } from "../../lib/api";
 
 type WorkbenchTab = "viz" | "sql" | "ai" | "embed";
 type ChartType = "area" | "bar" | "heatmap" | "donut";
@@ -189,6 +190,9 @@ export default function InteractiveWorkbench({
   // AI NL-to-Chart Studio State
   const [selectedAiPreset, setSelectedAiPreset] = useState<number>(0);
   const [isSynthesizingAi, setIsSynthesizingAi] = useState<boolean>(false);
+  const [aiSynthesizedMap, setAiSynthesizedMap] = useState<
+    Record<number, { sql: string; chartType: string; latency: string }>
+  >({});
 
   // Alerts & Signed Embed State
   const [tokenTtl, setTokenTtl] = useState<"15m" | "1h" | "24h">("1h");
@@ -224,11 +228,37 @@ export default function InteractiveWorkbench({
     }, 180);
   };
 
-  const handleSynthesizeAi = () => {
+  const handleSynthesizeAi = async () => {
     setIsSynthesizingAi(true);
-    setTimeout(() => {
+    const start = performance.now();
+    try {
+      const res = await apiNlToChart({
+        datasetId: "demo",
+        prompt: activeAi.prompt
+      });
+      const latency = `${Math.round(performance.now() - start)}ms`;
+      setAiSynthesizedMap((prev) => ({
+        ...prev,
+        [selectedAiPreset]: {
+          sql: res.sql || activeAi.sqlQuery,
+          chartType: res.chartType || activeAi.chartType,
+          latency
+        }
+      }));
+    } catch {
+      await new Promise((r) => setTimeout(r, 380));
+      const latency = `${Math.round(performance.now() - start)}ms`;
+      setAiSynthesizedMap((prev) => ({
+        ...prev,
+        [selectedAiPreset]: {
+          sql: activeAi.sqlQuery,
+          chartType: activeAi.chartType,
+          latency
+        }
+      }));
+    } finally {
       setIsSynthesizingAi(false);
-    }, 450);
+    }
   };
 
   const regenerateEmbedToken = () => {
@@ -789,9 +819,9 @@ export default function InteractiveWorkbench({
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-[#1c1c1c] pt-[10px] font-mono-code text-[11px] text-[#898989]">
-                        <span>Connected Sources: {selectedConnector}</span>
-                        <span>Recharts Multi-Widget Canvas</span>
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#1c1c1c] pt-[10px] font-mono-code text-[10.5px] sm:text-[11px] text-[#898989]">
+                        <span className="truncate">Connected: {selectedConnector}</span>
+                        <span className="shrink-0">Recharts Canvas</span>
                       </div>
                     </div>
                   </div>
@@ -969,28 +999,38 @@ export default function InteractiveWorkbench({
 
                     <div className="flex flex-col justify-between rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[16px] lg:col-span-7">
                       <div>
-                        <div className="mb-[10px] flex items-center justify-between border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989]">
-                          <span>SYNTHESIZED_SQL (POST /api/v1/ai/nl-to-chart)</span>
-                          <span className="text-emerald-400 font-semibold">{activeAi.latency}</span>
-                        </div>
-                        <pre className="overflow-x-auto rounded-[8px] border border-[#1f1f1f] bg-[#141414] p-[12px] font-mono-code text-[11px] leading-[1.6] text-[#b4b4b4]">
-                          <code>{activeAi.sqlQuery}</code>
-                        </pre>
+                        {(() => {
+                          const synth = aiSynthesizedMap[selectedAiPreset];
+                          const sqlToDisplay = synth?.sql || activeAi.sqlQuery;
+                          const latencyToDisplay = synth?.latency || activeAi.latency;
+                          const chartTypeToDisplay = synth?.chartType || activeAi.chartType;
+                          return (
+                            <>
+                              <div className="mb-[10px] flex items-center justify-between gap-2 border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989]">
+                                <span className="truncate">SYNTHESIZED_SQL <span className="hidden sm:inline">(POST /api/v1/ai/nl-to-chart)</span></span>
+                                <span className="text-emerald-400 font-semibold shrink-0 whitespace-nowrap">{latencyToDisplay}</span>
+                              </div>
+                              <pre className="overflow-x-auto rounded-[8px] border border-[#1f1f1f] bg-[#141414] p-[12px] font-mono-code text-[11px] leading-[1.6] text-[#b4b4b4]">
+                                <code>{sqlToDisplay}</code>
+                              </pre>
 
-                        <div className="mt-[14px] grid grid-cols-1 sm:grid-cols-3 gap-[8px]">
-                          <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
-                            <span className="block text-[10px] font-mono-code text-[#898989]">Chart Visual</span>
-                            <span className="mt-[2px] block text-[13px] font-medium text-[#fafafa]">{activeAi.chartType}</span>
-                          </div>
-                          <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
-                            <span className="block text-[10px] font-mono-code text-[#898989]">Aggregation</span>
-                            <span className="mt-[2px] block text-[13px] font-medium text-[#ff6b35] font-mono-code">{activeAi.metric}</span>
-                          </div>
-                          <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
-                            <span className="block text-[10px] font-mono-code text-[#898989]">Render Engine</span>
-                            <span className="mt-[2px] block text-[13px] font-medium text-emerald-400">Recharts 2.x</span>
-                          </div>
-                        </div>
+                              <div className="mt-[14px] grid grid-cols-1 sm:grid-cols-3 gap-[8px]">
+                                <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
+                                  <span className="block text-[10px] font-mono-code text-[#898989]">Chart Visual</span>
+                                  <span className="mt-[2px] block text-[13px] font-medium text-[#fafafa]">{chartTypeToDisplay}</span>
+                                </div>
+                                <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
+                                  <span className="block text-[10px] font-mono-code text-[#898989]">Aggregation</span>
+                                  <span className="mt-[2px] block text-[13px] font-medium text-[#ff6b35] font-mono-code">{activeAi.metric}</span>
+                                </div>
+                                <div className="rounded-[8px] border border-[#242424] bg-[#141414] p-[10px]">
+                                  <span className="block text-[10px] font-mono-code text-[#898989]">Render Engine</span>
+                                  <span className="mt-[2px] block text-[13px] font-medium text-emerald-400">Recharts 2.x</span>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
 
                       <div className="mt-[16px] flex flex-wrap items-center justify-between gap-2 border-t border-[#242424] pt-[12px]">
@@ -1013,9 +1053,9 @@ export default function InteractiveWorkbench({
                   <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-12">
                     <div className="flex flex-col justify-between rounded-[11px] border border-[#242424] bg-[#0d0d0d] p-[16px] lg:col-span-6">
                       <div>
-                        <div className="border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989] flex justify-between">
-                          <span>THRESHOLD METRIC ALERTS</span>
-                          <span className="text-emerald-400">3 Monitors Active</span>
+                        <div className="border-b border-[#242424] pb-[8px] font-mono-code text-[11px] text-[#898989] flex items-center justify-between gap-2">
+                          <span className="truncate">THRESHOLD METRIC ALERTS</span>
+                          <span className="text-emerald-400 shrink-0 whitespace-nowrap">3 Monitors Active</span>
                         </div>
                         <div className="mt-[12px] space-y-[8px]">
                           {[
@@ -1052,9 +1092,9 @@ export default function InteractiveWorkbench({
                                   {a.status}
                                 </span>
                               </div>
-                              <div className="mt-[4px] flex items-center justify-between text-[11px] font-mono-code text-[#898989]">
-                                <span>{a.condition}</span>
-                                <span>{a.channel}</span>
+                              <div className="mt-[4px] flex items-center justify-between gap-2 text-[10.5px] sm:text-[11px] font-mono-code text-[#898989]">
+                                <span className="truncate">{a.condition}</span>
+                                <span className="shrink-0">{a.channel}</span>
                               </div>
                             </div>
                           ))}

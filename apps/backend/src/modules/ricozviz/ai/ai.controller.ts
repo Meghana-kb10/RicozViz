@@ -4,9 +4,9 @@ import {
   askDataAnalyst,
   generateDashboardSummary,
   generateDatasetInsights,
-  nlToChart,
   toDatasetQueryFilters
 } from './ai-analytics.service.js';
+import { nlToChart } from './ai.service.js';
 import { getPrincipal } from '../../../plugins/ricozviz-auth.js';
 import { sendSuccess } from '../../../utils/response.js';
 

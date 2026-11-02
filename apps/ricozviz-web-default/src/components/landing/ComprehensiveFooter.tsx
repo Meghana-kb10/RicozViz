@@ -69,7 +69,7 @@ export default function ComprehensiveFooter() {
         </div>
 
         {/* 4-COLUMN DETAILED DIRECTORY */}
-        <div className="grid grid-cols-2 gap-[32px] sm:grid-cols-4 lg:grid-cols-4 pb-[48px]">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-[32px] sm:grid-cols-4 lg:grid-cols-4 pb-[48px]">
           {/* Column 1: Platform */}
           <div className="flex flex-col gap-[12px]">
             <span className="font-mono-code text-[11px] uppercase tracking-wider text-[#fafafa]">
