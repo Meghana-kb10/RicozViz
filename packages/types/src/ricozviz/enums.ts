@@ -138,7 +138,9 @@ export type DatasetStatus = (typeof DATASET_STATUS)[keyof typeof DATASET_STATUS]
 
 export const BLEND_JOIN_TYPE = {
   INNER: 'INNER',
-  LEFT: 'LEFT'
+  LEFT: 'LEFT',
+  RIGHT: 'RIGHT',
+  FULL_OUTER: 'FULL_OUTER'
 } as const;
 export type BlendJoinType = (typeof BLEND_JOIN_TYPE)[keyof typeof BLEND_JOIN_TYPE];
 

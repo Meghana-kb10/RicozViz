@@ -7,10 +7,11 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
     "start": "node dist/index.js",
-    "test": "tsx src/utils/response.test.ts && tsx src/modules/ricozviz/governance/governance.test.ts && tsx src/modules/ricozviz/governance/rls-simulator.test.ts && tsx src/modules/ricozviz/audit/audit-preview.test.ts",
+    "test": "tsx src/utils/response.test.ts && tsx src/modules/ricozviz/governance/governance.test.ts && tsx src/modules/ricozviz/governance/rls-simulator.test.ts && tsx src/modules/ricozviz/audit/audit-preview.test.ts && tsx src/modules/ricozviz/dataset/duckdb-dataset.test.ts",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@duckdb/node-api": "2.0.0-r.1",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.3.0",
     "@fastify/multipart": "^9.3.0",
@@ -19,8 +20,8 @@
     "@repo/types": "workspace:*",
     "@repo/utils": "workspace:*",
     "@repo/validation": "workspace:*",
-    "better-sqlite3": "^13.0.3",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.3",
     "csv-parser": "^3.2.1",
     "dotenv": "^16.4.7",
     "fastify": "^5.12.5",

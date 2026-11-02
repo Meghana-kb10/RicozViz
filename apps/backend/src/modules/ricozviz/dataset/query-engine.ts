@@ -8,6 +8,7 @@
 
 import type { Client } from 'pg';
 import { AppError } from '../../../utils/errors.js';
+import { duckdbStore } from './duckdb-store.js';
 import { validateSqlIdentifier } from './schema-discovery.js';
 import { compileCalculatedField, evaluateExpression } from './calculated-field.engine.js';
 import { resolveUserRlsFilters, type UserSecurityContext } from './rls.service.js';
@@ -130,6 +131,8 @@ interface ValidatedMeasure {
 export interface DatasetQueryEngineParams extends DatasetQueryParams {
   user?: UserSecurityContext | null;
   userContext?: UserSecurityContext | null;
+  timeoutMs?: number;
+  timeout?: number;
 }
 
 /** Normalised, lower-cased ordering directive. */
@@ -499,8 +502,9 @@ export class DatasetQueryEngine {
       }
     }
 
-    // Fallback or Native In-Memory / Uploaded CSV Execution
-    return this.executeInMemoryQuery({
+    // DuckDB Vectorized In-Memory OLAP Execution
+    return this.executeDuckDBQuery({
+      dataset,
       meta,
       isAggregate,
       selectedColumns,
@@ -513,7 +517,8 @@ export class DatasetQueryEngine {
       limit,
       offset,
       columnTypeMap,
-      startTime
+      startTime,
+      timeoutMs: params.timeoutMs ?? params.timeout ?? 5000
     });
   }
 
@@ -690,10 +695,17 @@ export class DatasetQueryEngine {
   }
 
   // ============================================================
-  // IN-MEMORY / CSV QUERY EXECUTION (Full feature support)
+  // DUCKDB VECTORIZED IN-MEMORY OLAP ENGINE
   // ============================================================
 
-  private executeInMemoryQuery(opts: {
+  /**
+   * DuckDB Vectorized In-Memory OLAP Engine Query Execution:
+   * Real execution via DuckDB C++ embedded engine for sub-second aggregations.
+   * Supports SUM/AVG/COUNT/MIN/MAX, GROUP BY, ORDER BY, filters, calculated columns,
+   * row limits, and query timeouts with RLS WHERE rewriting.
+   */
+  private async executeDuckDBQuery(opts: {
+    dataset: QueryableDataset;
     meta: Record<string, unknown>;
     isAggregate: boolean;
     selectedColumns: string[];
@@ -707,286 +719,182 @@ export class DatasetQueryEngine {
     offset: number;
     columnTypeMap: Map<string, string>;
     startTime: number;
-  }): DatasetQueryResult {
-    const rawRows = ((opts.meta.sampleData ||
-      opts.meta.previewRows ||
-      opts.meta.rows ||
-      []) as Record<string, unknown>[]) || [];
-
-    // Evaluate calculated fields on raw rows before filtering and grouping
-    const calculatedFields: Array<{
-      name: string;
-      expression: string;
-      dataType?: string;
-    }> = Array.isArray(opts.meta.calculatedFields)
-      ? (opts.meta.calculatedFields as Array<{
-          name: string;
-          expression: string;
-          dataType?: string;
-        }>)
-      : [];
-
-    let processedSourceRows = rawRows;
-    if (calculatedFields.length > 0 && rawRows.length > 0) {
-      const knownCols = Array.from(opts.columnTypeMap.entries()).map(([k, v]) => ({
-        name: k,
-        type: v
-      }));
-      const compiledFields: Array<{ name: string; ast: ReturnType<typeof compileCalculatedField>['ast'] }> = [];
-      for (const cf of calculatedFields) {
-        try {
-          const compiled = compileCalculatedField(cf.expression, knownCols);
-          compiledFields.push({ name: cf.name, ast: compiled.ast });
-        } catch {
-          // If compile fails on a legacy expression, continue safely
-        }
-      }
-
-      if (compiledFields.length > 0) {
-        processedSourceRows = rawRows.map((r) => {
-          const copy = { ...r };
-          for (const cf of compiledFields) {
-            copy[cf.name] = evaluateExpression(cf.ast, copy);
-          }
-          return copy;
-        });
-      }
-    }
-
-    // Helper to evaluate a filter against a row
-    const evalFilterCondition = (f: ValidatedFilter, row: Record<string, unknown>): boolean => {
-      const val = row[f.column];
-
-      if (f.operator === 'isNull') {
-        return val === null || val === undefined;
-      }
-      if (f.operator === 'isNotNull') {
-        return val !== null && val !== undefined;
-      }
-      if (val === null || val === undefined) {
-        return false;
-      }
-
-      const colType = opts.columnTypeMap.get(f.column) || 'string';
-
-      if (colType === 'number' || colType === 'integer') {
-        const numVal = Number(val);
-        const filterVal = Number(f.value);
-        if (f.operator === '=') return numVal === filterVal;
-        if (f.operator === '!=') return numVal !== filterVal;
-        if (f.operator === '>') return numVal > filterVal;
-        if (f.operator === '>=') return numVal >= filterVal;
-        if (f.operator === '<') return numVal < filterVal;
-        if (f.operator === '<=') return numVal <= filterVal;
-      }
-
-      if (colType === 'date') {
-        const rowTime = new Date(val as string | number | Date).getTime();
-        const filterTime = new Date(f.value as string | number | Date).getTime();
-        if (f.operator === '=') return rowTime === filterTime;
-        if (f.operator === '!=') return rowTime !== filterTime;
-        if (f.operator === '>') return rowTime > filterTime;
-        if (f.operator === '>=') return rowTime >= filterTime;
-        if (f.operator === '<') return rowTime < filterTime;
-        if (f.operator === '<=') return rowTime <= filterTime;
-      }
-
-      if (colType === 'boolean') {
-        const boolVal = Boolean(val);
-        const filterBool = Boolean(f.value);
-        if (f.operator === '=') return boolVal === filterBool;
-        if (f.operator === '!=') return boolVal !== filterBool;
-      }
-
-      // String comparisons & text matching
-      const strVal = String(val).toLowerCase();
-      const filterStr = String(f.value ?? '').toLowerCase();
-
-      if (f.operator === '=') return strVal === filterStr;
-      if (f.operator === '!=') return strVal !== filterStr;
-      if (f.operator === '>') return strVal > filterStr;
-      if (f.operator === '>=') return strVal >= filterStr;
-      if (f.operator === '<') return strVal < filterStr;
-      if (f.operator === '<=') return strVal <= filterStr;
-      if (f.operator === 'contains') return strVal.includes(filterStr);
-      if (f.operator === 'startsWith') return strVal.startsWith(filterStr);
-      if (f.operator === 'endsWith') return strVal.endsWith(filterStr);
-      if (f.operator === 'in') {
-        const rawList = Array.isArray(f.value) ? f.value : [f.value];
-        if (colType === 'number' || colType === 'integer') {
-          const numList = rawList.map((v) => Number(v));
-          return numList.includes(Number(val));
-        }
-        const strList = rawList.map((v) => String(v).toLowerCase());
-        return strList.includes(String(val).toLowerCase());
-      }
-
-      return false;
-    };
-
-    // 0. Mandatory Row-Level Security (RLS) enforcement
-    // Drop all rows failing RLS so unauthorized rows are completely inaccessible
-    let permittedSourceRows = processedSourceRows;
-    if (opts.rlsFilters && opts.rlsFilters.length > 0) {
-      permittedSourceRows = processedSourceRows.filter((row) => {
-        return opts.rlsFilters!.every((f) => evalFilterCondition(f, row));
-      });
-    }
-
-    // 1. Filter permitted rows with user query filters
-    const filteredRows = permittedSourceRows.filter((row) => {
-      if (opts.filters.length === 0) return true;
-
-      const evalFilter = (f: ValidatedFilter): boolean => evalFilterCondition(f, row);
-
-      if (opts.filterLogic === 'OR') {
-        return opts.filters.some(evalFilter);
-      }
-      return opts.filters.every(evalFilter);
-    });
-
-    let processedRows: Record<string, unknown>[] = [];
+    timeoutMs?: number;
+  }): Promise<DatasetQueryResult> {
+    const tableName = await duckdbStore.ensureDatasetTable(opts.dataset);
     const resultColumns: QueryResultColumn[] = [];
+    const selectParts: string[] = [];
 
-    // 2. Aggregate or Raw Projection
     if (opts.isAggregate) {
-      // Build result column headers
       for (const dim of opts.dimensions) {
+        selectParts.push(`"${dim}"`);
         resultColumns.push({
           name: dim,
           type: opts.columnTypeMap.get(dim) || 'string'
         });
       }
       for (const m of opts.measures) {
+        const colExpr = m.column === '*' ? '*' : `"${m.column}"`;
+        if (m.aggregation === 'AVG' || m.aggregation === 'SUM') {
+          selectParts.push(`ROUND(${m.aggregation}(${colExpr}), 3) AS "${m.alias}"`);
+        } else {
+          selectParts.push(`${m.aggregation}(${colExpr}) AS "${m.alias}"`);
+        }
         resultColumns.push({
           name: m.alias,
           type: m.resultType
         });
       }
-
-      // Group rows
-      const groups = new Map<
-        string,
-        { dims: Record<string, unknown>; rows: Record<string, unknown>[] }
-      >();
-
-      if (opts.dimensions.length === 0) {
-        groups.set('all', { dims: {}, rows: filteredRows });
-      } else {
-        for (const row of filteredRows) {
-          const dimObj: Record<string, unknown> = {};
-          for (const dim of opts.dimensions) {
-            dimObj[dim] = row[dim] ?? null;
-          }
-          const groupKey = JSON.stringify(dimObj);
-
-          if (!groups.has(groupKey)) {
-            groups.set(groupKey, { dims: dimObj, rows: [] });
-          }
-          groups.get(groupKey)!.rows.push(row);
-        }
-      }
-
-      // Calculate aggregations per group
-      for (const group of groups.values()) {
-        const aggregatedRow: Record<string, unknown> = { ...group.dims };
-
-        for (const m of opts.measures) {
-          if (m.aggregation === 'COUNT') {
-            if (m.column === '*') {
-              aggregatedRow[m.alias] = group.rows.length;
-            } else {
-              aggregatedRow[m.alias] = group.rows.filter(
-                (r) => r[m.column] !== null && r[m.column] !== undefined
-              ).length;
-            }
-          } else if (m.aggregation === 'SUM') {
-            const sum = group.rows.reduce<number>((acc, r) => {
-              const val = Number(r[m.column]);
-              return !Number.isNaN(val) ? acc + val : acc;
-            }, 0);
-            aggregatedRow[m.alias] = Math.round(sum * 1000) / 1000;
-          } else if (m.aggregation === 'AVG') {
-            const validVals = group.rows
-              .map((r) => Number(r[m.column]))
-              .filter((v) => !Number.isNaN(v));
-            const avg =
-              validVals.length > 0 ? validVals.reduce((a, b) => a + b, 0) / validVals.length : 0;
-            aggregatedRow[m.alias] = Math.round(avg * 1000) / 1000;
-          } else if (m.aggregation === 'MIN') {
-            const vals = group.rows
-              .map((r) => r[m.column])
-              .filter((v) => v !== null && v !== undefined);
-            aggregatedRow[m.alias] =
-              vals.length > 0
-                ? vals.reduce((min, cur) => ((cur as never) < (min as never) ? cur : min))
-                : null;
-          } else if (m.aggregation === 'MAX') {
-            const vals = group.rows
-              .map((r) => r[m.column])
-              .filter((v) => v !== null && v !== undefined);
-            aggregatedRow[m.alias] =
-              vals.length > 0
-                ? vals.reduce((max, cur) => ((cur as never) > (max as never) ? cur : max))
-                : null;
-          }
-        }
-
-        processedRows.push(aggregatedRow);
-      }
     } else {
-      // Raw Mode
       for (const col of opts.selectedColumns) {
+        selectParts.push(`"${col}"`);
         resultColumns.push({
           name: col,
           type: opts.columnTypeMap.get(col) || 'string'
         });
       }
-
-      processedRows = filteredRows.map((row) => {
-        const projected: Record<string, unknown> = {};
-        for (const col of opts.selectedColumns) {
-          projected[col] = row[col] ?? null;
-        }
-        return projected;
-      });
     }
 
-    // 3. Sort
+    // Helper to format a filter into DuckDB SQL
+    const formatFilterSql = (f: ValidatedFilter): string => {
+      const col = `"${f.column}"`;
+      const colType = (opts.columnTypeMap.get(f.column) || 'string').toLowerCase();
+
+      if (f.operator === 'isNull') {
+        return `${col} IS NULL`;
+      }
+      if (f.operator === 'isNotNull') {
+        return `${col} IS NOT NULL`;
+      }
+      if (f.operator === 'in') {
+        const rawList = Array.isArray(f.value) ? f.value : [f.value];
+        if (colType === 'number' || colType === 'integer') {
+          const nums = rawList.map((v) => Number(v)).filter((v) => !Number.isNaN(v));
+          if (nums.length === 0) return '1=0';
+          return `${col} IN (${nums.join(', ')})`;
+        }
+        const strList = rawList.map((v) => `'${String(v).replace(/'/g, "''")}'`);
+        if (strList.length === 0) return '1=0';
+        return `CAST(${col} AS VARCHAR) IN (${strList.join(', ')})`;
+      }
+
+      if (colType === 'number' || colType === 'integer') {
+        const num = Number(f.value);
+        if (Number.isNaN(num)) return '1=0';
+        return `${col} ${f.operator} ${num}`;
+      }
+
+      if (colType === 'boolean') {
+        const boolVal = Boolean(f.value);
+        return `${col} ${f.operator === '!=' ? '!=' : '='} ${boolVal ? 'TRUE' : 'FALSE'}`;
+      }
+
+      if (colType === 'date' || colType === 'datetime') {
+        const d = new Date(f.value as any);
+        const iso = !Number.isNaN(d.getTime()) ? d.toISOString() : String(f.value);
+        return `${col} ${f.operator} TIMESTAMP '${iso}'`;
+      }
+
+      const strVal = String(f.value ?? '').replace(/'/g, "''");
+      if (f.operator === '=') {
+        return `LOWER(CAST(${col} AS VARCHAR)) = LOWER('${strVal}')`;
+      }
+      if (f.operator === '!=') {
+        return `(LOWER(CAST(${col} AS VARCHAR)) != LOWER('${strVal}') OR ${col} IS NULL)`;
+      }
+      if (f.operator === '>') {
+        return `LOWER(CAST(${col} AS VARCHAR)) > LOWER('${strVal}')`;
+      }
+      if (f.operator === '>=') {
+        return `LOWER(CAST(${col} AS VARCHAR)) >= LOWER('${strVal}')`;
+      }
+      if (f.operator === '<') {
+        return `LOWER(CAST(${col} AS VARCHAR)) < LOWER('${strVal}')`;
+      }
+      if (f.operator === '<=') {
+        return `LOWER(CAST(${col} AS VARCHAR)) <= LOWER('${strVal}')`;
+      }
+      if (f.operator === 'contains') {
+        return `LOWER(CAST(${col} AS VARCHAR)) LIKE '%${strVal.toLowerCase()}%'`;
+      }
+      if (f.operator === 'startsWith') {
+        return `LOWER(CAST(${col} AS VARCHAR)) LIKE '${strVal.toLowerCase()}%'`;
+      }
+      if (f.operator === 'endsWith') {
+        return `LOWER(CAST(${col} AS VARCHAR)) LIKE '%${strVal.toLowerCase()}'`;
+      }
+
+      return '1=1';
+    };
+
+    const whereSegments: string[] = [];
+
+    // 1. Mandatory Row-Level Security (RLS) constraints
+    if (opts.rlsFilters && opts.rlsFilters.length > 0) {
+      const rlsParts = opts.rlsFilters.map(formatFilterSql);
+      if (rlsParts.length > 0) {
+        whereSegments.push(`(${rlsParts.join(' AND ')})`);
+      }
+    }
+
+    // 2. User query filters
+    if (opts.filters.length > 0) {
+      const filterParts = opts.filters.map(formatFilterSql);
+      if (filterParts.length > 0) {
+        whereSegments.push(`(${filterParts.join(` ${opts.filterLogic} `)})`);
+      }
+    }
+
+    const whereClause = whereSegments.length > 0 ? ` WHERE ${whereSegments.join(' AND ')}` : '';
+
+    let groupByClause = '';
+    if (opts.isAggregate && opts.dimensions.length > 0) {
+      groupByClause = ` GROUP BY ${opts.dimensions.map((d) => `"${d}"`).join(', ')}`;
+    }
+
+    let orderByClause = '';
     if (opts.orderBy) {
-      const { column, direction } = opts.orderBy;
-      const factor = direction === 'desc' ? -1 : 1;
-      processedRows.sort((a, b) => {
-        const valA = a[column];
-        const valB = b[column];
-        if (valA === valB) return 0;
-        if (valA === null || valA === undefined) return 1;
-        if (valB === null || valB === undefined) return -1;
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return (valA - valB) * factor;
-        }
-        return valA > valB ? factor : -factor;
-      });
+      orderByClause = ` ORDER BY "${opts.orderBy.column}" ${opts.orderBy.direction.toUpperCase()} NULLS LAST`;
     }
 
-    const total = processedRows.length;
+    const selectSql = [...selectParts, 'COUNT(*) OVER() AS "__total_count"'].join(', ');
+    const mainSql = `SELECT ${selectSql} FROM "${tableName}"${whereClause}${groupByClause}${orderByClause} LIMIT ${opts.limit} OFFSET ${opts.offset}`;
 
-    // 4. Paginate
-    const sliced = processedRows.slice(opts.offset, opts.offset + opts.limit);
+    const timeoutMs = opts.timeoutMs ?? 5000;
+    const queryResult = await duckdbStore.executeSql(mainSql, timeoutMs);
+
+    const rows = queryResult.rows;
+    let total = 0;
+
+    if (rows.length > 0) {
+      total = Number(rows[0]['__total_count'] ?? rows.length);
+      for (const r of rows) {
+        delete r['__total_count'];
+      }
+    } else {
+      const countSql = `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM "${tableName}"${whereClause}${groupByClause}) AS sub`;
+      try {
+        const countRes = await duckdbStore.executeSql(countSql, timeoutMs);
+        total = Number(countRes.rows[0]?.['cnt'] ?? 0);
+      } catch {
+        total = 0;
+      }
+    }
+
     const executionTimeMs = Date.now() - opts.startTime;
 
     return {
       columns: resultColumns,
-      rows: sliced,
+      rows,
       processedColumns: resultColumns,
-      processedRows: sliced,
-      rowCount: sliced.length,
+      processedRows: rows,
+      rowCount: rows.length,
       total,
       limit: opts.limit,
       offset: opts.offset,
       executionTimeMs,
       metadata: {
-        rowCount: sliced.length,
+        rowCount: rows.length,
         total,
         limit: opts.limit,
         offset: opts.offset,
@@ -994,6 +902,36 @@ export class DatasetQueryEngine {
         queryMode: opts.isAggregate ? 'AGGREGATE' : 'RAW'
       }
     };
+  }
+
+  /** Backward-compatible forwarder delegating in-memory queries directly to DuckDB */
+  private async executeInMemoryQuery(opts: {
+    meta: Record<string, unknown>;
+    isAggregate: boolean;
+    selectedColumns: string[];
+    dimensions: string[];
+    measures: ValidatedMeasure[];
+    filters: ValidatedFilter[];
+    filterLogic: 'AND' | 'OR';
+    rlsFilters?: ValidatedFilter[];
+    orderBy?: OrderBySpec;
+    limit: number;
+    offset: number;
+    columnTypeMap: Map<string, string>;
+    startTime: number;
+    dataset?: QueryableDataset;
+    timeoutMs?: number;
+  }): Promise<DatasetQueryResult> {
+    const dataset: QueryableDataset = opts.dataset ?? {
+      id: `in_mem_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      organizationId: 'in_mem',
+      workspaceId: null,
+      schemaMeta: opts.meta
+    };
+    return this.executeDuckDBQuery({
+      ...opts,
+      dataset
+    });
   }
 
   // ============================================================

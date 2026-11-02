@@ -23,6 +23,7 @@ import { schemaDiscoveryService } from './schema-discovery.js';
 import { computeDatasetProfile } from './data-quality.service.js';
 import { compileCalculatedField, evaluateExpression } from './calculated-field.engine.js';
 import { resolveWorkspaceAccess, listDatasetColumns } from './dataset.service.js';
+import { duckdbStore } from './duckdb-store.js';
 
 export type RefreshFrequency = '1H' | '6H' | '12H' | 'DAILY' | 'WEEKLY' | string;
 
@@ -522,6 +523,9 @@ export async function executeDatasetRefresh(
       }
     ).exec();
 
+    // Invalidate cached DuckDB table so subsequent queries load freshly refreshed data
+    await duckdbStore.invalidateDataset(datasetId);
+
     if (userContext?.userId) {
       await logAuditEvent({
         organizationId,
@@ -609,6 +613,9 @@ export async function executeDatasetRefresh(
             }
           }
         ).exec();
+
+    // Invalidate cached DuckDB table so subsequent queries load freshly refreshed data
+    await duckdbStore.invalidateDataset(datasetId);
       }
     } catch {
       // Ignore secondary error while updating failure log

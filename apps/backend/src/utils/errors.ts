@@ -55,6 +55,10 @@ export class AppError extends Error {
     return new AppError(409, 'CONFLICT', message);
   }
 
+  static timeout(message = 'Query execution timed out'): AppError {
+    return new AppError(504, 'GATEWAY_TIMEOUT', message);
+  }
+
   static internal(message = 'Internal server error'): AppError {
     return new AppError(500, 'INTERNAL_ERROR', message, undefined, false);
   }

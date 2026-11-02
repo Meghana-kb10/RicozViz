@@ -27,6 +27,8 @@ import type {
 import { AppError } from '../../../utils/errors.js';
 import { logger } from '../../../utils/logger.js';
 import { logAuditEvent } from '../audit/audit.service.js';
+import { duckdbStore } from './duckdb-store.js';
+import type { QueryableDataset } from './query-engine.js';
 import {
   buildSafeDataset,
   extractDatasetColumnsAndRows,
@@ -41,9 +43,25 @@ import {
 // VALIDATION SCHEMAS
 // ============================================================
 
-const joinTypeSchema = z.enum(['INNER', 'LEFT', 'inner', 'left'], {
-  errorMap: () => ({ message: 'Join type must be INNER or LEFT' })
-});
+const joinTypeSchema = z.enum(
+  [
+    'INNER',
+    'LEFT',
+    'RIGHT',
+    'FULL',
+    'FULL_OUTER',
+    'FULL OUTER',
+    'inner',
+    'left',
+    'right',
+    'full',
+    'full_outer',
+    'full outer'
+  ],
+  {
+    errorMap: () => ({ message: 'Join type must be INNER, LEFT, RIGHT, or FULL_OUTER' })
+  }
+);
 
 export const blendPreviewSchema = z.object({
   datasetAId: z.string().min(1, 'Invalid dataset A ID'),
@@ -124,6 +142,16 @@ export function areJoinTypesCompatible(typeA: string, typeB: string): boolean {
   return normalizeColumnType(typeA) === normalizeColumnType(typeB);
 }
 
+export function normalizeBlendJoinType(
+  type: string
+): 'INNER' | 'LEFT' | 'RIGHT' | 'FULL_OUTER' {
+  const norm = String(type).toUpperCase().replace(/\s+/g, '_');
+  if (norm === 'FULL' || norm === 'FULL_OUTER') return 'FULL_OUTER';
+  if (norm === 'RIGHT') return 'RIGHT';
+  if (norm === 'LEFT') return 'LEFT';
+  return 'INNER';
+}
+
 export interface ResultingColumn {
   name: string;
   type: string;
@@ -191,57 +219,85 @@ export function computeResultingColumns(
   return { resultingColumns, colMappingB };
 }
 
-/** Execute the in-memory hash join. */
-export function performDatasetJoin(
+/**
+ * Execute real INNER, LEFT, RIGHT, and FULL OUTER joins in DuckDB.
+ */
+export async function performDatasetJoin(
   rowsA: Record<string, unknown>[],
   rowsB: Record<string, unknown>[],
   joinColA: string,
   joinColB: string,
-  joinType: 'INNER' | 'LEFT',
-  colMappingB: Map<string, string>
-): Record<string, unknown>[] {
-  const mapB = new Map<string, Array<Record<string, unknown>>>();
-  for (const rB of rowsB) {
-    const val = rB[joinColB];
-    if (val !== undefined && val !== null && val !== '') {
-      const key = String(val).trim();
-      const existing = mapB.get(key) || [];
-      existing.push(rB);
-      mapB.set(key, existing);
-    }
+  joinType: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL_OUTER',
+  resultingColumns: ResultingColumn[],
+  colMappingB: Map<string, string>,
+  opts?: {
+    datasetAId?: string;
+    datasetBId?: string;
+    limit?: number;
+    timeoutMs?: number;
   }
+): Promise<{ rows: Record<string, unknown>[]; totalCount: number }> {
+  const cleanIdA = (opts?.datasetAId ?? `blend_a_${Date.now()}_${Math.random().toString(36).slice(2)}`).replace(/[^a-zA-Z0-9_]/g, '_');
+  const cleanIdB = (opts?.datasetBId ?? `blend_b_${Date.now()}_${Math.random().toString(36).slice(2)}`).replace(/[^a-zA-Z0-9_]/g, '_');
 
-  const emptyB: Record<string, unknown> = {};
-  for (const [, targetCol] of colMappingB.entries()) {
-    if (targetCol !== joinColA) {
-      emptyB[targetCol] = null;
-    }
-  }
+  const tableA = await duckdbStore.ensureDatasetTable(
+    {
+      id: cleanIdA,
+      organizationId: 'blend',
+      workspaceId: null,
+      schemaMeta: { sampleData: rowsA }
+    },
+    rowsA
+  );
 
-  const result: Record<string, unknown>[] = [];
+  const tableB = await duckdbStore.ensureDatasetTable(
+    {
+      id: cleanIdB,
+      organizationId: 'blend',
+      workspaceId: null,
+      schemaMeta: { sampleData: rowsB }
+    },
+    rowsB
+  );
 
-  for (const rA of rowsA) {
-    const valA = rA[joinColA];
-    const keyA = valA !== undefined && valA !== null && valA !== '' ? String(valA).trim() : null;
-    const matchesB = keyA ? mapB.get(keyA) : undefined;
-
-    if (matchesB && matchesB.length > 0) {
-      for (const mB of matchesB) {
-        const merged: Record<string, unknown> = { ...rA };
-        for (const [origCol, targetCol] of colMappingB.entries()) {
-          merged[targetCol] = mB[origCol] ?? null;
-        }
-        result.push(merged);
+  // Construct SQL projections with aliases
+  const projections: string[] = [];
+  for (const c of resultingColumns) {
+    if (c.origin === 'A') {
+      if ((joinType === 'FULL_OUTER' || joinType === 'RIGHT') && c.name === joinColA && joinColA === joinColB) {
+        projections.push(`COALESCE(a."${joinColA}", b."${joinColB}") AS "${c.name}"`);
+      } else {
+        projections.push(`a."${c.originalName}" AS "${c.name}"`);
       }
-    } else if (joinType === 'LEFT') {
-      result.push({
-        ...rA,
-        ...emptyB
-      });
+    } else {
+      projections.push(`b."${c.originalName}" AS "${c.name}"`);
     }
   }
 
-  return result;
+  let sqlJoin = 'INNER JOIN';
+  if (joinType === 'LEFT') sqlJoin = 'LEFT JOIN';
+  else if (joinType === 'RIGHT') sqlJoin = 'RIGHT JOIN';
+  else if (joinType === 'FULL_OUTER') sqlJoin = 'FULL OUTER JOIN';
+
+  const onClause = `CAST(a."${joinColA}" AS VARCHAR) = CAST(b."${joinColB}" AS VARCHAR)`;
+  const fromClause = `"${tableA}" AS a ${sqlJoin} "${tableB}" AS b ON ${onClause}`;
+
+  const timeoutMs = opts?.timeoutMs ?? 5000;
+
+  // Count total joined rows
+  const countSql = `SELECT COUNT(*) AS total_count FROM ${fromClause}`;
+  const countRes = await duckdbStore.executeSql(countSql, timeoutMs);
+  const totalCount = Number(countRes.rows[0]?.['total_count'] ?? 0);
+
+  // Fetch joined rows
+  const limitClause = opts?.limit && opts.limit > 0 ? ` LIMIT ${opts.limit}` : '';
+  const dataSql = `SELECT ${projections.join(', ')} FROM ${fromClause}${limitClause}`;
+  const dataRes = await duckdbStore.executeSql(dataSql, timeoutMs);
+
+  return {
+    rows: dataRes.rows,
+    totalCount
+  };
 }
 
 // ============================================================
@@ -255,7 +311,7 @@ interface ResolvedBlend {
   dataB: { columns: BlendColumn[]; rows: Record<string, unknown>[] };
   matchedColA: string;
   matchedColB: string;
-  normalizedJoinType: 'INNER' | 'LEFT';
+  normalizedJoinType: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL_OUTER';
 }
 
 /**
@@ -339,10 +395,7 @@ async function validateAndResolveBlend(
   }
 
   // Normalize join type
-  const normalizedJoinType = joinTypeInput.toUpperCase() as 'INNER' | 'LEFT';
-  if (normalizedJoinType !== 'INNER' && normalizedJoinType !== 'LEFT') {
-    throw AppError.badRequest('Join type must be INNER or LEFT');
-  }
+  const normalizedJoinType = normalizeBlendJoinType(joinTypeInput);
 
   return {
     datasetA,
@@ -392,16 +445,20 @@ export async function previewDatasetBlend(
     matchedColB
   );
 
-  const joinedRows = performDatasetJoin(
+  const { rows: previewRows, totalCount } = await performDatasetJoin(
     dataA.rows,
     dataB.rows,
     matchedColA,
     matchedColB,
     normalizedJoinType,
-    colMappingB
+    resultingColumns,
+    colMappingB,
+    {
+      datasetAId: datasetA.id,
+      datasetBId: datasetB.id,
+      limit: input.limit
+    }
   );
-
-  const previewRows = joinedRows.slice(0, input.limit);
 
   return {
     datasetA: {
@@ -424,7 +481,7 @@ export async function previewDatasetBlend(
       type: c.type.toLowerCase(),
       origin: c.origin
     })),
-    rowCount: joinedRows.length,
+    rowCount: totalCount,
     previewRowCount: previewRows.length,
     rows: previewRows
   };
@@ -463,13 +520,19 @@ export async function createDatasetBlend(
     matchedColB
   );
 
-  const joinedRows = performDatasetJoin(
+  const { rows: joinedRows, totalCount } = await performDatasetJoin(
     dataA.rows,
     dataB.rows,
     matchedColA,
     matchedColB,
     normalizedJoinType,
-    colMappingB
+    resultingColumns,
+    colMappingB,
+    {
+      datasetAId: datasetA.id,
+      datasetBId: datasetB.id,
+      limit: 1000
+    }
   );
 
   const schemaColumns = resultingColumns.map((c) => ({
@@ -676,6 +739,7 @@ export async function deleteDatasetBlend(
     await DatasetColumnModel.deleteMany({ datasetId: datasetObjectId }).exec();
     await ChartModel.deleteMany({ datasetId: datasetObjectId }).exec();
     await DatasetModel.deleteOne({ _id: datasetObjectId }).exec();
+    await duckdbStore.invalidateDataset(datasetId);
   } catch (err) {
     logger.error('Failed to delete blended dataset', {
       datasetId,
