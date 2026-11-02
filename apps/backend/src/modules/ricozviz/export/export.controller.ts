@@ -5,6 +5,7 @@ import {
   listExportHistory,
   verifyResourceWorkspaceAccess
 } from './export.service.js';
+import { executeScheduledReport, listReportExecutions } from './scheduled-report.service.js';
 import { getPrincipal } from '../../../plugins/ricozviz-auth.js';
 import { sendSuccess } from '../../../utils/response.js';
 
@@ -57,6 +58,24 @@ export class ExportController {
     }
 
     const history = await listExportHistory(principal.organizationId, workspaceId, limit);
+    sendSuccess(reply, history, 200);
+  }
+
+  /** POST /api/v1/exports/reports/:id/execute */
+  async executeReport(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const principal = getPrincipal(request);
+    const { id } = (request.params || {}) as { id: string };
+    const result = await executeScheduledReport(id, {
+      userId: principal.userId,
+      organizationId: principal.organizationId
+    });
+    sendSuccess(reply, result, 200);
+  }
+
+  /** GET /api/v1/exports/reports/:id/executions */
+  async reportExecutions(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const { id } = (request.params || {}) as { id: string };
+    const history = await listReportExecutions(id);
     sendSuccess(reply, history, 200);
   }
 }

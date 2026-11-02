@@ -12,6 +12,8 @@ export {
   registerInMemoryWorkspaceMember,
   clearInMemoryWorkspaceMembers
 } from './export.service.js';
+export { generateDashboardPdf, renderDashboardHtml, findChromeExecutable } from './pdf-generator.service.js';
+export { executeScheduledReport, listReportExecutions } from './scheduled-report.service.js';
 export type {
   ExportRequestParams,
   WorkspaceAction,

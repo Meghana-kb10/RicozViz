@@ -928,7 +928,7 @@ export default function DataSourcesPage() {
               {/* Type Selector (disabled on edit) */}
               <div>
                 <label className="block text-xs font-mono-code uppercase tracking-wider text-[#898989] mb-1.5">
-                  Source Architecture
+                  Live Connectors
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {(["POSTGRESQL", "MYSQL", "SQLITE", "XLSX", "JSON", "CSV", "REST_API"] as const).map((t) => (
@@ -952,6 +952,37 @@ export default function DataSourcesPage() {
                       {t === "REST_API" && "🌐 REST API"}
                     </button>
                   ))}
+                </div>
+
+                {/* Coming Soon Warehouses & Object Stores */}
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-mono-code uppercase tracking-wider text-[#666666]">
+                      Enterprise Warehouses & Lakehouses
+                    </label>
+                    <span className="text-[10px] font-mono-code text-[#ff6b35] bg-[#ff6b35]/10 px-2 py-0.5 rounded border border-[#ff6b35]/20">
+                      Coming soon
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { name: "Snowflake", icon: "❄️" },
+                      { name: "Google BigQuery", icon: "🔍" },
+                      { name: "ClickHouse", icon: "⚡" },
+                      { name: "Databricks", icon: "🧱" },
+                      { name: "Amazon Redshift", icon: "🔴" },
+                      { name: "Amazon S3 Parquet", icon: "🪣" },
+                    ].map((w) => (
+                      <div
+                        key={w.name}
+                        className="py-2 px-2.5 rounded-lg text-xs font-mono-code border border-[#222222] bg-[#141414]/80 text-[#666666] flex items-center justify-between opacity-60 cursor-not-allowed select-none"
+                        title={`${w.name} connector is coming soon and disabled in this release`}
+                      >
+                        <span className="truncate">{w.icon} {w.name}</span>
+                        <span className="text-[9px] uppercase tracking-wider text-[#898989] shrink-0 bg-[#1c1c1c] px-1.5 py-0.5 rounded border border-[#2e2e2e]">Soon</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

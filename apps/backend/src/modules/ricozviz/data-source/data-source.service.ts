@@ -388,12 +388,17 @@ async function loadDataSource(id: string): Promise<SerializedDataSource> {
  * POST /api/v1/data-sources
  * Create a data source inside the caller's organization and workspace.
  */
+export const COMING_SOON_DATA_SOURCES = ['SNOWFLAKE', 'CLICKHOUSE', 'BIGQUERY', 'DATABRICKS', 'REDSHIFT', 'S3_PARQUET'];
+
 export async function createDataSource(
   principal: AuthenticatedUser,
   input: CreateDataSourceInput,
   context: DataSourceRequestContext = {}
 ): Promise<DataSourceData> {
   const { userId, organizationId } = principalIds(principal);
+  if (COMING_SOON_DATA_SOURCES.includes(input.type)) {
+    throw AppError.badRequest(`${input.type} connector is coming soon and disabled in this release.`);
+  }
 
   const prismaType: DataSourceType =
     input.type === 'CSV'
@@ -663,6 +668,14 @@ export async function testDataSourceConnection(
 ): Promise<ConnectionTestResult> {
   const dataSource = await loadDataSource(id);
 
+  if (COMING_SOON_DATA_SOURCES.includes(dataSource.type)) {
+    return {
+      success: false,
+      status: 'FAILED',
+      message: `${dataSource.type} connector is coming soon and disabled in this release.`
+    };
+  }
+
   await verifyResourceWorkspaceAccess(
     { workspaceId: dataSource.workspaceId, organizationId: dataSource.organizationId },
     principal.userId,
@@ -722,6 +735,14 @@ export async function testDataSourceConnection(
  * Enforces secure credential handling and never leaks secrets.
  */
 export async function testRawConnection(input: TestRawConnectionInput): Promise<ConnectionTestResult> {
+  if (COMING_SOON_DATA_SOURCES.includes(input.type)) {
+    return {
+      success: false,
+      status: 'FAILED',
+      message: `${input.type} connector is coming soon and disabled in this release.`
+    };
+  }
+
   const connector = getConnector(input.type);
   if (!connector) {
     throw AppError.badRequest(`Unsupported connector type: ${input.type}`);

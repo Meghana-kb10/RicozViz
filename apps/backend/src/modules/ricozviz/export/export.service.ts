@@ -39,6 +39,7 @@ import type { ExportFormat, ExportJobData, ExportResourceType, ExportResult } fr
 import { AppError } from '../../../utils/errors.js';
 import { logger } from '../../../utils/logger.js';
 import { logAuditEvent } from '../../ricozviz/audit/audit.service.js';
+import { generateDashboardPdf } from './pdf-generator.service.js';
 
 // ============================================================
 // Validation schemas (messages are contractual)
@@ -736,7 +737,33 @@ export async function exportResource(params: ExportRequestParams): Promise<Expor
   } else if (format === 'PDF') {
     contentType = 'application/pdf';
     filename = `${sanitizedTitle}-${timestamp}.pdf`;
-    const pdfBuffer = createPdfReport(options?.title || resourceName, columns, rows);
+    let pdfBuffer: Buffer;
+    if (resourceType === 'DASHBOARD') {
+      const dashboardChartsData = sheets.map((s) => ({
+        title: s.name,
+        columns: s.rows && s.rows.length > 0 ? Object.keys(s.rows[0]) : columns,
+        rows: s.rows
+      }));
+      pdfBuffer = await generateDashboardPdf({
+        title: options?.title || resourceName,
+        description: null,
+        charts: dashboardChartsData,
+        exportedAt: new Date()
+      });
+    } else {
+      pdfBuffer = await generateDashboardPdf({
+        title: options?.title || resourceName,
+        description: null,
+        charts: [
+          {
+            title: resourceName,
+            columns,
+            rows
+          }
+        ],
+        exportedAt: new Date()
+      });
+    }
     dataBase64 = pdfBuffer.toString('base64');
     fileSizeBytes = pdfBuffer.length;
   } else if (format === 'PNG') {

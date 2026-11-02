@@ -72,6 +72,8 @@ export interface IAlertDocument extends Document {
   lastTriggeredAt: Date | null;
   lastValue: number | null;
   createdById: mongoose.Types.ObjectId;
+  recipients?: string[];
+  slackWebhookUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,6 +100,8 @@ const AlertSchema = new Schema<IAlertDocument>(
     lastEvaluatedAt: { type: Date, default: null },
     lastTriggeredAt: { type: Date, default: null },
     lastValue: { type: Number, default: null },
+    recipients: { type: [String], default: [] },
+    slackWebhookUrl: { type: String, default: null },
     createdById: objectIdRef('User', true)
   },
   { collection: COLLECTIONS.ALERTS, timestamps: true, versionKey: false }
@@ -120,6 +124,10 @@ export interface IAlertHistoryDocument extends Document {
   status: string;
   message: string;
   triggeredAt: Date;
+  deliveryStatus?: string;
+  deliveredAt?: Date | null;
+  deliveryError?: string | null;
+  deliveryChannel?: string | null;
 }
 
 const AlertHistorySchema = new Schema<IAlertHistoryDocument>(
@@ -130,7 +138,15 @@ const AlertHistorySchema = new Schema<IAlertHistoryDocument>(
     condition: { type: String, required: true },
     status: { type: String, required: true },
     message: { type: String, required: true },
-    triggeredAt: { type: Date, default: Date.now }
+    triggeredAt: { type: Date, default: Date.now },
+    deliveryStatus: {
+      type: String,
+      enum: ['DELIVERED', 'FAILED', 'SKIPPED', 'NOT_CONFIGURED'],
+      default: 'SKIPPED'
+    },
+    deliveredAt: { type: Date, default: null },
+    deliveryError: { type: String, default: null },
+    deliveryChannel: { type: String, default: null }
   },
   { collection: COLLECTIONS.ALERT_HISTORY, timestamps: true, versionKey: false }
 );

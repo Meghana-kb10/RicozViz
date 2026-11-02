@@ -22,6 +22,8 @@ import {
   getConditionSymbol,
   testAlertCondition
 } from './alert.service.js';
+import { dispatchAlertNotifications } from './notification.service.js';
+import type { NotificationDispatchResult } from './notification.service.js';
 
 export interface ScheduledAlertRunResult {
   alertId: string;
@@ -218,6 +220,26 @@ export class ScheduledAlertWorker {
 
           // 4. Record history if state changed (avoid duplicate spam)
           if (shouldRecordHistory) {
+            let dispatchResult: NotificationDispatchResult = {
+              deliveryStatus: 'SKIPPED',
+              deliveryChannel: null,
+              deliveredAt: null,
+              deliveryError: null
+            };
+            if (isTriggered) {
+              dispatchResult = await dispatchAlertNotifications({
+                alertId,
+                alertName: alert.name,
+                metricName: metric.name,
+                condition: effectiveCondition,
+                threshold: alert.threshold,
+                currentValue,
+                triggeredAt: now,
+                recipients: (alert as any).recipients,
+                slackWebhookUrl: (alert as any).slackWebhookUrl
+              });
+            }
+
             await AlertHistoryModel.create({
               alertId: alert._id,
               value: currentValue,
@@ -225,7 +247,11 @@ export class ScheduledAlertWorker {
               condition: effectiveCondition,
               status: newStatus,
               message,
-              triggeredAt: now
+              triggeredAt: now,
+              deliveryStatus: dispatchResult.deliveryStatus,
+              deliveredAt: dispatchResult.deliveredAt,
+              deliveryError: dispatchResult.deliveryError,
+              deliveryChannel: dispatchResult.deliveryChannel
             });
           }
 

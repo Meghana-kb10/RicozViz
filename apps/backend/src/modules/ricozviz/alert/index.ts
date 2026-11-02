@@ -28,6 +28,16 @@ export {
   ScheduledAlertWorker,
   scheduledAlertWorker
 } from './alert-worker.service.js';
+export {
+  dispatchAlertNotifications,
+  sendEmailAlert,
+  sendSlackAlert,
+  getEmailTransporter
+} from './notification.service.js';
+export type {
+  AlertNotificationPayload,
+  NotificationDispatchResult
+} from './notification.service.js';
 export type {
   ScheduledAlertRunResult,
   AlertWorkerPollSummary

@@ -88,6 +88,10 @@ export interface AlertHistoryEntry {
   evaluatedAt?: string;
   triggered?: boolean;
   notified?: boolean;
+  deliveryStatus?: 'DELIVERED' | 'FAILED' | 'SKIPPED' | 'NOT_CONFIGURED';
+  deliveredAt?: string | null;
+  deliveryError?: string | null;
+  deliveryChannel?: string | null;
 }
 
 export type AlertHistoryData = AlertHistoryEntry;
@@ -107,6 +111,8 @@ export interface AlertData {
   lastEvaluatedAt: string | null;
   lastTriggeredAt: string | null;
   lastValue: number | null;
+  recipients?: string[];
+  slackWebhookUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   metric?: {
@@ -132,6 +138,8 @@ export interface CreateAlertPayload {
   threshold: number;
   enabled?: boolean;
   isEnabled?: boolean;
+  recipients?: string[];
+  slackWebhookUrl?: string;
 }
 
 export interface AlertEvaluationResult {
@@ -151,5 +159,9 @@ export interface AlertEvaluationResult {
   historyId: string;
   message: string;
   notificationDelivery: string;
+  deliveryStatus?: 'DELIVERED' | 'FAILED' | 'SKIPPED' | 'NOT_CONFIGURED';
+  deliveredAt?: string | null;
+  deliveryError?: string | null;
+  deliveryChannel?: string | null;
   alert?: AlertData;
 }

@@ -34,6 +34,8 @@ import {
 } from '../visualization/visualization.service.js';
 import type { AuditRequestMeta } from '../visualization/visualization.service.js';
 import { formatMetricValue } from '../metric/metric.service.js';
+import { dispatchAlertNotifications } from './notification.service.js';
+import type { NotificationDispatchResult } from './notification.service.js';
 
 export const VALID_CONDITIONS: AlertConditionExtended[] = [
   ALERT_CONDITION.GREATER_THAN,
@@ -56,6 +58,8 @@ export interface CreateAlertBody {
   threshold?: unknown;
   enabled?: unknown;
   isEnabled?: unknown;
+  recipients?: unknown;
+  slackWebhookUrl?: unknown;
 }
 
 export interface UpdateAlertBody {
@@ -65,6 +69,8 @@ export interface UpdateAlertBody {
   threshold?: unknown;
   enabled?: unknown;
   isEnabled?: unknown;
+  recipients?: unknown;
+  slackWebhookUrl?: unknown;
 }
 
 export interface AlertListQuery {
@@ -356,6 +362,8 @@ function baseAlertPayload(alert: AlertRow): Record<string, unknown> {
     lastEvaluatedAt: alert.lastEvaluatedAt ? alert.lastEvaluatedAt.toISOString() : null,
     lastTriggeredAt: alert.lastTriggeredAt ? alert.lastTriggeredAt.toISOString() : null,
     lastValue: alert.lastValue ?? null,
+    recipients: (alert as any).recipients || [],
+    slackWebhookUrl: (alert as any).slackWebhookUrl || null,
     createdById: alert.createdById.toString(),
     createdAt: alert.createdAt.toISOString(),
     updatedAt: alert.updatedAt.toISOString()
@@ -371,6 +379,10 @@ function serializeHistoryEntry(entry: {
   status: string;
   message: string;
   triggeredAt: Date;
+  deliveryStatus?: string;
+  deliveredAt?: Date | null;
+  deliveryError?: string | null;
+  deliveryChannel?: string | null;
 }): AlertHistoryEntry {
   return {
     id: entry._id.toString(),
@@ -380,7 +392,11 @@ function serializeHistoryEntry(entry: {
     condition: entry.condition,
     status: entry.status as AlertHistoryEntry['status'],
     message: entry.message,
-    triggeredAt: entry.triggeredAt.toISOString()
+    triggeredAt: entry.triggeredAt.toISOString(),
+    deliveryStatus: (entry.deliveryStatus as AlertHistoryEntry['deliveryStatus']) || 'SKIPPED',
+    deliveredAt: entry.deliveredAt ? entry.deliveredAt.toISOString() : null,
+    deliveryError: entry.deliveryError || null,
+    deliveryChannel: entry.deliveryChannel || null
   };
 }
 
@@ -494,6 +510,11 @@ export async function createAlert(
     finalDescription = `[CONDITION:PERCENT_DECREASE] ${finalDescription}`.trim();
   }
 
+  const rawRecipients = Array.isArray(body.recipients)
+    ? (body.recipients as unknown[]).filter((r): r is string => typeof r === 'string' && r.includes('@'))
+    : [];
+  const rawSlackUrl = typeof body.slackWebhookUrl === 'string' ? body.slackWebhookUrl.trim() : null;
+
   const creatorId = toObjectIdSafe(principal.userId);
   if (!creatorId) {
     throw AppError.unauthorized('Invalid user context');
@@ -509,6 +530,8 @@ export async function createAlert(
     threshold: numThreshold,
     enabled: alertEnabled,
     status: ALERT_STATUS.PENDING,
+    recipients: rawRecipients,
+    slackWebhookUrl: rawSlackUrl,
     createdById: creatorId
   });
 
@@ -742,6 +765,15 @@ export async function updateAlert(
 
   if (enabled !== undefined || isEnabled !== undefined) {
     dataToUpdate.enabled = Boolean(enabled ?? isEnabled);
+  }
+
+  if (body.recipients !== undefined) {
+    dataToUpdate.recipients = Array.isArray(body.recipients)
+      ? (body.recipients as unknown[]).filter((r): r is string => typeof r === 'string' && r.includes('@'))
+      : [];
+  }
+  if (body.slackWebhookUrl !== undefined) {
+    dataToUpdate.slackWebhookUrl = typeof body.slackWebhookUrl === 'string' ? body.slackWebhookUrl.trim() : null;
   }
 
   const updated = (await AlertModel.findByIdAndUpdate(existing._id, { $set: dataToUpdate }, { new: true })
@@ -980,7 +1012,29 @@ export async function evaluateAlert(
     .lean()) as unknown as AlertRow;
 
   let historyId: string | null = null;
+  let dispatchResult: NotificationDispatchResult = {
+    deliveryStatus: 'SKIPPED',
+    deliveryChannel: null,
+    deliveredAt: null,
+    deliveryError: null
+  };
+
   if (shouldLogHistory) {
+    if (isTriggered) {
+      dispatchResult = await dispatchAlertNotifications({
+        alertId: alert._id.toString(),
+        alertName: alert.name,
+        metricName: metric.name,
+        condition: effectiveCondition,
+        threshold: alert.threshold,
+        currentValue,
+        triggeredAt: now,
+        recipients: (alert as any).recipients,
+        slackWebhookUrl: (alert as any).slackWebhookUrl,
+        fallbackEmail: principal.email
+      });
+    }
+
     const history = await AlertHistoryModel.create({
       alertId: alert._id,
       value: currentValue,
@@ -988,7 +1042,11 @@ export async function evaluateAlert(
       condition: effectiveCondition,
       status,
       message,
-      triggeredAt: now
+      triggeredAt: now,
+      deliveryStatus: dispatchResult.deliveryStatus,
+      deliveredAt: dispatchResult.deliveredAt,
+      deliveryError: dispatchResult.deliveryError,
+      deliveryChannel: dispatchResult.deliveryChannel
     });
     historyId = history._id.toString();
   }
@@ -1006,7 +1064,9 @@ export async function evaluateAlert(
       condition: effectiveCondition,
       isTriggered,
       stateChanged,
-      duplicatePrevented: isTriggered && !stateChanged
+      duplicatePrevented: isTriggered && !stateChanged,
+      deliveryStatus: dispatchResult.deliveryStatus,
+      deliveryChannel: dispatchResult.deliveryChannel
     },
     ipAddress: meta.ipAddress,
     userAgent: meta.userAgent
@@ -1029,8 +1089,12 @@ export async function evaluateAlert(
     historyId: historyId || null,
     message,
     notificationDelivery: isTriggered
-      ? 'Alert triggered! Notification recorded in alert history log.'
+      ? `Alert triggered! Notification delivery: ${dispatchResult.deliveryStatus}${dispatchResult.deliveryChannel ? ` via ${dispatchResult.deliveryChannel}` : ''}.`
       : 'Metric in normal bounds.',
+    deliveryStatus: dispatchResult.deliveryStatus,
+    deliveredAt: dispatchResult.deliveredAt ? dispatchResult.deliveredAt.toISOString() : null,
+    deliveryError: dispatchResult.deliveryError,
+    deliveryChannel: dispatchResult.deliveryChannel,
     status: updated.status as AlertStatus
   } as AlertEvaluationResult;
 }
@@ -1116,6 +1180,27 @@ export async function evaluateAllWorkspaceAlerts(
       await AlertModel.updateOne({ _id: alert._id }, { $set: updateData }).exec();
 
       if (shouldLogHistory) {
+        let dispatchResult: NotificationDispatchResult = {
+          deliveryStatus: 'SKIPPED',
+          deliveryChannel: null,
+          deliveredAt: null,
+          deliveryError: null
+        };
+        if (isTriggered) {
+          dispatchResult = await dispatchAlertNotifications({
+            alertId: alert._id.toString(),
+            alertName: alert.name,
+            metricName: metric.name,
+            condition: effectiveCondition,
+            threshold: alert.threshold,
+            currentValue,
+            triggeredAt: now,
+            recipients: (alert as any).recipients,
+            slackWebhookUrl: (alert as any).slackWebhookUrl,
+            fallbackEmail: principal.email
+          });
+        }
+
         await AlertHistoryModel.create({
           alertId: alert._id,
           value: currentValue,
@@ -1125,7 +1210,11 @@ export async function evaluateAllWorkspaceAlerts(
           message: isTriggered
             ? `Alert condition met: ${currentValue} ${effectiveCondition} ${alert.threshold}`
             : `Normal reading: ${currentValue}`,
-          triggeredAt: now
+          triggeredAt: now,
+          deliveryStatus: dispatchResult.deliveryStatus,
+          deliveredAt: dispatchResult.deliveredAt,
+          deliveryError: dispatchResult.deliveryError,
+          deliveryChannel: dispatchResult.deliveryChannel
         });
       }
 

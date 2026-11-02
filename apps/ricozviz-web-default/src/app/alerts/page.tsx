@@ -73,6 +73,8 @@ export default function AlertsPage() {
   const [formCondition, setFormCondition] = useState<AlertCondition>("GREATER_THAN");
   const [formThreshold, setFormThreshold] = useState<string>("");
   const [formIsEnabled, setFormIsEnabled] = useState(true);
+  const [formRecipients, setFormRecipients] = useState("");
+  const [formSlackUrl, setFormSlackUrl] = useState("");
 
   const canCreate = hasPermission("ALERT_CREATE") || auth?.role === "ADMIN" || auth?.role === "ANALYST";
   const canEdit = hasPermission("ALERT_EDIT") || auth?.role === "ADMIN" || auth?.role === "ANALYST";
@@ -186,6 +188,8 @@ export default function AlertsPage() {
     setFormCondition("GREATER_THAN");
     setFormThreshold("100000");
     setFormIsEnabled(true);
+    setFormRecipients(auth?.user?.email || "");
+    setFormSlackUrl("");
     setIsModalOpen(true);
   };
 
@@ -197,6 +201,8 @@ export default function AlertsPage() {
     setFormCondition(alert.condition);
     setFormThreshold(String(alert.threshold));
     setFormIsEnabled(alert.enabled ?? alert.isEnabled ?? true);
+    setFormRecipients(alert.recipients ? alert.recipients.join(", ") : "");
+    setFormSlackUrl(alert.slackWebhookUrl || "");
     setIsModalOpen(true);
   };
 
@@ -231,6 +237,12 @@ export default function AlertsPage() {
     setSubmitting(true);
     setErrorMsg(null);
 
+    const recipientsList = formRecipients
+      .split(",")
+      .map((r) => r.trim())
+      .filter((r) => r.includes("@"));
+    const slackUrl = formSlackUrl.trim() || undefined;
+
     try {
       if (editingAlert) {
         const updated = await apiUpdateAlert(editingAlert.id, {
@@ -240,6 +252,8 @@ export default function AlertsPage() {
           threshold: parsedThreshold,
           enabled: formIsEnabled,
           isEnabled: formIsEnabled,
+          recipients: recipientsList,
+          slackWebhookUrl: slackUrl,
         });
         setSuccessMsg(`Alert "${updated.name}" updated successfully.`);
         setAlerts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
@@ -253,6 +267,8 @@ export default function AlertsPage() {
           enabled: formIsEnabled,
           isEnabled: formIsEnabled,
           workspaceId: currentWorkspace?.id || "",
+          recipients: recipientsList,
+          slackWebhookUrl: slackUrl,
         });
         setSuccessMsg(`Alert "${created.name}" created successfully.`);
         setAlerts((prev) => [created, ...prev]);
@@ -738,6 +754,36 @@ export default function AlertsPage() {
                 </div>
               </div>
 
+              <div className="space-y-3 pt-2 border-t border-[#242424]">
+                <label className="block text-xs font-mono-code uppercase tracking-wider text-[#ff6b35]">
+                  Outbound Notifications (Live Delivery)
+                </label>
+                <div>
+                  <label className="block text-[11px] font-mono-code text-[#898989] mb-1">
+                    SMTP Email Recipients (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. alerts@company.com, oncall@domain.io"
+                    value={formRecipients}
+                    onChange={(e) => setFormRecipients(e.target.value)}
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono-code text-[#898989] mb-1">
+                    Slack Incoming Webhook URL (optional)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://hooks.slack.com/services/..."
+                    value={formSlackUrl}
+                    onChange={(e) => setFormSlackUrl(e.target.value)}
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#181818] px-3 py-2 text-xs text-[#fafafa] placeholder-[#666666] focus:border-[#ff6b35] focus:outline-none font-mono-code"
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 pt-2">
                 <input
                   type="checkbox"
@@ -807,7 +853,8 @@ export default function AlertsPage() {
                       <th className="px-3 py-2 font-semibold">Evaluated Value</th>
                       <th className="px-3 py-2 font-semibold">Threshold</th>
                       <th className="px-3 py-2 font-semibold">Status</th>
-                      <th className="px-3 py-2 font-semibold">Notification</th>
+                      <th className="px-3 py-2 font-semibold">Outbound Delivery</th>
+                      <th className="px-3 py-2 font-semibold">Message</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#242424]">
@@ -830,6 +877,27 @@ export default function AlertsPage() {
                           ) : (
                             <span className="inline-flex rounded-full bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-mono-code font-bold text-emerald-300">
                               OK
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {h.deliveryStatus === "DELIVERED" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-mono-code font-semibold text-emerald-300">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              DELIVERED {h.deliveryChannel ? `(${h.deliveryChannel})` : ""}
+                            </span>
+                          ) : h.deliveryStatus === "FAILED" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-950/60 border border-rose-500/40 px-2 py-0.5 text-[10px] font-mono-code font-semibold text-rose-300" title={h.deliveryError || undefined}>
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                              FAILED
+                            </span>
+                          ) : h.deliveryStatus === "NOT_CONFIGURED" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#1e1e1e] border border-[#333333] px-2 py-0.5 text-[10px] font-mono-code text-[#898989]">
+                              NO CHANNELS
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#181818] border border-[#2e2e2e] px-2 py-0.5 text-[10px] font-mono-code text-[#666666]">
+                              {h.deliveryStatus || "SKIPPED"}
                             </span>
                           )}
                         </td>

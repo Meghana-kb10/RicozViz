@@ -559,17 +559,17 @@ export default function HeroBentoSection({
                   <div
                     key={idx}
                     title={cell.fullPrompt}
-                    className="relative flex h-[50px] min-w-0 w-full overflow-hidden flex-col items-center justify-center rounded-[8px] border border-[#2e2e2e] bg-[#121212] px-1 font-mono-code text-[11px] text-[#898989] group-hover:border-[#393939] transition-all duration-300 hover:border-[#ff6b35]/60 hover:bg-[#181818]"
+                    className="relative flex h-[50px] min-w-0 w-full overflow-hidden flex-col items-center justify-center rounded-[8px] border border-[#2e2e2e] bg-[#121212] px-2 font-mono-code text-[11px] text-[#898989] group-hover:border-[#393939] transition-all duration-300 hover:border-[#ff6b35]/60 hover:bg-[#181818]"
                   >
                     <span
-                      className={`block w-full max-w-full text-center truncate transition-all duration-300 text-[9.5px] sm:text-[10.5px] leading-tight ${isVisible
+                      className={`block w-full min-w-0 max-w-full text-center truncate transition-all duration-300 text-[9.5px] sm:text-[10.5px] leading-tight ${isVisible
                         ? "blur-none text-[#fafafa]"
                         : "blur-[4px] select-none text-[#4d4d4d] group-hover:blur-none group-hover:text-[#ff8252]"
                         }`}
                     >
                       {cell.text}
                     </span>
-                    <span className="block w-full max-w-full text-center truncate text-[8px] sm:text-[8.5px] tracking-tight text-[#555555] group-hover:text-[#ff6b35]/70 transition-colors shrink-0 whitespace-nowrap">
+                    <span className="block w-full min-w-0 max-w-full text-center truncate text-[8px] sm:text-[8.5px] tracking-tight text-[#555555] group-hover:text-[#ff6b35]/70 transition-colors shrink-0 whitespace-nowrap mt-0.5">
                       {isVisible ? `[READY ${cell.tag}]` : `[SYNTH ${cell.tag}]`}
                     </span>
                   </div>

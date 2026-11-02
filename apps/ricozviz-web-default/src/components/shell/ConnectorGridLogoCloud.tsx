@@ -201,6 +201,7 @@ export interface ConnectorItem {
   icon: React.ComponentType<{ className?: string }>;
   accentColor: string;
   sampleEndpoint: string;
+  isComingSoon?: boolean;
 }
 
 export const ENTERPRISE_CONNECTORS: ConnectorItem[] = [
@@ -210,12 +211,13 @@ export const ENTERPRISE_CONNECTORS: ConnectorItem[] = [
     category: "warehouse",
     categoryLabel: "Cloud Data Warehouse",
     protocol: "Snowpipe & Flight SQL",
-    latencyBadge: "< 12ms Pushdown",
+    latencyBadge: "Coming Soon",
     description: "Vectorized query pushdown with zero-copy Snowpipe streaming and auto-scaling virtual warehouses.",
     authMethod: "Key-Pair / OAuth JWT",
     icon: SnowflakeIcon,
     accentColor: "#29B5E8",
     sampleEndpoint: "account.region.snowflakecomputing.com",
+    isComingSoon: true,
   },
   {
     id: "clickhouse",
@@ -223,12 +225,13 @@ export const ENTERPRISE_CONNECTORS: ConnectorItem[] = [
     category: "warehouse",
     categoryLabel: "Columnar Analytical Engine",
     protocol: "Native Columnar TCP / HTTP",
-    latencyBadge: "Sub-10ms Columnar",
+    latencyBadge: "Coming Soon",
     description: "Real-time high-throughput OLAP aggregation with vectorized execution and native Arrow blocks.",
     authMethod: "Native SHA-256 / SSL",
     icon: ClickHouseIcon,
     accentColor: "#FA8C16",
     sampleEndpoint: "clickhouse-cluster.internal:9000",
+    isComingSoon: true,
   },
   {
     id: "bigquery",
@@ -236,12 +239,13 @@ export const ENTERPRISE_CONNECTORS: ConnectorItem[] = [
     category: "warehouse",
     categoryLabel: "Serverless Data Warehouse",
     protocol: "BigQuery Storage Read API",
-    latencyBadge: "Zero-Copy Arrow Stream",
+    latencyBadge: "Coming Soon",
     description: "Federated queries across petabyte datasets via gRPC Arrow streaming without query serialization lag.",
     authMethod: "Google Cloud Service Account JSON",
     icon: BigQueryIcon,
     accentColor: "#4285F4",
     sampleEndpoint: "bigquery.googleapis.com/v1",
+    isComingSoon: true,
   },
   {
     id: "databricks",
@@ -249,12 +253,13 @@ export const ENTERPRISE_CONNECTORS: ConnectorItem[] = [
     category: "lakehouse",
     categoryLabel: "Delta Lakehouse",
     protocol: "Delta Lake Direct & SQL Warehouse",
-    latencyBadge: "Parquet Columnar Pushdown",
+    latencyBadge: "Coming Soon",
     description: "Serverless SQL endpoints querying Delta Lake tables with ACID isolation and liquid clustering.",
     authMethod: "Personal Access Token / OAuth",
     icon: DatabricksIcon,
     accentColor: "#FF3621",
     sampleEndpoint: "dbc-99887766.cloud.databricks.com",
+    isComingSoon: true,
   },
   {
     id: "redshift",
@@ -262,12 +267,13 @@ export const ENTERPRISE_CONNECTORS: ConnectorItem[] = [
     category: "warehouse",
     categoryLabel: "Managed Cloud Warehouse",
     protocol: "Redshift Data API & Serverless",
-    latencyBadge: "Cluster Accelerated",
+    latencyBadge: "Coming Soon",
     description: "High-performance columnar storage with automated workload management (WLM) and direct S3 spectrum queries.",
     authMethod: "AWS IAM Role / Secret ARN",
     icon: RedshiftIcon,
     accentColor: "#CC292B",
     sampleEndpoint: "cluster.redshift.amazonaws.com:5439",
+    isComingSoon: true,
   },
   {
     id: "s3-parquet",
@@ -275,12 +281,13 @@ export const ENTERPRISE_CONNECTORS: ConnectorItem[] = [
     category: "lakehouse",
     categoryLabel: "Object Store & Delta Files",
     protocol: "Apache Arrow IPC / S3 Multi-Part",
-    latencyBadge: "Direct Vector Read",
+    latencyBadge: "Coming Soon",
     description: "Zero-copy ingestion directly from Amazon S3 Parquet partitions straight into DuckDB WASM memory.",
     authMethod: "AWS IAM AssumeRole / SigV4",
     icon: S3ParquetIcon,
     accentColor: "#569A31",
     sampleEndpoint: "s3://prod-analytics-lakehouse/parquet/",
+    isComingSoon: true,
   },
   {
     id: "postgresql",
@@ -350,6 +357,11 @@ export function ConnectorGridLogoCloud() {
 
   function handleTestConnection(connector: ConnectorItem) {
     setActiveConnector(connector);
+    if (connector.isComingSoon) {
+      setIsTesting(false);
+      setTestSuccess(false);
+      return;
+    }
     setIsTesting(true);
     setTestSuccess(false);
 
@@ -525,8 +537,12 @@ export function ConnectorGridLogoCloud() {
                 <h4 className="text-base font-heading font-bold text-[#172B3A] dark:text-[#E5E7EB]">
                   {activeConnector.name} Enterprise Connector
                 </h4>
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">
-                  Ready
+                <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 ${
+                  activeConnector.isComingSoon
+                    ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-500/30"
+                    : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
+                }`}>
+                  {activeConnector.isComingSoon ? "Coming Soon" : "Ready"}
                 </span>
               </div>
               <p className="font-mono text-xs text-[#596775] dark:text-[#9CA3AF] mt-0.5">
@@ -536,24 +552,34 @@ export function ConnectorGridLogoCloud() {
           </div>
 
           {/* Test Connection Button */}
-          <button
-            onClick={() => handleTestConnection(activeConnector)}
-            disabled={isTesting}
-            type="button"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#147D78] hover:bg-[#106963] text-white font-sans text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-60 self-start md:self-auto"
-          >
-            {isTesting ? (
-              <>
-                <RotateCcw className="h-3.5 w-3.5 animate-spin" />
-                <span>Pinging Connector...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="h-3.5 w-3.5 fill-current text-emerald-300" />
-                <span>Test Live Connection</span>
-              </>
-            )}
-          </button>
+          {activeConnector.isComingSoon ? (
+            <button
+              disabled
+              type="button"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-400 dark:bg-gray-700 text-white font-sans text-xs font-semibold shadow-xs transition opacity-60 cursor-not-allowed self-start md:self-auto"
+            >
+              <span>Connector Coming Soon</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => handleTestConnection(activeConnector)}
+              disabled={isTesting}
+              type="button"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#147D78] hover:bg-[#106963] text-white font-sans text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-60 self-start md:self-auto"
+            >
+              {isTesting ? (
+                <>
+                  <RotateCcw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Pinging Connector...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="h-3.5 w-3.5 fill-current text-emerald-300" />
+                  <span>Test Live Connection</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Live Diagnostics Metrics */}
