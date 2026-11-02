@@ -550,9 +550,9 @@ export default function HeroBentoSection({
                 { text: "monthly ARR", fullPrompt: "plot monthly ARR growth", clear: true, tag: "SQL" },
                 { text: "cohort churn", fullPrompt: "cohort churn rate", clear: true, tag: "CHART" },
                 { text: "customer LTV", fullPrompt: "top 10 customer LTV", clear: true, tag: "VISUAL" },
-                { text: "margin breakdown", fullPrompt: "q3 margin breakdown", clear: false, tag: "AI" },
+                { text: "margin split", fullPrompt: "q3 margin breakdown", clear: false, tag: "AI" },
                 { text: "orders by geo", fullPrompt: "orders by country", clear: true, tag: "BAR" },
-                { text: "funnel drop-off", fullPrompt: "conversion funnel drop", clear: false, tag: "AUTO" },
+                { text: "funnel drop", fullPrompt: "conversion funnel drop", clear: false, tag: "AUTO" },
               ].map((cell, idx) => {
                 const isVisible = cell.clear || aiPromptExpanded;
                 return (
@@ -562,14 +562,14 @@ export default function HeroBentoSection({
                     className="relative flex h-[50px] min-w-0 w-full overflow-hidden flex-col items-center justify-center rounded-[8px] border border-[#2e2e2e] bg-[#121212] px-1.5 font-mono-code text-[11px] text-[#898989] group-hover:border-[#393939] transition-all duration-300 hover:border-[#ff6b35]/60 hover:bg-[#181818]"
                   >
                     <span
-                      className={`block w-full max-w-full text-center truncate transition-all duration-300 text-[10.5px] leading-tight ${isVisible
+                      className={`block w-full max-w-full text-center truncate transition-all duration-300 text-[10px] sm:text-[10.5px] leading-tight ${isVisible
                         ? "blur-none text-[#fafafa]"
                         : "blur-[4px] select-none text-[#4d4d4d] group-hover:blur-none group-hover:text-[#ff8252]"
                         }`}
                     >
                       {cell.text}
                     </span>
-                    <span className="block w-full max-w-full text-center truncate text-[9px] text-[#555555] group-hover:text-[#ff6b35]/70 transition-colors shrink-0 whitespace-nowrap">
+                    <span className="block w-full max-w-full text-center truncate text-[8.5px] sm:text-[9px] text-[#555555] group-hover:text-[#ff6b35]/70 transition-colors shrink-0 whitespace-nowrap">
                       {isVisible ? `[READY ${cell.tag}]` : `[SYNTH ${cell.tag}]`}
                     </span>
                   </div>
