@@ -15,3 +15,15 @@ export { AuthProvider, useAuth } from './AuthContext';
 
 export type { AuthMode, AuthCardProps } from './AuthCard';
 export { AuthCard } from './AuthCard';
+
+export type { BrandLogoProps } from './BrandLogo';
+export { BrandLogo } from './BrandLogo';
+
+export type { StatCardProps } from './StatCard';
+export { StatCard } from './StatCard';
+
+export type { StatusBadgeProps, StatusType } from './StatusBadge';
+export { StatusBadge } from './StatusBadge';
+
+export type { DataTableProps, DataTableColumn } from './DataTable';
+export { DataTable } from './DataTable';

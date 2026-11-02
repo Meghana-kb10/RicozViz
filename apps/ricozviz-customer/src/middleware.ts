@@ -26,7 +26,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const authCookie = request.cookies.get("ricozviz_auth");
+  const authCookie = request.cookies.get("rv_customer_session");
   const isAuthenticated = Boolean(authCookie?.value);
 
   // If user is already authenticated and visits login/register, redirect to dashboard or returnUrl

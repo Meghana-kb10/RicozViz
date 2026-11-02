@@ -64,9 +64,18 @@ function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
+let activeSessionCookieName = 'rv_customer_session';
+
 /** Point the client at a specific origin (used by the Next app at module load). */
-export function configureRicozVizApi(options: { baseUrl?: string }): void {
+export function configureRicozVizApi(options: { baseUrl?: string; sessionCookieName?: string }): void {
   configuredBaseUrl = options.baseUrl ? stripTrailingSlash(options.baseUrl) : null;
+  if (options.sessionCookieName) {
+    activeSessionCookieName = options.sessionCookieName;
+  }
+}
+
+export function getSessionCookieName(): string {
+  return activeSessionCookieName;
 }
 
 /** Error thrown for any non-2xx RicozViz response. */
@@ -105,10 +114,10 @@ export function setAccessToken(token: string | null): void {
     try {
       if (token) {
         sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
-        document.cookie = 'ricozviz_auth=true; path=/; max-age=86400; SameSite=Lax';
+        document.cookie = `${activeSessionCookieName}=true; path=/; max-age=86400; SameSite=Lax`;
       } else {
         sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-        document.cookie = 'ricozviz_auth=; path=/; max-age=0; SameSite=Lax';
+        document.cookie = `${activeSessionCookieName}=; path=/; max-age=0; SameSite=Lax`;
       }
     } catch {
       // ignore

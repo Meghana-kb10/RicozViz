@@ -1,5 +1,5 @@
 ---
-"ricozviz-web": minor
+"ricozviz-customer": minor
 "backend": minor
 "@repo/types": minor
 "@repo/api": minor

@@ -1,5 +1,5 @@
 {
-  "name": "ricozviz-web",
+  "name": "ricozviz-customer",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@repo/api": "workspace:*",
+    "@repo/components": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/utils": "workspace:*",
     "@repo/validation": "workspace:*",

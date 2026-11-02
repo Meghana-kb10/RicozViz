@@ -1,5 +1,5 @@
 ---
-"ricozviz-web": minor
+"ricozviz-customer": minor
 ---
 
 feat(onboarding): terminal-style quickstart and SDK snippet below primary CTAs (#22)

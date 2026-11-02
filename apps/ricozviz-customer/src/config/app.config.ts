@@ -7,9 +7,11 @@ export interface AppConfig {
 }
 
 export const appConfig: AppConfig = {
-  name: 'RicozViz',
-  description: 'Enterprise intelligence & governed analytics workspace.',
-  version: '1.0.0',
+  name: process.env.NEXT_PUBLIC_CUSTOMER_APP_NAME || 'RicozViz Customer Portal',
+  description:
+    process.env.NEXT_PUBLIC_CUSTOMER_APP_DESCRIPTION ||
+    'Enterprise intelligence & governed analytics workspace.',
+  version: process.env.NEXT_PUBLIC_CUSTOMER_APP_VERSION || '1.0.0',
   apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
   environment: process.env.NODE_ENV || 'development'
 };

@@ -22,3 +22,12 @@ build
 !.env.example
 !.env.*.example
 .agents
+
+# Scratch and maintenance scripts
+update-*.js
+fix-*.js
+patch-*.js
+label-*.js
+scratch/
+*.scratch.*
+

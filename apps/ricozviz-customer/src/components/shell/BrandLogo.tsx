@@ -1,10 +1,13 @@
+import React from "react";
 import Image from "next/image";
+import { BrandLogo as RepoBrandLogo } from "@repo/components";
 
 export interface BrandLogoProps {
   size?: number;
   className?: string;
   priority?: boolean;
   alt?: string;
+  useSvg?: boolean;
 }
 
 export function BrandLogo({
@@ -12,7 +15,12 @@ export function BrandLogo({
   className = "",
   priority = false,
   alt = "RicozViz Logo",
+  useSvg = false,
 }: BrandLogoProps) {
+  if (useSvg) {
+    return <RepoBrandLogo size={size} className={className} alt={alt} />;
+  }
+
   return (
     <Image
       src="/icon.png"
@@ -26,3 +34,5 @@ export function BrandLogo({
     />
   );
 }
+
+export { RepoBrandLogo };

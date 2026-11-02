@@ -71,6 +71,7 @@ export const api = createApiClient();
 export {
   getApiBaseUrl,
   configureRicozVizApi,
+  getSessionCookieName,
   ApiError,
   getAccessToken,
   setAccessToken,
@@ -268,3 +269,14 @@ export {
   apiGetCisoAccreditations,
   apiGetCisoTrustPack
 } from './ricozviz/governance.js';
+
+export {
+  apiListWorkerRuns,
+  apiTriggerWorkerJob,
+  apiGetWorkerHealth,
+  type WorkerRunItem,
+  type ListWorkerRunsParams,
+  type ListWorkerRunsResponse,
+  type WorkerHealthResponse,
+  type TriggerWorkerJobResponse
+} from './ricozviz/worker.js';

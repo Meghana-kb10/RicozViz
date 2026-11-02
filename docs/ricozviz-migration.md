@@ -8,7 +8,7 @@ Express 4, Prisma/PostgreSQL, Next.js 16 at the repo root) into this Turborepo
 
 | Concern | Legacy | Now |
 | --- | --- | --- |
-| Web app | `apps/web` (standalone Next.js) | `apps/ricozviz-web` |
+| Web app | `apps/web` (standalone Next.js) | `apps/ricozviz-customer` |
 | API server | `apps/api` (Express) | `apps/backend` (Fastify 5) |
 | Database | `apps/api/prisma` (PostgreSQL) | `packages/database` (Mongoose/MongoDB) |
 | Domain types | `apps/web/lib/api.ts` + `apps/api` inline | `packages/types/src/ricozviz` |
@@ -21,7 +21,7 @@ untouched** so the template stays a valid reference boilerplate.
 
 ## UI fidelity
 
-`apps/ricozviz-web` preserves the legacy UI:
+`apps/ricozviz-customer` preserves the legacy UI:
 
 - `app/` → `src/app/`, `components/`, `contexts/`, and `lib/` copied with the
   API facade exception below.

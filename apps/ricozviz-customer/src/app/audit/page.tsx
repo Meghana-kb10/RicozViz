@@ -27,10 +27,8 @@ import {
   type AuditLogStatsResponse,
 } from "../../lib/api";
 import { downloadCsv } from "../../lib/export-csv";
-import { MultiTenantAuditTrailMockup } from "../../components/shell/MultiTenantAuditTrailMockup";
 
 export default function AuditLogsPage() {
-  const [viewMode, setViewMode] = useState<"tabular" | "preview">("tabular");
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [stats, setStats] = useState<AuditLogStatsResponse | null>(null);
@@ -119,64 +117,27 @@ export default function AuditLogsPage() {
       ]}
       actions={
         <div className="flex items-center gap-2.5">
-          {/* View Mode Switcher */}
-          <div className="flex items-center p-0.5 rounded-lg bg-[#141414] border border-[#242424] text-xs font-mono-code">
-            <button
-              type="button"
-              onClick={() => setViewMode("tabular")}
-              className={`px-3 py-1.5 rounded-md transition font-semibold cursor-pointer ${
-                viewMode === "tabular"
-                  ? "bg-[#ff6b35] text-white"
-                  : "text-[#898989] hover:text-[#fafafa]"
-              }`}
-            >
-              Tabular Events
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("preview")}
-              className={`px-3 py-1.5 rounded-md transition font-semibold flex items-center gap-1.5 cursor-pointer ${
-                viewMode === "preview"
-                  ? "bg-[#ff6b35] text-white"
-                  : "text-[#898989] hover:text-[#fafafa]"
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Multi-Tenant WORM</span>
-            </button>
-          </div>
-
-          {viewMode === "tabular" && (
-            <>
-              <button
-                onClick={handleExportCsv}
-                disabled={logs.length === 0}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#141414] hover:bg-[#202020] text-xs font-mono-code text-[#fafafa] disabled:opacity-50 cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>CSV</span>
-              </button>
-              <button
-                onClick={loadAuditData}
-                disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] hover:bg-[#222222] text-xs font-mono-code text-[#fafafa] transition cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#ff6b35]" : ""}`} />
-                <span>Refresh</span>
-              </button>
-            </>
-          )}
+          <button
+            onClick={handleExportCsv}
+            disabled={logs.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#141414] hover:bg-[#202020] text-xs font-mono-code text-[#fafafa] disabled:opacity-50 cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>CSV</span>
+          </button>
+          <button
+            onClick={loadAuditData}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#2e2e2e] bg-[#181818] hover:bg-[#222222] text-xs font-mono-code text-[#fafafa] transition cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#ff6b35]" : ""}`} />
+            <span>Refresh</span>
+          </button>
         </div>
       }
     >
       <div className="space-y-6 max-w-7xl mx-auto">
-        {viewMode === "preview" ? (
-          <div className="pt-2">
-            <MultiTenantAuditTrailMockup />
-          </div>
-        ) : (
-          <>
-            {error && (
+        {error && (
               <div className="rounded-xl border border-red-500/30 bg-red-950/40 p-4 text-xs font-mono-code text-red-300 flex items-center gap-3">
                 <ShieldAlert className="w-5 h-5 flex-shrink-0 text-red-400" />
                 <span>{error}</span>
@@ -502,8 +463,6 @@ export default function AuditLogsPage() {
                 </div>
               </div>
             )}
-          </>
-        )}
       </div>
     </AppShell>
   );
