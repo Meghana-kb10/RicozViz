@@ -5,13 +5,6 @@ import { buildApp } from './app.js';
 
 const { port, host, mongodbUri, mongodbDbName, env } = config;
 
-// Background automation & monitoring workers (ported from the legacy server.ts).
-import { scheduledReportWorker } from './modules/ricozviz/report/index.js';
-import { scheduledAlertWorker } from './modules/ricozviz/alert/index.js';
-import { scheduledRefreshWorker } from './modules/ricozviz/dataset/index.js';
-
-const WORKER_INTERVAL_MS = 60_000;
-
 async function bootstrap() {
   try {
     // Attempt database connection with configured URI and database name
@@ -36,19 +29,11 @@ async function bootstrap() {
     await app.listen({ port, host });
     logger.info(`[${env}] RicozViz Fastify backend running at http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
 
-    // Start background automation & monitoring workers
-    scheduledReportWorker.start(WORKER_INTERVAL_MS);
-    scheduledAlertWorker.start(WORKER_INTERVAL_MS);
-    scheduledRefreshWorker.start(WORKER_INTERVAL_MS);
-
     const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
     for (const signal of signals) {
       process.on(signal, async () => {
         logger.info(`Received ${signal}, shutting down gracefully...`);
         try {
-          scheduledReportWorker.stop();
-          scheduledAlertWorker.stop();
-          scheduledRefreshWorker.stop();
           await app.close();
           await disconnectDatabase();
           logger.info('Closed HTTP server and disconnected database.');

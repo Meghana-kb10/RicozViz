@@ -1,3 +1,6 @@
+import { broadcastWsDashboardUpdate } from './ws-collaboration.service.js';
+import { createWsTicket } from './ws-ticket.service.js';
+import type { WsTicketResponse } from '@repo/types';
 // ============================================================
 // Real-Time Collaboration Service
 // ============================================================
@@ -147,7 +150,7 @@ export function resolveUserFromTokenSource(params: {
 }
 
 /** Resolve the dashboard document used by the collaboration channel. */
-async function resolveCollaborationDashboard(
+export async function resolveCollaborationDashboard(
   dashboardId: string,
   user: AuthenticatedUser,
   requiredAction: 'READ' | 'WRITE'
@@ -539,4 +542,29 @@ export async function handleGetCollaborationState(
     activeCollaborators: activeUsers,
     collaboratorCount: activeUsers.length
   };
+}
+
+
+/**
+ * Issues a single-use 30-second ticket for authenticating the real-time presence WebSocket.
+ * Requires user to have read access to the target dashboard.
+ */
+export async function handleCreateDashboardWsTicket(
+  user: AuthenticatedUser,
+  dashboardId: string
+): Promise<WsTicketResponse> {
+  const dashboard = await resolveCollaborationDashboard(dashboardId, user, 'READ');
+  const workspaceId =
+    getDashboardWorkspaceId(dashboard.layoutConfig) ||
+    (user as any).workspaceId ||
+    dashboard.organizationId;
+
+  return createWsTicket({
+    userId: user.userId,
+    userName: (user as any).name || (user.email ? user.email.split('@')[0] : 'Collaborator'),
+    userAvatar: (user as any).avatar,
+    userRole: user.roleName,
+    dashboardId,
+    workspaceId
+  });
 }

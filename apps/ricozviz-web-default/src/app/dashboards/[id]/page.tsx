@@ -48,6 +48,7 @@ import {
   apiRestoreDashboardVersion,
   type DashboardVersionRecord,
   type VersionComparisonResult,
+  apiGetDashboardWsTicket,
   apiGetCollaborationState,
   apiSendCollaborationPresence,
   apiCollaborativeUpdate,
@@ -445,63 +446,141 @@ export default function DashboardDetailPage({
     };
   }, [auth, id]);
 
-  // Real-time Collaboration (SSE) Stream & Heartbeat Listener
+  // Real-time Collaboration: WebSocket with automatic fallback to SSE & polling
   useEffect(() => {
     if (!id || !auth) return;
-    const baseUrl = getApiBaseUrl();
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-    const streamUrl = `${baseUrl}/api/dashboards/${id}/collaboration/stream?token=${encodeURIComponent(token)}`;
-
+    let isMounted = true;
+    let socket: WebSocket | null = null;
     let eventSource: EventSource | null = null;
-    try {
-      eventSource = new EventSource(streamUrl);
-      eventSource.addEventListener("PRESENCE_STATE", (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (Array.isArray(data.collaborators)) {
-            setActiveCollaborators(data.collaborators);
-          }
-        } catch {}
-      });
-      eventSource.addEventListener("USER_JOINED", (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.user) {
-            setActiveCollaborators((prev) => {
-              const filtered = prev.filter((p) => p.userId !== data.user.userId);
-              return [...filtered, data.user];
-            });
-          }
-        } catch {}
-      });
-      eventSource.addEventListener("USER_LEFT", (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.userId) {
-            setActiveCollaborators((prev) => prev.filter((p) => p.userId !== data.userId));
-          }
-        } catch {}
-      });
-      eventSource.addEventListener("DASHBOARD_UPDATED", (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          setRemoteUpdateNotice(
-            `Dashboard was updated by ${data.updatedBy?.name || "a collaborator"} (Version ${data.newVersionNumber || ""}). Reload to view latest changes.`
-          );
-        } catch {}
-      });
-    } catch (err) {
-      console.warn("Could not initiate collaboration EventSource", err);
-    }
+    let heartbeatTimer: NodeJS.Timeout | null = null;
+    let fallbackInterval: NodeJS.Timeout | null = null;
 
-    // Initial heartbeat and periodic heartbeat every 20s
-    void apiSendCollaborationPresence(id).catch(() => {});
-    const interval = setInterval(() => {
+    // Start fallback polling / SSE if WebSocket fails or disconnects
+    const startFallback = () => {
+      if (!isMounted || eventSource || fallbackInterval) return;
+      console.warn("[Collaboration] WebSocket unavailable, falling back to SSE and REST polling");
+
+      const baseUrl = getApiBaseUrl();
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+      const streamUrl = `${baseUrl}/api/v1/dashboards/${id}/collaboration/stream?token=${encodeURIComponent(token)}`;
+
+      try {
+        eventSource = new EventSource(streamUrl);
+        eventSource.addEventListener("PRESENCE_STATE", (e: MessageEvent) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (Array.isArray(data.collaborators)) {
+              setActiveCollaborators(data.collaborators);
+            }
+          } catch {}
+        });
+        eventSource.addEventListener("USER_JOINED", (e: MessageEvent) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.user) {
+              setActiveCollaborators((prev) => {
+                const filtered = prev.filter((p) => p.userId !== data.user.userId);
+                return [...filtered, data.user];
+              });
+            }
+          } catch {}
+        });
+        eventSource.addEventListener("USER_LEFT", (e: MessageEvent) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data.userId) {
+              setActiveCollaborators((prev) => prev.filter((p) => p.userId !== data.userId));
+            }
+          } catch {}
+        });
+        eventSource.addEventListener("DASHBOARD_UPDATED", (e: MessageEvent) => {
+          try {
+            const data = JSON.parse(e.data);
+            setRemoteUpdateNotice(
+              `Dashboard was updated by ${data.updatedBy?.name || "a collaborator"} (Version ${data.newVersionNumber || ""}). Reload to view latest changes.`
+            );
+          } catch {}
+        });
+      } catch (err) {
+        console.warn("Could not initiate collaboration EventSource", err);
+      }
+
       void apiSendCollaborationPresence(id).catch(() => {});
-    }, 20000);
+      fallbackInterval = setInterval(() => {
+        void apiSendCollaborationPresence(id).catch(() => {});
+      }, 20000);
+    };
+
+    // Primary: Initiate authenticated WebSocket presence session
+    const connectWs = async () => {
+      try {
+        const ticketRes = await apiGetDashboardWsTicket(id);
+        if (!isMounted) return;
+
+        const baseUrl = getApiBaseUrl();
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsHost = baseUrl.replace(/^http(s)?:\/\//, "");
+        const wsUrl = `${wsProtocol}//${wsHost}/ws/dashboards/${id}?ticket=${encodeURIComponent(ticketRes.ticket)}`;
+
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+          if (!isMounted) {
+            socket?.close();
+            return;
+          }
+          heartbeatTimer = setInterval(() => {
+            if (socket?.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({ type: "HEARTBEAT" }));
+            }
+          }, 20000);
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === "PRESENCE_STATE" && Array.isArray(msg.collaborators)) {
+              setActiveCollaborators(msg.collaborators);
+            } else if (msg.type === "USER_JOINED" && msg.user) {
+              setActiveCollaborators((prev) => {
+                const filtered = prev.filter((p) => p.userId !== msg.user.userId);
+                return [...filtered, msg.user];
+              });
+            } else if (msg.type === "USER_LEFT" && msg.userId) {
+              setActiveCollaborators((prev) => prev.filter((p) => p.userId !== msg.userId));
+            } else if (msg.type === "DASHBOARD_UPDATED") {
+              const updatedBy = msg.data?.updatedBy?.name || "a collaborator";
+              const ver = msg.data?.newVersionNumber || "";
+              setRemoteUpdateNotice(
+                `Dashboard was updated by ${updatedBy} (Version ${ver}). Reload to view latest changes.`
+              );
+            }
+          } catch {}
+        };
+
+        socket.onerror = () => {
+          startFallback();
+        };
+
+        socket.onclose = () => {
+          if (isMounted) {
+            startFallback();
+          }
+        };
+      } catch (err) {
+        startFallback();
+      }
+    };
+
+    void connectWs();
 
     return () => {
-      clearInterval(interval);
+      isMounted = false;
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (fallbackInterval) clearInterval(fallbackInterval);
+      if (socket) {
+        socket.close();
+      }
       if (eventSource) {
         eventSource.close();
       }

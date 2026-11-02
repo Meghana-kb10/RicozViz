@@ -1,3 +1,4 @@
+import { runJobWithDistributedLock } from '../../worker/index.js';
 // ============================================================
 // Scheduled Dataset Refresh Service
 // ============================================================
@@ -670,7 +671,10 @@ export class ScheduledRefreshWorker {
     });
 
     this.pollTimer = setInterval(() => {
-      void this.executeDueRefreshes().catch((err: unknown) => {
+      void runJobWithDistributedLock('scheduled-dataset-refresh', async () => {
+        const summary = await this.executeDueRefreshes();
+        return { itemsProcessed: summary.processed };
+      }).catch((err: unknown) => {
         logger.error('[RefreshWorker] Unhandled error during dataset refresh poll cycle', {
           error: err instanceof Error ? err.message : String(err)
         });

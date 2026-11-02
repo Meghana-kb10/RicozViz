@@ -43,7 +43,10 @@ export const COLLECTIONS = {
   ALERT_HISTORY: 'alert_history',
   EXPORT_JOBS: 'export_jobs',
   AUDIT_LOGS: 'audit_logs',
-  AI_USAGE: 'ai_usage'
+  AI_USAGE: 'ai_usage',
+  WORKER_LOCKS: 'worker_locks',
+  WORKER_RUNS: 'worker_runs',
+  WS_TICKETS: 'ws_tickets'
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
@@ -74,5 +77,8 @@ export const RICOZVIZ_COLLECTIONS: readonly CollectionName[] = [
   COLLECTIONS.ALERT_HISTORY,
   COLLECTIONS.EXPORT_JOBS,
   COLLECTIONS.AUDIT_LOGS,
-  COLLECTIONS.AI_USAGE
+  COLLECTIONS.AI_USAGE,
+  COLLECTIONS.WORKER_LOCKS,
+  COLLECTIONS.WORKER_RUNS,
+  COLLECTIONS.WS_TICKETS
 ] as const;

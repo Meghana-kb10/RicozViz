@@ -1,3 +1,4 @@
+import { runJobWithDistributedLock } from '../../worker/index.js';
 // ============================================================
 // Scheduled Report Background Worker
 // ============================================================
@@ -50,7 +51,10 @@ export class ScheduledReportWorker {
     });
 
     this.pollTimer = setInterval(() => {
-      void this.executeDueReports().catch((err: unknown) => {
+      void runJobWithDistributedLock('scheduled-reports', async () => {
+        const summary = await this.executeDueReports();
+        return { itemsProcessed: summary.processed };
+      }).catch((err: unknown) => {
         logger.error('[ReportWorker] Unhandled error during report poll cycle', {
           error: err instanceof Error ? err.message : String(err)
         });

@@ -113,6 +113,7 @@ export {
   apiListDashboardCollaborators,
   apiGrantDashboardCollaborator,
   apiRevokeDashboardCollaborator,
+  apiGetDashboardWsTicket,
   apiGetCollaborationState,
   apiSendCollaborationPresence,
   apiCollaborativeUpdate,

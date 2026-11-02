@@ -64,4 +64,16 @@ export { AiUsageModel } from './ai-usage.model';
 export type { IAiUsageDocument, AiUsageStatus } from './ai-usage.model';
 export type { IAuditLogDocument } from './insight.model';
 
+export { RefreshTokenModel } from './refresh-token.model';
+export type { IRefreshTokenDocument } from './refresh-token.model';
+export { CredentialVaultModel } from './credential-vault.model';
+export type { ICredentialVaultDocument } from './credential-vault.model';
+
+export { WorkerLockModel } from './worker-lock.model';
+export type { IWorkerLockDocument } from './worker-lock.model';
+export { WorkerRunModel } from './worker-run.model';
+export type { IWorkerRunDocument } from './worker-run.model';
+export { WsTicketModel } from './ws-ticket.model';
+export type { IWsTicketDocument } from './ws-ticket.model';
+
 export { defineModel, objectIdRef, objectIdRefOptional, toObjectId, idToString } from './model.util';

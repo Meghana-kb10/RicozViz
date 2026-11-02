@@ -1,3 +1,4 @@
+import { runJobWithDistributedLock } from '../../worker/index.js';
 // ============================================================
 // Scheduled Smart Data Alert Background Worker
 // ============================================================
@@ -79,7 +80,10 @@ export class ScheduledAlertWorker {
     });
 
     this.pollTimer = setInterval(() => {
-      void this.executeDueAlerts().catch((err: unknown) => {
+      void runJobWithDistributedLock('scheduled-smart-alerts', async () => {
+        const summary = await this.executeDueAlerts();
+        return { itemsProcessed: summary.processed };
+      }).catch((err: unknown) => {
         logger.error('[AlertWorker] Unhandled error during alert poll cycle', {
           error: err instanceof Error ? err.message : String(err)
         });

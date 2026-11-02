@@ -1,5 +1,15 @@
 "use client";
 
+// ============================================================================
+// LANDING PAGE SHOWCASE DEMO COMPONENT
+// ============================================================================
+// NOTE: This component is a scripted, interactive frontend showcase / demo
+// designed for marketing and prospective users exploring the RicozViz landing page.
+// It simulates multiplayer cursor movements, widget focus locks, and audit activity.
+// Actual real-time dashboard collaboration is powered by the production
+// WebSocket presence service (/ws/dashboards/:id) with tenant-isolated rooms.
+// ============================================================================
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Users,

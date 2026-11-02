@@ -9,6 +9,7 @@ import {
   handlePresenceHeartbeat,
   handleCollaborativeUpdate,
   handleGetCollaborationState,
+  handleCreateDashboardWsTicket,
   type SseSink
 } from './realtime-collaboration.service.js';
 
@@ -31,24 +32,25 @@ export class CollaborationController {
   async stream(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const { id } = request.params as CollaborationParams;
     const query = (request.query ?? {}) as StreamQuery;
+    const authHeader = request.headers.authorization;
 
-    const user = resolveUserFromTokenSource({
-      authorization: request.headers.authorization,
-      queryToken: query.token
-    });
+    const user = resolveUserFromTokenSource({ authorization: authHeader, queryToken: query.token });
 
-    // Take ownership of the socket: this response never ends.
-    reply.hijack();
-    reply.raw.writeHead(200, {
+    void reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no'
     });
+    reply.raw.flushHeaders?.();
 
     const sink: SseSink = {
-      write: (chunk: string) => reply.raw.write(chunk),
-      end: () => reply.raw.end()
+      write(chunk: string) {
+        reply.raw.write(chunk);
+      },
+      end() {
+        reply.raw.end();
+      }
     };
 
     const { dispose } = await openCollaborationStream(user, id, sink);
@@ -58,7 +60,6 @@ export class CollaborationController {
         dispose();
       } catch (err) {
         logger.warn('Failed to dispose collaboration stream', {
-          dashboardId: id,
           error: err instanceof Error ? err.message : String(err)
         });
       }
@@ -101,6 +102,17 @@ export class CollaborationController {
       ipAddress: request.ip,
       userAgent: request.headers['user-agent']
     });
+    sendSuccess(reply, result, 200);
+  }
+
+  /**
+   * POST /api/v1/dashboards/:id/collaboration/ticket
+   * Generate single-use ticket for authenticating real-time WebSocket presence.
+   */
+  async ticket(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const principal = getPrincipal(request);
+    const { id } = request.params as CollaborationParams;
+    const result = await handleCreateDashboardWsTicket(principal, id);
     sendSuccess(reply, result, 200);
   }
 }

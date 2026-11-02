@@ -24,7 +24,8 @@
 | **`exports`** | `real` | • Real CSV generation and streaming download (`downloadCsv`), JSON dump generation, and recurring export cadence scheduler in database.<br>• Real server-side PDF generation with Puppeteer (headless Chromium) compiling A4 executive dashboard reports.<br>• Scheduled report worker dispatches real emails with the generated PDF attached to configured recipients. | `apps/backend/src/modules/ricozviz/export/export.service.ts`<br>`apps/backend/src/modules/ricozviz/export/pdf-generator.service.ts`<br>`apps/backend/src/modules/ricozviz/export/scheduled-report.service.ts`<br>`apps/ricozviz-web-default/src/app/exports/page.tsx` |
 | **`audit ledger`** | `real` | • Cryptographic WORM (Write-Once-Read-Many) append-only ledger using SHA-256 hash chains.<br>• Every audit event links previous block hash, sequence index, timestamp, and payload digest.<br>• Cryptographic verification (`verifyChainIntegrity`) validates tamper resistance.<br>• Multi-tenant tenantId scoping and token revocation events are cryptographically recorded. Verified by 5 passing unit tests. | `apps/backend/src/modules/ricozviz/audit/audit-preview.service.ts`<br>`apps/backend/src/modules/ricozviz/audit/audit-preview.controller.ts`<br>`apps/backend/src/modules/ricozviz/audit/audit-preview.test.ts`<br>`apps/ricozviz-web-default/src/app/audit/page.tsx` |
 | **`RLS`** | `partial` | • Real SQL WHERE-clause rewrite in `rls.service.ts` injecting tenant and workspace boundaries.<br>• Column masking in `rls-simulator.ts` is an in-memory simulation tool for CISO compliance demonstrations, not enforced at the database proxy/storage level.<br>• SAML 2.0 / SCIM badge attestations in CISO overview are metadata badges; no actual SAML IdP SP metadata endpoints or SCIM 2.0 REST endpoints exist (system uses JWT + password). | `apps/backend/src/modules/ricozviz/dataset/rls.service.ts`<br>`apps/backend/src/modules/ricozviz/governance/governance.service.ts`<br>`apps/backend/src/modules/ricozviz/governance/rls-simulator.ts`<br>`apps/ricozviz-web-default/src/app/security/page.tsx`<br>`apps/ricozviz-web-default/src/components/shell/SecurityGovernanceBadges.tsx` |
-| **`presence`** | `partial` | • Heartbeat polling via REST API (`POST /api/v1/collaboration/presence`) with in-memory TTL expiration and active collaborator listing.<br>• Not real-time WebSockets or Server-Sent Events (SSE); clients poll on interval.<br>• Landing page multiplayer canvas (`CollaborativeMultiplayerCanvas.tsx`) runs a pre-scripted CSS animation loop rather than broadcasting live cursor data. | `apps/backend/src/modules/ricozviz/collaboration/collaboration.service.ts`<br>`apps/backend/src/modules/ricozviz/collaboration/collaboration.controller.ts`<br>`apps/ricozviz-web-default/src/components/landing/CollaborativeMultiplayerCanvas.tsx` |
+| **`presence`** | `real` | • Production real-time presence & cursor synchronization engine powered by `@fastify/websocket` (`/ws/dashboards/:id`).<br>• Zero token leakage in URLs: authenticates via short-lived, single-use 30-second ticket (`POST /api/v1/dashboards/:id/ws-ticket` or `/collaboration/ticket`) requiring dashboard workspace access.<br>• Tenant-isolated rooms (`${workspaceId}:${dashboardId}`): live broadcasting of `USER_JOINED`, `USER_LEFT`, `CURSOR_MOVED`, `WIDGET_FOCUSED`, and `DASHBOARD_UPDATED`.<br>• Server-side 45-second dead-connection TTL sweep and per-connection 50 msg/s rate limiting.<br>• Dashboard UI connects via WebSocket with automatic fallback to SSE & REST polling if socket disconnects.<br>• Landing page multiplayer canvas is preserved and explicitly documented as a front-of-house showcase demo. | `apps/backend/src/modules/ricozviz/collaboration/ws-collaboration.service.ts`<br>`apps/backend/src/modules/ricozviz/collaboration/ws-ticket.service.ts`<br>`apps/backend/src/modules/ricozviz/collaboration/collaboration.routes.ts`<br>`apps/ricozviz-web-default/src/app/dashboards/[id]/page.tsx`<br>`apps/ricozviz-web-default/src/components/shell/CollaborativeMultiplayerCanvas.tsx` |
+| **`workers`** | `real` | • Dedicated background worker daemon (`apps/backend/src/worker.ts`, script: `pnpm run worker`, tsup ESM target).<br>• Decoupled from API server: Fastify HTTP server no longer runs any cron timers.<br>• Distributed lease locking (`WorkerLockModel`, `worker_locks` collection): atomic `findOneAndUpdate` acquisition, periodic heartbeat renewal, and automatic lock expiration prevent duplicate execution across multiple worker instances.<br>• Exponential backoff retries (up to 3 attempts with jitter) and failed-job state handling.<br>• 30-day retention execution audit trail (`WorkerRunModel`, `worker_runs` collection) indexing job name, start time, attempt count, processed items, duration, and error details.<br>• Graceful shutdown on SIGTERM/SIGINT (finishing active jobs or releasing locks) and HTTP `/health` endpoint on port 3010.<br>• Reusable service API (`listWorkerRuns`, `triggerJob`, `getWorkerHealthStatus`) ready for admin monitoring routes. | `apps/backend/src/worker.ts`<br>`apps/backend/src/modules/worker/worker-lock.service.ts`<br>`apps/backend/src/modules/worker/worker-runner.service.ts`<br>`apps/backend/src/modules/worker/worker-admin.service.ts`<br>`packages/database/src/models/worker-lock.model.ts`<br>`packages/database/src/models/worker-run.model.ts` |
 
 ---
 
@@ -120,9 +121,24 @@
 
 ---
 
-### 2.11 Collaboration & Presence (`apps/backend/src/modules/ricozviz/collaboration/`)
-- **Operational Reality**: REST polling endpoint `/api/v1/collaboration/presence` stores active user cursors in an in-memory map with a 30-second TTL.
-- **Critical Gap**: No WebSocket / SSE server. Clients must poll to receive updates. Interactive landing page cursors are pre-recorded CSS keyframe simulations.
+### 2.11 Collaboration & Real-Time Presence (`apps/backend/src/modules/ricozviz/collaboration/`)
+- **Operational Reality**: Fully **real** real-time multiplayer presence engine powered by `@fastify/websocket` (`/ws/dashboards/:id`).
+  - Zero token leakage in URLs: authenticates via short-lived, single-use 30-second ticket (`POST /api/v1/dashboards/:id/ws-ticket` or `/collaboration/ticket`) requiring dashboard workspace access.
+  - Tenant-isolated rooms (`${workspaceId}:${dashboardId}`): live broadcasting of `USER_JOINED`, `USER_LEFT`, `CURSOR_MOVED`, `WIDGET_FOCUSED`, and `DASHBOARD_UPDATED`.
+  - Server-side 45-second dead-connection TTL sweep and per-connection 50 msg/s rate limiting.
+  - Dashboard UI (`apps/ricozviz-web-default/src/app/dashboards/[id]/page.tsx`) connects via WebSocket with automatic fallback to SSE & REST polling if socket disconnects.
+  - Landing page multiplayer canvas (`CollaborativeMultiplayerCanvas.tsx`) is preserved and explicitly documented as a front-of-house showcase demo.
+
+---
+
+### 2.12 Dedicated Background Worker Daemon (`apps/backend/src/worker.ts`)
+- **Operational Reality**: Fully **real** standalone background daemon (`apps/backend/src/worker.ts`, script: `pnpm run worker`, tsup ESM target).
+  - Decoupled from API server: Fastify HTTP server no longer runs any cron timers.
+  - Distributed lease locking (`WorkerLockModel`, `worker_locks` collection): atomic `findOneAndUpdate` acquisition, periodic heartbeat renewal, and automatic lock expiration prevent duplicate execution across multiple worker instances.
+  - Exponential backoff retries (up to 3 attempts with jitter) and failed-job state handling.
+  - 30-day retention execution audit trail (`WorkerRunModel`, `worker_runs` collection) indexing job name, start time, attempt count, processed items, duration, and error details.
+  - Graceful shutdown on SIGTERM/SIGINT (finishing active jobs or releasing locks) and HTTP `/health` endpoint on port 3010.
+  - Reusable service API (`listWorkerRuns`, `triggerJob`, `getWorkerHealthStatus`) ready for admin monitoring routes.
 
 ---
 
@@ -146,7 +162,7 @@ In response to production UI feedback and zero-trust authentication compliance:
 ---
 
 ## 4. Current Test Verification Status
-- **Backend Test Suite**: 8/8 test suites passing 100%:
+- **Backend Test Suite**: 9/9 test suites passing 100%:
   1. `response.test.ts` (API formatting & error payload sanitization)
   2. `governance.test.ts` (CISO controls, security badges & checksums)
   3. `rls-simulator.test.ts` (Dynamic masking & cryptographic RLS)
@@ -155,6 +171,7 @@ In response to production UI feedback and zero-trust authentication compliance:
   6. `ai.test.ts` (10 analytical queries + 10 SQL injection attacks)
   7. `flow.test.ts` (Complete 10-step E2E enterprise flow)
   8. `security-hardening.test.ts` (Zero-trust audit, AES-256-GCM, token rotation, lockout, rate limiting)
+  9. `worker-presence.test.ts` (Worker distributed locking race, backoff failure state, audit logging, WebSocket ticket auth, cross-tenant room isolation)
 
 ---
 

@@ -23,10 +23,25 @@ export {
   handlePresenceHeartbeat,
   handleCollaborativeUpdate,
   handleGetCollaborationState,
-  collaborativeUpdateSchema
+  collaborativeUpdateSchema,
+  resolveCollaborationDashboard,
+  handleCreateDashboardWsTicket
 } from './realtime-collaboration.service.js';
 export type {
   SseSink,
   CollaboratorPresenceRecord,
   CollaborativeUpdateResult
 } from './realtime-collaboration.service.js';
+
+export {
+  createWsTicket,
+  consumeWsTicket,
+  clearInMemoryTickets
+} from './ws-ticket.service.js';
+
+export {
+  handleWsConnection,
+  broadcastWsDashboardUpdate,
+  getRoomCollaboratorsCount,
+  clearAllWsRooms
+} from './ws-collaboration.service.js';

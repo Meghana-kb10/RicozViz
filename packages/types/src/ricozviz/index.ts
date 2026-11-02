@@ -264,3 +264,22 @@ export type {
   RevokeTokenPayload,
   RevokeTokenResult
 } from './governance';
+
+export type {
+  WorkerRunStatus,
+  WorkerLock,
+  WorkerRun,
+  WorkerRunFilter,
+  TriggerJobResult,
+  WorkerHealthStatus
+} from './worker';
+
+export type {
+  WsTicket,
+  WsTicketResponse,
+  WsClientMessageType,
+  WsClientMessage,
+  WsServerMessageType,
+  WsCollaboratorPresence,
+  WsServerMessage
+} from './presence';

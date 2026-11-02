@@ -1,3 +1,4 @@
+import { collaborationController } from '../collaboration/collaboration.controller.js';
 // ========================================
 // Dashboard Routes — /api/v1/dashboards
 // ========================================
@@ -32,14 +33,28 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   // Real-Time Collaboration SSE Stream (authenticates token from Authorization header or ?token query)
   await app.register(collaborationRoutes, { prefix: '/:id/collaboration' });
 
+  // All subsequent dashboard management endpoints require authentication
+  const auth = { preHandler: [requireAuth] };
+
+  /**
+   * POST /api/v1/dashboards/:id/ws-ticket
+   * Generate short-lived single-use ticket for WebSocket handshake.
+   * Permission: DASHBOARD_VIEW
+   */
+  app.post(
+    '/:id/ws-ticket',
+    { ...auth, preHandler: [requireAuth, requirePermission('DASHBOARD_VIEW')] },
+    collaborationController.ticket.bind(collaborationController)
+  );
+
+
   // Report schedule CRUD: GET|POST|DELETE /api/v1/dashboards/:id/schedule
   await app.register(reportScheduleRoutes, { prefix: '/:id/schedule' });
 
   // Report generation / execution: /api/v1/dashboards/:id/reports...
   await app.register(reportRoutes, { prefix: '/:id/reports' });
 
-  // All subsequent dashboard management endpoints require authentication
-  const auth = { preHandler: [requireAuth] };
+
 
   /**
    * POST /api/v1/dashboards/:id/share

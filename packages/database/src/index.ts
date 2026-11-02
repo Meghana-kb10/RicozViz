@@ -80,6 +80,12 @@ export type {
   IAuditLogDocument
 } from './models/insight.model';
 export type { IAiUsage, IAiUsageDocument, AiUsageStatus } from './models/ai-usage.model';
+export { WorkerLockModel } from './models/worker-lock.model';
+export type { IWorkerLockDocument } from './models/worker-lock.model';
+export { WorkerRunModel } from './models/worker-run.model';
+export type { IWorkerRunDocument } from './models/worker-run.model';
+export { WsTicketModel } from './models/ws-ticket.model';
+export type { IWsTicketDocument } from './models/ws-ticket.model';
 
 // ---- Model helpers ----
 export { defineModel, objectIdRef, objectIdRefOptional, toObjectId, idToString } from './models/model.util';

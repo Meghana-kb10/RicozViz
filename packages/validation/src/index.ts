@@ -106,4 +106,33 @@ export { loginRequestSchema as loginSchema } from './auth/index';
 export type { LoginRequestInput as LoginInputType } from './auth/index';
 
 // RicozViz enterprise validation schemas
-export * from './ricozviz/index';
+// RicozViz enterprise validation schemas
+export {
+  resourceIdParamSchema,
+  resourceTokenParamSchema,
+  resourceSlugParamSchema,
+  aiFilterSchema,
+  askAnalystSchema,
+  nlToChartSchema,
+  insightsSchema,
+  dashboardSummarySchema,
+  testRawConnectionSchema,
+  createDataSourceSchema,
+  updateDataSourceSchema,
+  createDatasetSchema,
+  updateDatasetSchema,
+  listDatasetsQuerySchema,
+  datasetQueryParamsSchema,
+  createDashboardSchema,
+  updateDashboardSchema,
+  listDashboardsQuerySchema,
+  createEmbedConfigSchema,
+  createChartSchema,
+  updateChartSchema,
+  createAlertSchema,
+  updateAlertSchema,
+  exportRequestSchema,
+  createWorkspaceSchema,
+  updateWorkspaceSchema
+} from './ricozviz/index';
+

@@ -286,7 +286,20 @@ export type {
   LedgerIntegritySummary,
   AuditTrailPreviewData,
   RevokeTokenPayload,
-  RevokeTokenResult
+  RevokeTokenResult,
+  WorkerRunStatus,
+  WorkerLock,
+  WorkerRun,
+  WorkerRunFilter,
+  TriggerJobResult,
+  WorkerHealthStatus,
+  WsTicket,
+  WsTicketResponse,
+  WsClientMessageType,
+  WsClientMessage,
+  WsServerMessageType,
+  WsCollaboratorPresence,
+  WsServerMessage
 } from './ricozviz/index';
 
 

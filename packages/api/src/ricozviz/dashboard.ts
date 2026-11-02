@@ -17,6 +17,7 @@
 import { apiFetch } from './client.js';
 import type {
   CollaborationStateResult,
+  WsTicketResponse,
   CreateDashboardInput,
   DashboardAccessLevel,
   DashboardCollaboratorData,
@@ -185,6 +186,18 @@ export async function apiRevokeDashboardCollaborator(
 }
 
 // ---- Real-time collaboration --------------------------------------------------
+
+
+export async function apiGetDashboardWsTicket(
+  dashboardId: string
+): Promise<WsTicketResponse> {
+  return apiFetch<WsTicketResponse>(
+    `/api/v1/dashboards/${dashboardId}/ws-ticket`,
+    {
+      method: "POST",
+    }
+  );
+}
 
 export async function apiGetCollaborationState(
   dashboardId: string
