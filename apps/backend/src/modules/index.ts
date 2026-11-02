@@ -25,6 +25,7 @@ import { templateRoutes } from './ricozviz/template/index.js';
 import { auditRoutes } from './ricozviz/audit/index.js';
 import { aiRoutes } from './ricozviz/ai/index.js';
 import { governanceRoutes } from './ricozviz/governance/index.js';
+import { adminRoutes } from './admin/index.js';
 
 /** Canonical list of migrated endpoints, served from the versioned index route. */
 const RICOZVIZ_V1_ENDPOINTS = [
@@ -78,6 +79,9 @@ export async function registerModules(app: FastifyInstance): Promise<void> {
   await app.register(auditRoutes, { prefix: '/api/v1/audit-logs' });
   await app.register(governanceRoutes, { prefix: '/api/v1/governance' });
   await app.register(aiRoutes, { prefix: '/api/v1/ai' });
+
+  // ---- Platform Administration Subsystem (/admin/*) ----
+  await app.register(adminRoutes, { prefix: '/admin' });
 
   // ---- Versioned index ----
   app.get('/api/v1', async (_request, reply) =>

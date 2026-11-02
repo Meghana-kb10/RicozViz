@@ -133,6 +133,26 @@ export {
   updateAlertSchema,
   exportRequestSchema,
   createWorkspaceSchema,
-  updateWorkspaceSchema
+  updateWorkspaceSchema,
+  adminLoginSchema,
+  adminTotpVerifySchema,
+  adminTenantListQuerySchema,
+  adminTenantPlanUpdateSchema,
+  adminTenantSuspendSchema,
+  adminUserListQuerySchema,
+  adminUserStatusUpdateSchema,
+  adminFeatureFlagUpsertSchema,
+  adminWorkerTriggerSchema,
+  adminAuditQuerySchema,
+  type AdminLoginInput,
+  type AdminTotpVerifyInput,
+  type AdminTenantListQueryInput,
+  type AdminTenantPlanUpdateInput,
+  type AdminTenantSuspendInput,
+  type AdminUserListQueryInput,
+  type AdminUserStatusUpdateInput,
+  type AdminFeatureFlagUpsertInput,
+  type AdminWorkerTriggerInput,
+  type AdminAuditQueryInput
 } from './ricozviz/index';
 

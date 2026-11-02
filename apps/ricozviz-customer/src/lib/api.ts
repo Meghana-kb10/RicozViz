@@ -399,15 +399,3 @@ export type {
  * selects the concrete file/DB connectors below. The API layer accepts both.
  */
 export type { DataSourceConnectorType as DataSourceType } from '@repo/types';
-
-// ---- Worker Subsystem (Operator APIs) ----------------------------------------
-export {
-  apiListWorkerRuns,
-  apiTriggerWorkerJob,
-  apiGetWorkerHealth,
-  type WorkerRunItem,
-  type ListWorkerRunsParams,
-  type ListWorkerRunsResponse,
-  type WorkerHealthResponse,
-  type TriggerWorkerJobResponse
-} from '@repo/api';

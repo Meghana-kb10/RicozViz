@@ -5,7 +5,7 @@
 **Verification Baseline**:
 - `pnpm install`: Clean installation, 0 dependency conflicts.
 - `pnpm run check-types`: **0 errors** across all 9 packages (`@repo/types`, `@repo/validation`, `@repo/utils`, `@repo/database`, `@repo/api`, `@repo/components`, `@repo/tailwind-config`, `apps/ricozviz-customer`, `apps/backend`).
-- `pnpm --filter backend test`: **4/4 test suites passed** (`response.test.ts`, `governance.test.ts`, `rls-simulator.test.ts`, `audit-preview.test.ts`).
+- `pnpm --filter backend test`: **10/10 test suites passed** (`response.test.ts`, `governance.test.ts`, `rls-simulator.test.ts`, `audit-preview.test.ts`, `duckdb-dataset.test.ts`, `ai.test.ts`, `flow.test.ts`, `security-hardening.test.ts`, `worker-presence.test.ts`, `admin.test.ts`).
 - `pnpm run build`: **0 errors**, production bundles compiled cleanly for all applications and packages.
 
 ---
@@ -25,6 +25,7 @@
 | **`audit ledger`** | `real` | • Cryptographic WORM (Write-Once-Read-Many) append-only ledger using SHA-256 hash chains.<br>• Every audit event links previous block hash, sequence index, timestamp, and payload digest.<br>• Cryptographic verification (`verifyChainIntegrity`) validates tamper resistance.<br>• Multi-tenant tenantId scoping and token revocation events are cryptographically recorded. Verified by 5 passing unit tests. | `apps/backend/src/modules/ricozviz/audit/audit-preview.service.ts`<br>`apps/backend/src/modules/ricozviz/audit/audit-preview.controller.ts`<br>`apps/backend/src/modules/ricozviz/audit/audit-preview.test.ts`<br>`apps/ricozviz-customer/src/app/audit/page.tsx` |
 | **`RLS`** | `partial` | • Real SQL WHERE-clause rewrite in `rls.service.ts` injecting tenant and workspace boundaries.<br>• Column masking in `rls-simulator.ts` is an in-memory simulation tool for CISO compliance demonstrations, not enforced at the database proxy/storage level.<br>• SAML 2.0 / SCIM badge attestations in CISO overview are metadata badges; no actual SAML IdP SP metadata endpoints or SCIM 2.0 REST endpoints exist (system uses JWT + password). | `apps/backend/src/modules/ricozviz/dataset/rls.service.ts`<br>`apps/backend/src/modules/ricozviz/governance/governance.service.ts`<br>`apps/backend/src/modules/ricozviz/governance/rls-simulator.ts`<br>`apps/ricozviz-customer/src/app/security/page.tsx`<br>`apps/ricozviz-customer/src/components/shell/SecurityGovernanceBadges.tsx` |
 | **`presence`** | `real` | • Production real-time presence & cursor synchronization engine powered by `@fastify/websocket` (`/ws/dashboards/:id`).<br>• Zero token leakage in URLs: authenticates via short-lived, single-use 30-second ticket (`POST /api/v1/dashboards/:id/ws-ticket` or `/collaboration/ticket`) requiring dashboard workspace access.<br>• Tenant-isolated rooms (`${workspaceId}:${dashboardId}`): live broadcasting of `USER_JOINED`, `USER_LEFT`, `CURSOR_MOVED`, `WIDGET_FOCUSED`, and `DASHBOARD_UPDATED`.<br>• Server-side 45-second dead-connection TTL sweep and per-connection 50 msg/s rate limiting.<br>• Dashboard UI connects via WebSocket with automatic fallback to SSE & REST polling if socket disconnects.<br>• Landing page multiplayer canvas is preserved and explicitly documented as a front-of-house showcase demo. | `apps/backend/src/modules/ricozviz/collaboration/ws-collaboration.service.ts`<br>`apps/backend/src/modules/ricozviz/collaboration/ws-ticket.service.ts`<br>`apps/backend/src/modules/ricozviz/collaboration/collaboration.routes.ts`<br>`apps/ricozviz-customer/src/app/dashboards/[id]/page.tsx`<br>`apps/ricozviz-customer/src/components/shell/CollaborativeMultiplayerCanvas.tsx` |
+| **`platform admin`** | `real` | • Complete platform-operator subsystem under `/admin/*` in `apps/backend/src/modules/admin/`.<br>• Isolated auth: dedicated `POST /admin/auth/login`, `aud: "admin"`, distinct `JWT_ADMIN_SECRET`, 15-minute access tokens, and rotating refresh tokens stored with SHA-256 hashes in `RefreshTokenModel` (`rv_admin_session` cookie).<br>• Mandatory RFC 6238 TOTP 2FA for all `PLATFORM_ADMIN`s: enrollment, verification, AES-256-GCM secret encryption at rest, and 10 single-use hashed backup codes.<br>• Tenant governance: list (search/pagination/metrics), detail, suspend/unsuspend (instantly blocks users on customer routes with 403), and tier plan changes.<br>• User lifecycle management: list, detail, disable/enable, and force logout (revokes all active refresh tokens in user's family and increments `tokenVersion`).<br>• Strictly read-only, time-limited (15 min) impersonation: token carries `imp: true`, allows safe diagnostic GET inspection, and strictly blocks mutating POST/PUT/DELETE requests with 403.<br>• Background worker orchestration: inspect active worker health/locks, query run history, and trigger registered jobs on demand.<br>• Global WORM audit ledger & cryptographic hash-chain verification spanning all tenants.<br>• Dynamic feature flags (`FeatureFlagModel`) with global toggles and per-tenant overrides (`featureFlagService`).<br>• Fully typed API client in `@repo/api` under `packages/api/src/admin/`. | `apps/backend/src/modules/admin/`<br>`packages/api/src/admin/`<br>`packages/validation/src/ricozviz/admin.schema.ts`<br>`packages/database/src/models/feature-flag.model.ts` |
 | **`workers`** | `real` | • Dedicated background worker daemon (`apps/backend/src/worker.ts`, script: `pnpm run worker`, tsup ESM target).<br>• Decoupled from API server: Fastify HTTP server no longer runs any cron timers.<br>• Distributed lease locking (`WorkerLockModel`, `worker_locks` collection): atomic `findOneAndUpdate` acquisition, periodic heartbeat renewal, and automatic lock expiration prevent duplicate execution across multiple worker instances.<br>• Exponential backoff retries (up to 3 attempts with jitter) and failed-job state handling.<br>• 30-day retention execution audit trail (`WorkerRunModel`, `worker_runs` collection) indexing job name, start time, attempt count, processed items, duration, and error details.<br>• Graceful shutdown on SIGTERM/SIGINT (finishing active jobs or releasing locks) and HTTP `/health` endpoint on port 3010.<br>• Reusable service API (`listWorkerRuns`, `triggerJob`, `getWorkerHealthStatus`) ready for admin monitoring routes. | `apps/backend/src/worker.ts`<br>`apps/backend/src/modules/worker/worker-lock.service.ts`<br>`apps/backend/src/modules/worker/worker-runner.service.ts`<br>`apps/backend/src/modules/worker/worker-admin.service.ts`<br>`packages/database/src/models/worker-lock.model.ts`<br>`packages/database/src/models/worker-run.model.ts` |
 
 ---
@@ -131,6 +132,22 @@
 
 ---
 
+### 2.13 Platform Admin Subsystem (`apps/backend/src/modules/admin/`)
+- **Operational Reality**: Fully **real** platform-operator administration architecture:
+  - **Role Model**: Added `SYSTEM_ROLE.PLATFORM_ADMIN` to `@repo/types` and `@repo/database`, distinct from workspace `ADMIN`. It can never be granted via any customer signup or API route. CLI seed script `apps/backend/src/scripts/create-platform-admin.ts` (`pnpm run seed:admin`) enforces password complexity (min 12 chars, upper, lower, number, special char).
+  - **Separate Admin Auth**: Dedicated `POST /admin/auth/login` with isolated `JWT_ADMIN_SECRET`, `aud: "admin"`, 15-minute access tokens, and rotating refresh tokens with family replay defense. Tokens are bound to cookie `rv_admin_session`. Cross-boundary token isolation is strictly enforced: customer tokens receive 403 Forbidden on `/admin/*`, and admin tokens receive 403 Forbidden on customer routes.
+  - **RFC 6238 TOTP 2FA**: Native Node.js crypto engine generating standard Base32 secrets and OTPAuth QR URIs. Secrets are encrypted at rest using AES-256-GCM. 10 single-use backup codes hashed with bcrypt. 2FA verification is mandatory for all platform admin operations.
+  - **Account Lockout Defense**: 5 consecutive failed login attempts locks the admin account for 15 minutes.
+  - **Tenant Governance**: Complete tenant management under `/admin/tenants`. Suspending a tenant immediately prevents all member users from accessing customer routes (403 Forbidden).
+  - **User Governance**: User inspection, enable/disable, and global force logout (`POST /admin/users/:id/force-logout`) which revokes all active refresh token families and increments `tokenVersion`.
+  - **Read-Only Impersonation**: Generates a 15-minute token with `imp: true`. Customer route guards allow diagnostic GET queries while strictly rejecting POST/PUT/PATCH/DELETE mutations with 403 Forbidden.
+  - **Worker Orchestration**: Reuses `listWorkerRuns`, `getWorkerHealthStatus`, and `triggerJob` to monitor background daemons and trigger manual runs.
+  - **Cryptographic WORM Audit**: Global multi-tenant ledger search and hash-chain mathematical integrity verification.
+  - **Feature Flags**: Dynamic feature toggles persisted in `FeatureFlagModel` with global defaults and tenant-specific overrides.
+  - **Typed API Client**: Exported from `@repo/api` under `packages/api/src/admin/`. All worker client exports have been removed from the customer app facade.
+
+---
+
 ### 2.12 Dedicated Background Worker Daemon (`apps/backend/src/worker.ts`)
 - **Operational Reality**: Fully **real** standalone background daemon (`apps/backend/src/worker.ts`, script: `pnpm run worker`, tsup ESM target).
   - Decoupled from API server: Fastify HTTP server no longer runs any cron timers.
@@ -162,7 +179,7 @@ In response to production UI feedback and zero-trust authentication compliance:
 ---
 
 ## 4. Current Test Verification Status
-- **Backend Test Suite**: 9/9 test suites passing 100%:
+- **Backend Test Suite**: 10/10 test suites passing 100%:
   1. `response.test.ts` (API formatting & error payload sanitization)
   2. `governance.test.ts` (CISO controls, security badges & checksums)
   3. `rls-simulator.test.ts` (Dynamic masking & cryptographic RLS)
@@ -172,6 +189,7 @@ In response to production UI feedback and zero-trust authentication compliance:
   7. `flow.test.ts` (Complete 10-step E2E enterprise flow)
   8. `security-hardening.test.ts` (Zero-trust audit, AES-256-GCM, token rotation, lockout, rate limiting)
   9. `worker-presence.test.ts` (Worker distributed locking race, backoff failure state, audit logging, WebSocket ticket auth, cross-tenant room isolation)
+  10. `admin.test.ts` (Admin password strength, TOTP 2FA & AES-GCM at rest, token isolation, tenant suspension, read-only impersonation, feature flag hierarchy, account lockout, WORM audit chain)
 
 ---
 

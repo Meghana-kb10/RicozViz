@@ -1,4 +1,8 @@
-import type { OrganizationProfile, UserProfile } from './entities';
+/**
+ * Authentication and identity payloads for the RicozViz domain.
+ */
+
+import type { UserProfile, OrganizationProfile } from './entities';
 
 export interface RicozVizAuthResponse {
   user: UserProfile;
@@ -36,10 +40,28 @@ export interface RicozVizLoginInput {
 export interface AccessTokenPayload {
   sub: string;
   email: string;
-  organizationId: string;
-  roleId: string;
-  roleName: string;
-  permissions: string[];
+  organizationId?: string;
+  roleId?: string;
+  roleName?: string;
+  permissions?: string[];
+  role?: string;
+  aud?: string;
+  systemRole?: string;
+  twoFactorVerified?: boolean;
+  imp?: boolean;
+  impersonator?: string;
+  iat?: number;
+  exp?: number;
+}
+
+/** Admin JWT access-token payload */
+export interface AdminAccessTokenPayload {
+  sub: string;
+  email: string;
+  role: 'PLATFORM_ADMIN';
+  aud: 'admin';
+  twoFactorVerified: boolean;
+  type: 'access';
   iat?: number;
   exp?: number;
 }
@@ -52,4 +74,9 @@ export interface AuthenticatedUser {
   roleId: string;
   roleName: string;
   permissions: string[];
+  role?: string;
+  aud?: string;
+  systemRole?: string;
+  isImpersonated?: boolean;
+  impersonator?: string;
 }

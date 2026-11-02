@@ -29,6 +29,12 @@ export const MEMBERSHIP_STATUS = {
 } as const;
 export type MembershipStatus = (typeof MEMBERSHIP_STATUS)[keyof typeof MEMBERSHIP_STATUS];
 
+export const SYSTEM_ROLE = {
+  USER: 'USER',
+  PLATFORM_ADMIN: 'PLATFORM_ADMIN'
+} as const;
+export type SystemRole = (typeof SYSTEM_ROLE)[keyof typeof SYSTEM_ROLE];
+
 export const WORKSPACE_ROLE = {
   OWNER: 'OWNER',
   ADMIN: 'ADMIN',

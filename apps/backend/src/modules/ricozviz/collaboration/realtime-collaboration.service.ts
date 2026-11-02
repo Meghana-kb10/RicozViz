@@ -136,6 +136,9 @@ export function resolveUserFromTokenSource(params: {
 
   try {
     const payload = verifyAccessToken(token);
+    if (!payload.organizationId || !payload.roleId || !payload.roleName) {
+      throw AppError.unauthorized('Invalid collaboration token claims');
+    }
     return {
       userId: payload.sub,
       email: payload.email,

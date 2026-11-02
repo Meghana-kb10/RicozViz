@@ -4,6 +4,7 @@ import type {
   DataSourceDisplayStatus,
   MembershipStatus,
   OrganizationStatus,
+  SystemRole,
   UserStatus,
   WorkspaceRole
 } from './enums';
@@ -14,6 +15,7 @@ export interface UserProfile {
   name: string;
   avatarUrl: string | null;
   status: UserStatus | string;
+  systemRole?: SystemRole | string;
   createdAt: string;
 }
 

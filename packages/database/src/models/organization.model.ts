@@ -9,6 +9,7 @@ export interface IOrganizationDocument extends Document {
   slug: string;
   logoUrl: string | null;
   status: string;
+  plan?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,7 +24,8 @@ const OrganizationSchema = new Schema<IOrganizationDocument>(
       enum: Object.values(ORGANIZATION_STATUS),
       default: ORGANIZATION_STATUS.ACTIVE,
       index: true
-    }
+    },
+    plan: { type: String, default: 'STARTER', index: true }
   },
   { collection: COLLECTIONS.ORGANIZATIONS, timestamps: true, versionKey: false }
 );

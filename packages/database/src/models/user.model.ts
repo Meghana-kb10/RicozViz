@@ -19,13 +19,20 @@ export interface IUserDocument extends Document {
   name: string;
   email: string;
   password?: string;
-  role: 'admin' | 'user' | 'guest';
+  role: 'admin' | 'user' | 'guest' | 'PLATFORM_ADMIN';
   passwordHash?: string | null;
   avatarUrl?: string | null;
   status?: string;
   tokenVersion?: number;
   failedLoginAttempts?: number;
   lockUntil?: Date | null;
+  twoFactorSecretEncrypted?: string | null;
+  twoFactorSecretKeyVersion?: number | null;
+  twoFactorSecretIv?: string | null;
+  twoFactorSecretAuthTag?: string | null;
+  twoFactorBackupCodesHashed?: string[];
+  twoFactorEnabled?: boolean;
+  twoFactorVerifiedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,9 +86,43 @@ const UserSchema = new Schema<IUserDocument>(
       type: Date,
       default: null
     },
+    twoFactorSecretEncrypted: {
+      type: String,
+      default: null,
+      select: false
+    },
+    twoFactorSecretKeyVersion: {
+      type: Number,
+      default: null,
+      select: false
+    },
+    twoFactorSecretIv: {
+      type: String,
+      default: null,
+      select: false
+    },
+    twoFactorSecretAuthTag: {
+      type: String,
+      default: null,
+      select: false
+    },
+    twoFactorBackupCodesHashed: {
+      type: [String],
+      default: [],
+      select: false
+    },
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    twoFactorVerifiedAt: {
+      type: Date,
+      default: null
+    },
     role: {
       type: String,
-      enum: ['admin', 'user', 'guest'],
+      enum: ['admin', 'user', 'guest', 'PLATFORM_ADMIN'],
       default: 'user',
       index: true
     }

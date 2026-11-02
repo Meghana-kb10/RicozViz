@@ -15,6 +15,7 @@ export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   jwtAccessSecret: string;
   jwtRefreshSecret: string;
+  jwtAdminSecret: string;
   jwtAccessExpiresIn: string;
   jwtRefreshExpiresIn: string;
   credentialEncKey: string;
@@ -29,6 +30,7 @@ export interface AppConfig {
 const ricozEnvSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').optional(),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters').optional(),
+  JWT_ADMIN_SECRET: z.string().min(32, 'JWT_ADMIN_SECRET must be at least 32 characters').optional(),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters').optional(),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
@@ -122,6 +124,7 @@ export function loadEnv(cwd: string = process.cwd()): AppConfig {
     corsOrigin,
     jwtAccessSecret: effectiveJwtAccessSecret,
     jwtRefreshSecret: effectiveJwtRefreshSecret,
+    jwtAdminSecret: parsed.data.JWT_ADMIN_SECRET || `${effectiveJwtAccessSecret}_admin_vault_secret_32_bytes!`,
     jwtAccessExpiresIn: parsed.data.JWT_ACCESS_EXPIRES_IN,
     jwtRefreshExpiresIn: parsed.data.JWT_REFRESH_EXPIRES_IN,
     credentialEncKey: effectiveCredentialKey,

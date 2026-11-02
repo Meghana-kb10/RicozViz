@@ -46,7 +46,8 @@ export const COLLECTIONS = {
   AI_USAGE: 'ai_usage',
   WORKER_LOCKS: 'worker_locks',
   WORKER_RUNS: 'worker_runs',
-  WS_TICKETS: 'ws_tickets'
+  WS_TICKETS: 'ws_tickets',
+  FEATURE_FLAGS: 'feature_flags'
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

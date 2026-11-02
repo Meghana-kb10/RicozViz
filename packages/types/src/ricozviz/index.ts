@@ -10,6 +10,7 @@ export {
   USER_STATUS,
   ORGANIZATION_STATUS,
   MEMBERSHIP_STATUS,
+  SYSTEM_ROLE,
   WORKSPACE_ROLE,
   DATA_SOURCE_TYPE,
   DATA_SOURCE_STATUS,
@@ -52,6 +53,7 @@ export type {
   UserStatus,
   OrganizationStatus,
   MembershipStatus,
+  SystemRole,
   WorkspaceRole,
   DataSourceType,
   DataSourceStatus,
@@ -110,6 +112,7 @@ export type {
   RicozVizRegisterInput,
   RicozVizLoginInput,
   AccessTokenPayload,
+  AdminAccessTokenPayload,
   AuthenticatedUser
 } from './auth';
 

@@ -216,3 +216,30 @@ export const updateWorkspaceSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   description: z.string().max(500).optional().nullable()
 });
+
+// ==============================================================================
+// Platform Admin Validation Schemas
+// ==============================================================================
+
+export {
+  adminLoginSchema,
+  adminTotpVerifySchema,
+  adminTenantListQuerySchema,
+  adminTenantPlanUpdateSchema,
+  adminTenantSuspendSchema,
+  adminUserListQuerySchema,
+  adminUserStatusUpdateSchema,
+  adminFeatureFlagUpsertSchema,
+  adminWorkerTriggerSchema,
+  adminAuditQuerySchema,
+  type AdminLoginInput,
+  type AdminTotpVerifyInput,
+  type AdminTenantListQueryInput,
+  type AdminTenantPlanUpdateInput,
+  type AdminTenantSuspendInput,
+  type AdminUserListQueryInput,
+  type AdminUserStatusUpdateInput,
+  type AdminFeatureFlagUpsertInput,
+  type AdminWorkerTriggerInput,
+  type AdminAuditQueryInput
+} from './admin.schema.js';

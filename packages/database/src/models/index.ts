@@ -75,5 +75,7 @@ export { WorkerRunModel } from './worker-run.model';
 export type { IWorkerRunDocument } from './worker-run.model';
 export { WsTicketModel } from './ws-ticket.model';
 export type { IWsTicketDocument } from './ws-ticket.model';
+export { FeatureFlagModel } from './feature-flag.model';
+export type { IFeatureFlagDocument, IFeatureFlagTenantOverride } from './feature-flag.model';
 
 export { defineModel, objectIdRef, objectIdRefOptional, toObjectId, idToString } from './model.util';
