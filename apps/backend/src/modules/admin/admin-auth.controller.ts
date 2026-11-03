@@ -4,7 +4,11 @@ import { sendSuccess } from '../../utils/response.js';
 import { AppError } from '../../utils/errors.js';
 import { ADMIN_REFRESH_COOKIE } from '../../lib/jwt.js';
 import { validate } from '@repo/validation';
-import { adminLoginSchema, adminTotpVerifySchema } from '@repo/validation';
+import {
+  adminLoginSchema,
+  adminTotpVerifySchema,
+  adminChangePasswordSchema
+} from '@repo/validation';
 
 export class AdminAuthController {
   async login(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -62,6 +66,25 @@ export class AdminAuthController {
     const input = validate(adminTotpVerifySchema, request.body);
     const result = await adminAuthService.verifyTotp(adminUser.userId, input.totpCode);
     sendSuccess(reply, result, 200);
+  }
+
+  async changePassword(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const adminUser = request.adminUser;
+    if (!adminUser) throw AppError.unauthorized('Admin unauthorized');
+
+    const input = validate(adminChangePasswordSchema, request.body);
+    const ipAddress = request.ip || (request.headers['x-forwarded-for'] as string) || undefined;
+    const userAgent = (request.headers['user-agent'] as string) || undefined;
+
+    await adminAuthService.changePassword(
+      adminUser.userId,
+      input.currentPassword,
+      input.newPassword,
+      ipAddress,
+      userAgent
+    );
+
+    sendSuccess(reply, { message: 'Password changed successfully' }, 200);
   }
 }
 

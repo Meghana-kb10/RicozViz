@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==========================================================================
+   RicozViz Platform Admin Subsystem Design Tokens
+   Obsidian Precision Dark Palette (#121212 floor, #ff6b35 coral accent)
+   ========================================================================== */
+
+@theme {
+  --font-heading: var(--font-heading, "Inter", sans-serif);
+  --font-sans: var(--font-sans, "Inter", sans-serif);
+  --font-mono: var(--font-mono, "JetBrains Mono", monospace);
+
+  --color-admin-floor: #0e0e0e;
+  --color-admin-surface: #141414;
+  --color-admin-card: #181818;
+  --color-admin-border: #242424;
+  --color-admin-border-subtle: #1e1e1e;
+  --color-admin-border-hover: #333333;
+  --color-admin-coral: #ff6b35;
+  --color-admin-coral-hover: #fa5c20;
+  --color-admin-text: #fafafa;
+  --color-admin-muted: #898989;
+  --color-admin-subtle: #555555;
+}
+
+:root {
+  --background: 0 0% 5%;
+  --foreground: 0 0% 98%;
+  --surface: 0 0% 8%;
+  --surface-raised: 0 0% 10%;
+  --border: 0 0% 15%;
+  --accent-coral: #ff6b35;
+}
+
+body {
+  background-color: #0e0e0e;
+  color: #fafafa;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+::-webkit-scrollbar-thumb {
+  background: #282828;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #383838;
+}

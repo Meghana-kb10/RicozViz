@@ -67,6 +67,11 @@ export const adminAuditQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0)
 });
 
+export const adminChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(12, 'New password must be at least 12 characters long')
+});
+
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
 export type AdminTotpVerifyInput = z.infer<typeof adminTotpVerifySchema>;
 export type AdminTenantListQueryInput = z.infer<typeof adminTenantListQuerySchema>;
@@ -77,3 +82,4 @@ export type AdminUserStatusUpdateInput = z.infer<typeof adminUserStatusUpdateSch
 export type AdminFeatureFlagUpsertInput = z.infer<typeof adminFeatureFlagUpsertSchema>;
 export type AdminWorkerTriggerInput = z.infer<typeof adminWorkerTriggerSchema>;
 export type AdminAuditQueryInput = z.infer<typeof adminAuditQuerySchema>;
+export type AdminChangePasswordInput = z.infer<typeof adminChangePasswordSchema>;

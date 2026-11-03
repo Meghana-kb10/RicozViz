@@ -324,6 +324,48 @@ export class AdminAuthService {
 
     return { backupCodes: plaintextCodes };
   }
+
+  /**
+   * Change platform admin password with current password verification and audit logging.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    const user = await UserModel.findById(toObjectId(userId)).select('+passwordHash');
+    if (!user || user.role !== 'PLATFORM_ADMIN') {
+      throw AppError.notFound('Admin user not found');
+    }
+
+    const currentMatches = user.passwordHash
+      ? await bcrypt.compare(currentPassword, user.passwordHash)
+      : false;
+
+    if (!currentMatches) {
+      throw AppError.badRequest('Current password is incorrect');
+    }
+
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    user.passwordHash = newHash;
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+
+    await logAuditEvent({
+      organizationId: 'SYSTEM',
+      action: 'UPDATE',
+      resourceType: 'ADMIN_USER',
+      resourceId: user._id.toString(),
+      userId: user._id.toString(),
+      ipAddress,
+      userAgent,
+      metadata: { action: 'PASSWORD_CHANGE', adminEmail: user.email }
+    });
+
+    logger.info(`[AdminAuth] Password successfully changed for platform admin "${user.email}".`);
+  }
 }
 
 export const adminAuthService = new AdminAuthService();

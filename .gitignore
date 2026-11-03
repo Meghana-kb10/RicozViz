@@ -30,4 +30,6 @@ patch-*.js
 label-*.js
 scratch/
 *.scratch.*
+test-results/
+playwright-report/
 

@@ -33,6 +33,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   app.post('/auth/logout', adminAuthController.logout.bind(adminAuthController));
   app.post('/auth/totp/enroll', adminGuard, adminAuthController.enrollTotp.bind(adminAuthController));
   app.post('/auth/totp/verify', adminGuard, adminAuthController.verifyTotp.bind(adminAuthController));
+  app.post('/auth/change-password', adminGuard, adminAuthController.changePassword.bind(adminAuthController));
 
   // ---- Tenants Administration -------------------------------------------------
   app.get('/tenants', adminGuard, adminTenantsController.list.bind(adminTenantsController));

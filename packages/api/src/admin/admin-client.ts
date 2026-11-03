@@ -6,10 +6,13 @@
  * and automatic 401 refresh via `/admin/auth/refresh`.
  */
 
-import type { AdminLoginInput, AdminTotpVerifyInput } from '@repo/validation';
+import type {
+  AdminLoginInput,
+  AdminTotpVerifyInput,
+  AdminChangePasswordInput
+} from '@repo/validation';
 
 const DEFAULT_BASE_URL = 'http://localhost:4000';
-const ADMIN_ACCESS_TOKEN_KEY = 'rv_admin_at';
 const ADMIN_SESSION_COOKIE = 'rv_admin_session';
 
 let configuredAdminBaseUrl: string | null = null;
@@ -54,29 +57,11 @@ export class AdminApiError extends Error {
 }
 
 export function getAdminAccessToken(): string | null {
-  if (typeof window !== 'undefined') {
-    try {
-      return window.sessionStorage.getItem(ADMIN_ACCESS_TOKEN_KEY);
-    } catch {
-      return inMemoryAdminAccessToken;
-    }
-  }
   return inMemoryAdminAccessToken;
 }
 
 export function setAdminAccessToken(token: string | null): void {
   inMemoryAdminAccessToken = token;
-  if (typeof window !== 'undefined') {
-    try {
-      if (token) {
-        window.sessionStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, token);
-      } else {
-        window.sessionStorage.removeItem(ADMIN_ACCESS_TOKEN_KEY);
-      }
-    } catch {
-      // sessionStorage unavailable
-    }
-  }
 }
 
 export function clearAdminAccessToken(): void {
@@ -85,8 +70,28 @@ export function clearAdminAccessToken(): void {
 
 // Concurrency queue for admin 401 refresh
 let adminRefreshPromise: Promise<string | null> | null = null;
+let customAdminRefreshHandler: (() => Promise<string | null>) | null = null;
+
+export function setAdminRefreshHandler(handler: (() => Promise<string | null>) | null): void {
+  customAdminRefreshHandler = handler;
+}
 
 async function executeAdminRefresh(): Promise<string | null> {
+  if (customAdminRefreshHandler) {
+    try {
+      const token = await customAdminRefreshHandler();
+      if (token) {
+        setAdminAccessToken(token);
+        return token;
+      }
+      clearAdminAccessToken();
+      return null;
+    } catch {
+      clearAdminAccessToken();
+      return null;
+    }
+  }
+
   const url = `${getAdminApiBaseUrl()}/admin/auth/refresh`;
   try {
     const res = await fetch(url, {
@@ -233,3 +238,11 @@ export async function apiAdminVerifyTotp(input: AdminTotpVerifyInput): Promise<{
     body: JSON.stringify(input)
   });
 }
+
+export async function apiAdminChangePassword(input: AdminChangePasswordInput): Promise<{ message: string }> {
+  return adminApiFetch<{ message: string }>('/admin/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+}
+

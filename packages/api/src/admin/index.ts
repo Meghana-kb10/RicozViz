@@ -10,12 +10,14 @@ export {
   getAdminAccessToken,
   setAdminAccessToken,
   clearAdminAccessToken,
+  setAdminRefreshHandler,
   adminApiFetch,
   apiAdminLogin,
   apiAdminRefresh,
   apiAdminLogout,
   apiAdminEnrollTotp,
   apiAdminVerifyTotp,
+  apiAdminChangePassword,
   type AdminAuthUser,
   type AdminAuthResult
 } from './admin-client.js';

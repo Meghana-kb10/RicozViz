@@ -232,6 +232,7 @@ export {
   adminFeatureFlagUpsertSchema,
   adminWorkerTriggerSchema,
   adminAuditQuerySchema,
+  adminChangePasswordSchema,
   type AdminLoginInput,
   type AdminTotpVerifyInput,
   type AdminTenantListQueryInput,
@@ -241,5 +242,6 @@ export {
   type AdminUserStatusUpdateInput,
   type AdminFeatureFlagUpsertInput,
   type AdminWorkerTriggerInput,
-  type AdminAuditQueryInput
+  type AdminAuditQueryInput,
+  type AdminChangePasswordInput
 } from './admin.schema.js';
