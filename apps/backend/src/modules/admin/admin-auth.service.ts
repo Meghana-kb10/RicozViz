@@ -147,6 +147,8 @@ export class AdminAuthService {
       tokenHash,
       userId: user._id,
       familyId,
+      createdByIp: ipAddress || null,
+      userAgent: userAgent || null,
       expiresAt: new Date(Date.now() + SEVEN_DAYS_MS)
     });
 
@@ -178,7 +180,11 @@ export class AdminAuthService {
   /**
    * Refresh admin access token with rotation and family replay detection.
    */
-  async refresh(rawRefreshToken: string): Promise<{
+  async refresh(
+    rawRefreshToken: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<{
     accessToken: string;
     newRefreshToken: string;
     cookieOptions: ReturnType<typeof getAdminRefreshCookieOptions>;
@@ -221,6 +227,8 @@ export class AdminAuthService {
       tokenHash: newTokenHash,
       userId: user._id,
       familyId: newFamilyId,
+      createdByIp: ipAddress || storedToken.createdByIp || null,
+      userAgent: userAgent || storedToken.userAgent || null,
       expiresAt: new Date(Date.now() + SEVEN_DAYS_MS)
     });
 
@@ -365,6 +373,137 @@ export class AdminAuthService {
     });
 
     logger.info(`[AdminAuth] Password successfully changed for platform admin "${user.email}".`);
+  }
+
+  /**
+   * Regenerate backup codes for platform admin. Requires verified current TOTP code.
+   */
+  async regenerateBackupCodes(
+    userId: string,
+    totpCode: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<{ backupCodes: string[] }> {
+    const user = await UserModel.findById(toObjectId(userId)).select(
+      '+twoFactorSecretEncrypted +twoFactorSecretIv +twoFactorSecretAuthTag +twoFactorSecretKeyVersion'
+    );
+    if (!user || user.role !== 'PLATFORM_ADMIN') {
+      throw AppError.notFound('Admin user not found');
+    }
+
+    if (!user.twoFactorEnabled || !user.twoFactorSecretEncrypted || !user.twoFactorSecretIv || !user.twoFactorSecretAuthTag) {
+      throw AppError.badRequest('Two-factor authentication is not active on this account');
+    }
+
+    const decryptedSecret = totpService.decryptSecret({
+      encryptedData: user.twoFactorSecretEncrypted,
+      iv: user.twoFactorSecretIv,
+      authTag: user.twoFactorSecretAuthTag,
+      keyVersion: user.twoFactorSecretKeyVersion || 1
+    });
+
+    const isValid = totpService.verifyCode(decryptedSecret, totpCode);
+    if (!isValid) {
+      throw AppError.badRequest('Invalid 6-digit TOTP verification code');
+    }
+
+    const { plaintextCodes, hashedCodes } = await totpService.generateBackupCodes();
+
+    user.twoFactorBackupCodesHashed = hashedCodes;
+    await user.save();
+
+    await logAuditEvent({
+      organizationId: 'SYSTEM',
+      action: 'UPDATE',
+      resourceType: 'ADMIN_USER',
+      resourceId: user._id.toString(),
+      userId: user._id.toString(),
+      ipAddress,
+      userAgent,
+      metadata: { action: 'REGENERATE_BACKUP_CODES', adminEmail: user.email }
+    });
+
+    logger.info(`[AdminAuth] Backup codes regenerated for platform admin "${user.email}".`);
+
+    return { backupCodes: plaintextCodes };
+  }
+
+  /**
+   * List active refresh token sessions for platform admin.
+   */
+  async listSessions(
+    userId: string,
+    currentRefreshToken?: string
+  ): Promise<Array<{
+    id: string;
+    ipAddress: string;
+    userAgent: string;
+    createdAt: string;
+    lastUsedAt: string;
+    isCurrent: boolean;
+  }>> {
+    const currentHash = currentRefreshToken
+      ? crypto.createHash('sha256').update(currentRefreshToken).digest('hex')
+      : null;
+
+    const tokens = await RefreshTokenModel.find({
+      userId: toObjectId(userId),
+      isRevoked: false,
+      expiresAt: { $gt: new Date() }
+    })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    return tokens.map((t) => ({
+      id: t._id.toString(),
+      ipAddress: t.createdByIp || '127.0.0.1',
+      userAgent: t.userAgent || 'Unknown Browser / Session',
+      createdAt: t.createdAt.toISOString(),
+      lastUsedAt: t.updatedAt.toISOString(),
+      isCurrent: Boolean(currentHash && t.tokenHash === currentHash)
+    }));
+  }
+
+  /**
+   * Revoke a single active admin refresh session.
+   */
+  async revokeSession(
+    userId: string,
+    sessionId: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    const sId = toObjectId(sessionId);
+    if (!sId) throw AppError.badRequest('Invalid session ID');
+
+    const token = await RefreshTokenModel.findOne({
+      _id: sId,
+      userId: toObjectId(userId)
+    });
+
+    if (!token) {
+      throw AppError.notFound('Session not found or already revoked');
+    }
+
+    token.isRevoked = true;
+    await token.save();
+
+    if (token.familyId) {
+      await RefreshTokenModel.deleteMany({ familyId: token.familyId });
+    }
+
+    await logAuditEvent({
+      organizationId: 'SYSTEM',
+      action: 'DELETE',
+      resourceType: 'ADMIN_SESSION',
+      resourceId: sessionId,
+      userId,
+      ipAddress,
+      userAgent,
+      metadata: { action: 'REVOKE_ADMIN_SESSION', sessionId }
+    });
+
+    logger.info(`[AdminAuth] Revoked admin session "${sessionId}" for admin "${userId}".`);
   }
 }
 

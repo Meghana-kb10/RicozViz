@@ -62,20 +62,28 @@ export async function apiAdminGetUser(id: string): Promise<AdminUserItem> {
   });
 }
 
-export async function apiAdminDisableUser(id: string): Promise<{ message: string; user: AdminUserItem }> {
+export async function apiAdminDisableUser(
+  id: string,
+  input?: { reason?: string }
+): Promise<{ message: string; user: AdminUserItem }> {
   return adminApiFetch<{ message: string; user: AdminUserItem }>(
     `/admin/users/${encodeURIComponent(id)}/disable`,
     {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify(input || {})
     }
   );
 }
 
-export async function apiAdminEnableUser(id: string): Promise<{ message: string; user: AdminUserItem }> {
+export async function apiAdminEnableUser(
+  id: string,
+  input?: { reason?: string }
+): Promise<{ message: string; user: AdminUserItem }> {
   return adminApiFetch<{ message: string; user: AdminUserItem }>(
     `/admin/users/${encodeURIComponent(id)}/enable`,
     {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify(input || {})
     }
   );
 }
@@ -88,7 +96,8 @@ export async function apiAdminSetUserStatus(
   return adminApiFetch<{ message: string; user: AdminUserItem }>(
     `/admin/users/${encodeURIComponent(id)}/${endpoint}`,
     {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify(input)
     }
   );
 }
@@ -102,11 +111,15 @@ export async function apiAdminForceLogoutUser(id: string): Promise<{ message: st
   );
 }
 
-export async function apiAdminImpersonateUser(id: string): Promise<ImpersonationResult> {
+export async function apiAdminImpersonateUser(
+  id: string,
+  input?: { reason?: string }
+): Promise<ImpersonationResult> {
   return adminApiFetch<ImpersonationResult>(
     `/admin/users/${encodeURIComponent(id)}/impersonate`,
     {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify(input || {})
     }
   );
 }

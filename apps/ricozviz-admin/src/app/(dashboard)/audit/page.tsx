@@ -112,7 +112,7 @@ export default function AdminAuditPage() {
           <div className="flex items-center gap-2">
             <ScrollText className="w-5 h-5 text-purple-400" />
             <h1 className="text-xl font-bold tracking-tight text-white font-mono">
-              Immutable WORM Audit Ledger
+              Global Cryptographic Audit Trail
             </h1>
           </div>
           <p className="text-xs text-gray-400 mt-1">
@@ -202,11 +202,18 @@ export default function AdminAuditPage() {
           },
           {
             key: 'action',
-            header: 'Action',
+            header: 'Action / Justification',
             render: (entry) => (
-              <span className="px-2 py-0.5 text-[10px] font-mono bg-[#1c1c1c] border border-[#2c2c2c] rounded text-white font-medium">
-                {entry.action}
-              </span>
+              <div className="space-y-1">
+                <span className="px-2 py-0.5 text-[10px] font-mono bg-[#1c1c1c] border border-[#2c2c2c] rounded text-white font-medium">
+                  {entry.action}
+                </span>
+                {typeof entry.metadata?.reason === 'string' && (
+                  <p className="text-[11px] text-gray-300 italic max-w-[260px] truncate" title={entry.metadata.reason}>
+                    {entry.metadata.reason}
+                  </p>
+                )}
+              </div>
             )
           },
           {
@@ -246,11 +253,11 @@ export default function AdminAuditPage() {
             header: 'Chain Hash (SHA-256)',
             render: (entry) => (
               <div className="font-mono text-[9px] text-gray-500 space-y-0.5">
-                <div className="truncate max-w-[140px]" title={`Current: ${entry.currentHash}`}>
-                  c: {entry.currentHash.substring(0, 14)}...
+                <div className="truncate max-w-[140px]" title={`Current: ${entry.currentHash || ''}`}>
+                  c: {entry.currentHash ? `${entry.currentHash.substring(0, 14)}...` : '—'}
                 </div>
-                <div className="truncate max-w-[140px]" title={`Previous: ${entry.previousHash}`}>
-                  p: {entry.previousHash.substring(0, 14)}...
+                <div className="truncate max-w-[140px]" title={`Previous: ${entry.previousHash || ''}`}>
+                  p: {entry.previousHash ? `${entry.previousHash.substring(0, 14)}...` : '—'}
                 </div>
               </div>
             )

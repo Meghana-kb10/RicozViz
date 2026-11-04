@@ -62,16 +62,16 @@ export default function AdminUserDetailPage({
     setDialogLoading(true);
     try {
       if (dialogAction === 'DISABLE') {
-        await apiAdminDisableUser(user.id);
+        await apiAdminDisableUser(user.id, { reason });
         showToast({ type: 'warning', message: `${user.email} disabled.` });
       } else if (dialogAction === 'ENABLE') {
-        await apiAdminEnableUser(user.id);
+        await apiAdminEnableUser(user.id, { reason });
         showToast({ type: 'success', message: `${user.email} enabled.` });
       } else if (dialogAction === 'FORCE_LOGOUT') {
         await apiAdminForceLogoutUser(user.id);
         showToast({ type: 'info', message: `Active sessions terminated for ${user.email}.` });
       } else if (dialogAction === 'IMPERSONATE') {
-        await apiAdminImpersonateUser(user.id);
+        await apiAdminImpersonateUser(user.id, { reason });
         showToast({ type: 'warning', message: `Read-only impersonation active for ${user.email}.` });
       }
 
@@ -276,8 +276,12 @@ export default function AdminUserDetailPage({
               : `Disables this user's account.`
           }
           confirmTextMatch={dialogAction === 'DISABLE' ? user.email : undefined}
-          reasonRequired={dialogAction === 'IMPERSONATE'}
-          reasonPlaceholder="Specify reason for impersonation ledger record..."
+          reasonRequired={
+            dialogAction === 'IMPERSONATE' ||
+            dialogAction === 'DISABLE' ||
+            dialogAction === 'ENABLE'
+          }
+          reasonPlaceholder="Audit explanation for immutable ledger (required)..."
           confirmLabel={
             dialogAction === 'FORCE_LOGOUT'
               ? 'Revoke Sessions'

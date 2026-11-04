@@ -77,7 +77,7 @@ export default function AdminOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#222]">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-white font-mono">Operations Console</h1>
+            <h1 className="text-xl font-bold tracking-tight text-white font-mono">Platform Operator Console</h1>
             <span className="bg-[#ff6b35]/15 text-[#ff6b35] border border-[#ff6b35]/30 text-[10px] font-mono font-bold px-2 py-0.5 rounded tracking-widest uppercase">
               LIVE TELEMETRY
             </span>

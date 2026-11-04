@@ -17,9 +17,13 @@ export {
   apiAdminLogout,
   apiAdminEnrollTotp,
   apiAdminVerifyTotp,
+  apiAdminRegenerateBackupCodes,
+  apiAdminListSessions,
+  apiAdminRevokeSession,
   apiAdminChangePassword,
   type AdminAuthUser,
-  type AdminAuthResult
+  type AdminAuthResult,
+  type AdminSessionItem
 } from './admin-client.js';
 
 export {

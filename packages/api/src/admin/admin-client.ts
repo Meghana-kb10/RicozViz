@@ -246,3 +246,31 @@ export async function apiAdminChangePassword(input: AdminChangePasswordInput): P
   });
 }
 
+export interface AdminSessionItem {
+  id: string;
+  ipAddress: string;
+  userAgent: string;
+  createdAt: string;
+  lastUsedAt: string;
+  isCurrent: boolean;
+}
+
+export async function apiAdminRegenerateBackupCodes(input: { totpCode: string }): Promise<{ backupCodes: string[] }> {
+  return adminApiFetch<{ backupCodes: string[] }>('/admin/auth/totp/regenerate-backup-codes', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+}
+
+export async function apiAdminListSessions(): Promise<{ sessions: AdminSessionItem[] }> {
+  return adminApiFetch<{ sessions: AdminSessionItem[] }>('/admin/auth/sessions', {
+    method: 'GET'
+  });
+}
+
+export async function apiAdminRevokeSession(sessionId: string): Promise<{ message: string }> {
+  return adminApiFetch<{ message: string }>(`/admin/auth/sessions/${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE'
+  });
+}
+

@@ -109,13 +109,14 @@ function AdminTwoFactorForm() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {!useBackupMode ? (
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-2" htmlFor="totp-input">
+                <label className="block text-xs font-medium text-gray-300 mb-2" htmlFor="totp-code">
                   Authenticator Security Code
                 </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
-                    id="totp-input"
+                    id="totp-code"
+                    name="totpCode"
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -131,13 +132,14 @@ function AdminTwoFactorForm() {
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-2" htmlFor="backup-input">
+                <label className="block text-xs font-medium text-gray-300 mb-2" htmlFor="backup-code">
                   8-Character Backup Code
                 </label>
                 <div className="relative">
                   <LifeBuoy className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
-                    id="backup-input"
+                    id="backup-code"
+                    name="backupCode"
                     type="text"
                     maxLength={8}
                     autoFocus

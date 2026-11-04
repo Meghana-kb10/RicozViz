@@ -57,6 +57,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Nonce generation for Content Security Policy
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  const cspHeader = `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' http://localhost:4000 http://localhost:3002 ws: wss:; frame-ancestors 'none'; object-src 'none'; base-uri 'self';`;
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', cspHeader);
+
+  const withSecurityHeaders = (res: NextResponse): NextResponse => {
+    res.headers.set('Content-Security-Policy', cspHeader);
+    res.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+    res.headers.set('X-Content-Type-Options', 'nosniff');
+    res.headers.set('Referrer-Policy', 'no-referrer');
+    res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=(), payment=(), usb=()');
+    return res;
+  };
+
   const isAuthPage =
     pathname === '/login' ||
     pathname.startsWith('/login/') ||
@@ -66,54 +83,60 @@ export async function middleware(request: NextRequest) {
 
   if (!sessionCookie) {
     if (isAuthPage) {
-      return NextResponse.next();
+      return withSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
     }
     const loginUrl = new URL('/login', request.url);
     if (pathname !== '/') {
       loginUrl.searchParams.set('returnUrl', pathname);
     }
-    return NextResponse.redirect(loginUrl);
+    return withSecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
-  // Cryptographic verification of session cookie
+  // Cryptographic verification of session cookie with server-side secret
   const verification = await verifyAdminJwtSignature(sessionCookie, JWT_ADMIN_SECRET);
 
   if (!verification.valid || !verification.payload) {
     if (isAuthPage) {
-      const response = NextResponse.next();
+      const response = withSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
       response.cookies.delete('rv_admin_session');
       return response;
     }
     const loginUrl = new URL('/login', request.url);
-    const response = NextResponse.redirect(loginUrl);
+    const response = withSecurityHeaders(NextResponse.redirect(loginUrl));
     response.cookies.delete('rv_admin_session');
     return response;
   }
 
-  const { aud, type, exp } = verification.payload;
+  const { aud, type, role, twoFactorVerified, exp } = verification.payload;
 
-  // Strict claim validations: Must be admin audience, refresh type, and unexpired
+  // Strict claim validations: Must be admin audience, refresh type, PLATFORM_ADMIN role, 2FA verified, and unexpired
   const isExpired = exp && exp * 1000 < Date.now();
-  const isValidAdminSession = aud === 'admin' && type === 'refresh' && !isExpired;
+  const is2FaVerified = twoFactorVerified === true || twoFactorVerified === 1 || twoFactorVerified === 'true';
+  const isValidAdminSession =
+    aud === 'admin' &&
+    type === 'refresh' &&
+    role === 'PLATFORM_ADMIN' &&
+    is2FaVerified &&
+    !isExpired;
 
   if (!isValidAdminSession) {
     if (isAuthPage) {
-      const response = NextResponse.next();
+      const response = withSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
       response.cookies.delete('rv_admin_session');
       return response;
     }
     const loginUrl = new URL('/login', request.url);
-    const response = NextResponse.redirect(loginUrl);
+    const response = withSecurityHeaders(NextResponse.redirect(loginUrl));
     response.cookies.delete('rv_admin_session');
     return response;
   }
 
   // If already authenticated and visiting an auth route, redirect to /overview
   if (isAuthPage) {
-    return NextResponse.redirect(new URL('/overview', request.url));
+    return withSecurityHeaders(NextResponse.redirect(new URL('/overview', request.url)));
   }
 
-  return NextResponse.next();
+  return withSecurityHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 
 export const config = {

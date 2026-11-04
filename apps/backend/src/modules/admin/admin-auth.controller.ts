@@ -7,6 +7,7 @@ import { validate } from '@repo/validation';
 import {
   adminLoginSchema,
   adminTotpVerifySchema,
+  adminRegenerateBackupCodesSchema,
   adminChangePasswordSchema
 } from '@repo/validation';
 
@@ -34,7 +35,9 @@ export class AdminAuthController {
       throw AppError.unauthorized('No admin refresh token provided');
     }
 
-    const result = await adminAuthService.refresh(token);
+    const ipAddress = request.ip || (request.headers['x-forwarded-for'] as string) || undefined;
+    const userAgent = (request.headers['user-agent'] as string) || undefined;
+    const result = await adminAuthService.refresh(token, ipAddress, userAgent);
     reply.setCookie(ADMIN_REFRESH_COOKIE, result.newRefreshToken, result.cookieOptions);
 
     sendSuccess(reply, { accessToken: result.accessToken }, 200);
@@ -85,6 +88,47 @@ export class AdminAuthController {
     );
 
     sendSuccess(reply, { message: 'Password changed successfully' }, 200);
+  }
+
+  async regenerateBackupCodes(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const adminUser = request.adminUser;
+    if (!adminUser) throw AppError.unauthorized('Admin unauthorized');
+
+    const input = validate(adminRegenerateBackupCodesSchema, request.body);
+    const ipAddress = request.ip || (request.headers['x-forwarded-for'] as string) || undefined;
+    const userAgent = (request.headers['user-agent'] as string) || undefined;
+
+    const result = await adminAuthService.regenerateBackupCodes(
+      adminUser.userId,
+      input.totpCode,
+      ipAddress,
+      userAgent
+    );
+
+    sendSuccess(reply, result, 200);
+  }
+
+  async listSessions(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const adminUser = request.adminUser;
+    if (!adminUser) throw AppError.unauthorized('Admin unauthorized');
+
+    const cookieToken = request.cookies[ADMIN_REFRESH_COOKIE];
+    const sessions = await adminAuthService.listSessions(adminUser.userId, cookieToken);
+
+    sendSuccess(reply, { sessions }, 200);
+  }
+
+  async revokeSession(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const adminUser = request.adminUser;
+    if (!adminUser) throw AppError.unauthorized('Admin unauthorized');
+
+    const { id } = request.params as { id: string };
+    const ipAddress = request.ip || (request.headers['x-forwarded-for'] as string) || undefined;
+    const userAgent = (request.headers['user-agent'] as string) || undefined;
+
+    await adminAuthService.revokeSession(adminUser.userId, id, ipAddress, userAgent);
+
+    sendSuccess(reply, { message: 'Session revoked successfully' }, 200);
   }
 }
 

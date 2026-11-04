@@ -11,6 +11,10 @@ export const adminTotpVerifySchema = z.object({
   totpCode: z.string().length(6, 'TOTP code must be exactly 6 digits')
 });
 
+export const adminRegenerateBackupCodesSchema = z.object({
+  totpCode: z.string().length(6, 'TOTP code must be exactly 6 digits')
+});
+
 export const adminTenantListQuerySchema = z.object({
   search: z.string().optional(),
   status: z.enum(['ACTIVE', 'SUSPENDED', 'ARCHIVED']).optional(),
@@ -26,6 +30,10 @@ export const adminTenantSuspendSchema = z.object({
   reason: z.string().min(1, 'Reason is required').max(500)
 });
 
+export const adminTenantUnsuspendSchema = z.object({
+  reason: z.string().max(500).optional()
+});
+
 export const adminUserListQuerySchema = z.object({
   search: z.string().optional(),
   tenantId: z.string().optional(),
@@ -35,7 +43,12 @@ export const adminUserListQuerySchema = z.object({
 });
 
 export const adminUserStatusUpdateSchema = z.object({
-  status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED'])
+  status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']),
+  reason: z.string().max(500).optional()
+});
+
+export const adminUserImpersonateSchema = z.object({
+  reason: z.string().max(500).optional()
 });
 
 export const adminFeatureFlagUpsertSchema = z.object({
@@ -74,11 +87,14 @@ export const adminChangePasswordSchema = z.object({
 
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
 export type AdminTotpVerifyInput = z.infer<typeof adminTotpVerifySchema>;
+export type AdminRegenerateBackupCodesInput = z.infer<typeof adminRegenerateBackupCodesSchema>;
 export type AdminTenantListQueryInput = z.infer<typeof adminTenantListQuerySchema>;
 export type AdminTenantPlanUpdateInput = z.infer<typeof adminTenantPlanUpdateSchema>;
 export type AdminTenantSuspendInput = z.infer<typeof adminTenantSuspendSchema>;
+export type AdminTenantUnsuspendInput = z.infer<typeof adminTenantUnsuspendSchema>;
 export type AdminUserListQueryInput = z.infer<typeof adminUserListQuerySchema>;
 export type AdminUserStatusUpdateInput = z.infer<typeof adminUserStatusUpdateSchema>;
+export type AdminUserImpersonateInput = z.infer<typeof adminUserImpersonateSchema>;
 export type AdminFeatureFlagUpsertInput = z.infer<typeof adminFeatureFlagUpsertSchema>;
 export type AdminWorkerTriggerInput = z.infer<typeof adminWorkerTriggerSchema>;
 export type AdminAuditQueryInput = z.infer<typeof adminAuditQuerySchema>;

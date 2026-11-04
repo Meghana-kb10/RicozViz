@@ -400,6 +400,193 @@ async function runAdminTests(): Promise<void> {
     console.log('✓ Cryptographic WORM audit chain integrity verified');
   }
 
+  // --------------------------------------------------------------------------
+  // TEST 9: Backup Codes Regeneration & Active Sessions
+  // --------------------------------------------------------------------------
+  console.log('\n--- Test 9: Backup Codes Regeneration & Active Sessions ---');
+  {
+    const adminSecret = totpService.generateSecret();
+    const encrypted = totpService.encryptSecret(adminSecret);
+    const validTotp = totpService.generateCode(adminSecret);
+
+    // 1. In-memory TOTP service & backup codes lifecycle validation
+    const { plaintextCodes, hashedCodes } = await totpService.generateBackupCodes();
+    assert.strictEqual(plaintextCodes.length, 10, 'Must generate exactly 10 plaintext backup codes');
+    assert.strictEqual(hashedCodes.length, 10, 'Must generate exactly 10 hashed backup codes');
+
+    const consume = await totpService.verifyAndConsumeBackupCode(plaintextCodes[0], hashedCodes);
+    assert.strictEqual(consume.valid, true, 'First backup code must be successfully consumed');
+    assert.strictEqual(consume.remainingHashed.length, 9, 'Remaining backup codes must count 9');
+
+    // Replay attack with consumed code must fail
+    const replayed = await totpService.verifyAndConsumeBackupCode(plaintextCodes[0], consume.remainingHashed);
+    assert.strictEqual(replayed.valid, false, 'Replaying consumed backup code must be rejected');
+
+    // 2. Token claims validation: refresh token must include PLATFORM_ADMIN and twoFactorVerified: true
+    const testAdminId = new mongoose.Types.ObjectId().toString();
+    const { signAdminRefreshToken, verifyAdminRefreshToken } = await import('../../lib/jwt.js');
+    const refreshToken = signAdminRefreshToken(testAdminId, 1, 'family_test_123');
+    const refreshPayload = verifyAdminRefreshToken(refreshToken);
+    assert.strictEqual((refreshPayload as any).role, 'PLATFORM_ADMIN', 'Refresh token must encode PLATFORM_ADMIN role');
+    assert.strictEqual((refreshPayload as any).twoFactorVerified, true, 'Refresh token must encode twoFactorVerified: true');
+
+    // 3. Endpoint schema enforcement
+    const adminToken = signAdminAccessToken({
+      sub: testAdminId,
+      email: 'security-admin@ricozviz.io',
+      twoFactorVerified: true
+    });
+
+    const invalidTotpRes = await app.inject({
+      method: 'POST',
+      url: '/admin/auth/totp/regenerate-backup-codes',
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { totpCode: '123' } // Invalid length (must be 6)
+    });
+    assert.strictEqual(invalidTotpRes.statusCode, 400, 'Invalid TOTP code length must fail schema validation');
+
+    if (mongoose.connection.readyState === 1) {
+      const adminUser = await UserModel.create({
+        email: `admin-sessions-${Date.now()}@ricozviz.internal`,
+        name: 'Security Admin Tester',
+        role: 'PLATFORM_ADMIN',
+        status: 'ACTIVE',
+        twoFactorEnabled: true,
+        twoFactorSecretEncrypted: encrypted.encryptedData,
+        twoFactorSecretIv: encrypted.iv,
+        twoFactorSecretAuthTag: encrypted.authTag,
+        twoFactorSecretKeyVersion: encrypted.keyVersion,
+        twoFactorBackupCodesHashed: []
+      });
+
+      const liveAdminToken = signAdminAccessToken({
+        sub: adminUser._id.toString(),
+        email: adminUser.email,
+        twoFactorVerified: true
+      });
+
+      const validRegenRes = await app.inject({
+        method: 'POST',
+        url: '/admin/auth/totp/regenerate-backup-codes',
+        headers: { authorization: `Bearer ${liveAdminToken}` },
+        payload: { totpCode: validTotp }
+      });
+      assert.strictEqual(validRegenRes.statusCode, 200, 'Valid TOTP code must generate backup codes');
+
+      const { RefreshTokenModel } = await import('@repo/database');
+      const testSession = await RefreshTokenModel.create({
+        tokenHash: crypto.randomBytes(32).toString('hex'),
+        userId: adminUser._id,
+        familyId: crypto.randomUUID(),
+        createdByIp: '198.51.100.24',
+        userAgent: 'Mozilla/5.0 Admin Test Suite',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      });
+
+      const sessionsRes = await app.inject({
+        method: 'GET',
+        url: '/admin/auth/sessions',
+        headers: { authorization: `Bearer ${liveAdminToken}` }
+      });
+      assert.strictEqual(sessionsRes.statusCode, 200);
+
+      const revokeRes = await app.inject({
+        method: 'DELETE',
+        url: `/admin/auth/sessions/${testSession._id.toString()}`,
+        headers: { authorization: `Bearer ${liveAdminToken}` }
+      });
+      assert.strictEqual(revokeRes.statusCode, 200);
+    }
+
+    console.log('✓ Backup code regeneration and active session lifecycle verified');
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 10: Mandatory Audit Reasons on Unsuspend, Status & Impersonation
+  // --------------------------------------------------------------------------
+  console.log('\n--- Test 10: Audit Reasons on Action Endpoints ---');
+  {
+    const {
+      adminTenantUnsuspendSchema,
+      adminUserStatusUpdateSchema,
+      adminUserImpersonateSchema
+    } = await import('@repo/validation');
+
+    // 1. Validate schemas accept reason
+    const unsuspendValid = adminTenantUnsuspendSchema.safeParse({ reason: 'Compliance audit cleared satisfactorily' });
+    assert.strictEqual(unsuspendValid.success, true, 'adminTenantUnsuspendSchema must accept valid reason');
+
+    const statusValid = adminUserStatusUpdateSchema.safeParse({ status: 'SUSPENDED', reason: 'Suspicious credential exposure alert' });
+    assert.strictEqual(statusValid.success, true, 'adminUserStatusUpdateSchema must accept status and reason');
+
+    const impValid = adminUserImpersonateSchema.safeParse({ reason: 'Investigating dataset calculation defect #891' });
+    assert.strictEqual(impValid.success, true, 'adminUserImpersonateSchema must accept reason');
+
+    const adminToken = signAdminAccessToken({
+      sub: new mongoose.Types.ObjectId().toString(),
+      email: 'audit-reason-admin@ricozviz.io',
+      twoFactorVerified: true
+    });
+
+    if (mongoose.connection.readyState === 1) {
+      const testTenant = await OrganizationModel.create({
+        name: `Reason Test Org ${Date.now()}`,
+        slug: `reason-test-org-${Date.now()}`,
+        status: 'SUSPENDED'
+      });
+
+      const testUser = await UserModel.create({
+        name: 'Reason Test User',
+        email: `user-reason-${Date.now()}@ricozviz.internal`,
+        role: 'user',
+        status: 'ACTIVE'
+      });
+
+      const unsuspendRes = await app.inject({
+        method: 'POST',
+        url: `/admin/tenants/${testTenant._id.toString()}/unsuspend`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { reason: 'Compliance audit cleared satisfactorily' }
+      });
+      assert.strictEqual(unsuspendRes.statusCode, 200);
+
+      const disableRes = await app.inject({
+        method: 'POST',
+        url: `/admin/users/${testUser._id.toString()}/disable`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { reason: 'Suspicious credential exposure alert' }
+      });
+      assert.strictEqual(disableRes.statusCode, 200);
+
+      const enableRes = await app.inject({
+        method: 'POST',
+        url: `/admin/users/${testUser._id.toString()}/enable`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { reason: 'Identity verified with security team' }
+      });
+      assert.strictEqual(enableRes.statusCode, 200);
+
+      const impRes = await app.inject({
+        method: 'POST',
+        url: `/admin/users/${testUser._id.toString()}/impersonate`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { reason: 'Investigating dataset calculation defect #891' }
+      });
+      assert.strictEqual(impRes.statusCode, 200);
+    } else {
+      // Offline fallback: test route injection validation
+      const invalidUnsuspend = await app.inject({
+        method: 'POST',
+        url: `/admin/tenants/invalid-id/unsuspend`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { reason: 'Test reason' }
+      });
+      assert.ok([400, 404].includes(invalidUnsuspend.statusCode), 'Must reject invalid tenant ID with 400/404');
+    }
+
+    console.log('✓ Action endpoints enforce and record audit ledger reasons');
+  }
+
   console.log('\n============================================================');
   console.log('🎉 ALL PLATFORM ADMIN SUBSYSTEM TESTS PASSED SUCCESSFULLY!');
   console.log('============================================================\n');

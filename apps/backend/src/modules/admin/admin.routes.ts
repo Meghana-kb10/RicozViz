@@ -33,6 +33,9 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   app.post('/auth/logout', adminAuthController.logout.bind(adminAuthController));
   app.post('/auth/totp/enroll', adminGuard, adminAuthController.enrollTotp.bind(adminAuthController));
   app.post('/auth/totp/verify', adminGuard, adminAuthController.verifyTotp.bind(adminAuthController));
+  app.post('/auth/totp/regenerate-backup-codes', adminGuard, adminAuthController.regenerateBackupCodes.bind(adminAuthController));
+  app.get('/auth/sessions', adminGuard, adminAuthController.listSessions.bind(adminAuthController));
+  app.delete('/auth/sessions/:id', adminGuard, adminAuthController.revokeSession.bind(adminAuthController));
   app.post('/auth/change-password', adminGuard, adminAuthController.changePassword.bind(adminAuthController));
 
   // ---- Tenants Administration -------------------------------------------------

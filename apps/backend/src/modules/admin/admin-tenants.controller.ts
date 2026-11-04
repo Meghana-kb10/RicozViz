@@ -21,7 +21,8 @@ import { validate } from '@repo/validation';
 import {
   adminTenantListQuerySchema,
   adminTenantPlanUpdateSchema,
-  adminTenantSuspendSchema
+  adminTenantSuspendSchema,
+  adminTenantUnsuspendSchema
 } from '@repo/validation';
 
 export class AdminTenantsController {
@@ -162,6 +163,7 @@ export class AdminTenantsController {
    */
   async unsuspend(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const { id } = request.params as { id: string };
+    const body = request.body ? validate(adminTenantUnsuspendSchema, request.body) : {};
     const orgId = toObjectId(id);
     if (!orgId) throw AppError.badRequest('Invalid tenant ID');
 
@@ -181,6 +183,7 @@ export class AdminTenantsController {
       ipAddress: request.ip,
       metadata: {
         adminEmail: request.adminUser!.email,
+        reason: (body as any)?.reason,
         previousStatus,
         newStatus: 'ACTIVE'
       }

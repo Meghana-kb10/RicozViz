@@ -65,7 +65,16 @@ export function signAdminRefreshToken(userId: string, tokenVersion: number, fami
     expiresIn: '7d'
   };
   return jwt.sign(
-    { sub: userId, tokenVersion, familyId, aud: 'admin', jti: crypto.randomUUID(), type: 'refresh' },
+    {
+      sub: userId,
+      tokenVersion,
+      familyId,
+      aud: 'admin',
+      role: 'PLATFORM_ADMIN',
+      twoFactorVerified: true,
+      jti: crypto.randomUUID(),
+      type: 'refresh'
+    },
     config.jwtAdminSecret,
     options
   );

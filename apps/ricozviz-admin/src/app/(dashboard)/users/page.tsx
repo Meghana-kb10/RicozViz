@@ -66,14 +66,14 @@ export default function AdminUsersPage() {
     setDialogLoading(true);
     try {
       if (dialogAction === 'DISABLE') {
-        await apiAdminDisableUser(selectedUser.id);
+        await apiAdminDisableUser(selectedUser.id, { reason });
         showToast({
           type: 'warning',
           title: 'User Disabled',
           message: `${selectedUser.email} has been deactivated.`
         });
       } else if (dialogAction === 'ENABLE') {
-        await apiAdminEnableUser(selectedUser.id);
+        await apiAdminEnableUser(selectedUser.id, { reason });
         showToast({
           type: 'success',
           title: 'User Enabled',
@@ -87,7 +87,7 @@ export default function AdminUsersPage() {
           message: `All refresh tokens and sessions for ${selectedUser.email} were terminated.`
         });
       } else if (dialogAction === 'IMPERSONATE') {
-        const result = await apiAdminImpersonateUser(selectedUser.id);
+        const result = await apiAdminImpersonateUser(selectedUser.id, { reason });
         showToast({
           type: 'warning',
           title: 'Impersonation Session Active',
@@ -318,8 +318,12 @@ export default function AdminUsersPage() {
               : `Restores this user account to active status.`
           }
           confirmTextMatch={dialogAction === 'DISABLE' ? selectedUser.email : undefined}
-          reasonRequired={dialogAction === 'IMPERSONATE'}
-          reasonPlaceholder="Audit explanation for this impersonation session..."
+          reasonRequired={
+            dialogAction === 'IMPERSONATE' ||
+            dialogAction === 'DISABLE' ||
+            dialogAction === 'ENABLE'
+          }
+          reasonPlaceholder="Audit explanation for immutable ledger (required)..."
           confirmLabel={
             dialogAction === 'FORCE_LOGOUT'
               ? 'Revoke Sessions'

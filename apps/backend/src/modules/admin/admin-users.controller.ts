@@ -17,7 +17,11 @@ import { sendSuccess } from '../../utils/response.js';
 import { AppError } from '../../utils/errors.js';
 import { logAuditEvent } from '../ricozviz/audit/audit.service.js';
 import { validate } from '@repo/validation';
-import { adminUserListQuerySchema, adminUserStatusUpdateSchema } from '@repo/validation';
+import {
+  adminUserListQuerySchema,
+  adminUserStatusUpdateSchema,
+  adminUserImpersonateSchema
+} from '@repo/validation';
 
 export class AdminUsersController {
   /**
@@ -134,7 +138,8 @@ export class AdminUsersController {
         adminEmail: request.adminUser!.email,
         targetEmail: user.email,
         prevStatus,
-        newStatus: body.status
+        newStatus: body.status,
+        reason: body.reason
       }
     });
 
@@ -182,6 +187,7 @@ export class AdminUsersController {
    */
   async impersonate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const { id } = request.params as { id: string };
+    const body = request.body ? validate(adminUserImpersonateSchema, request.body) : {};
     const userId = toObjectId(id);
     if (!userId) throw AppError.badRequest('Invalid user ID');
 
@@ -214,7 +220,8 @@ export class AdminUsersController {
         adminEmail: request.adminUser!.email,
         targetEmail: user.email,
         readOnly: true,
-        expiresInMinutes: 15
+        expiresInMinutes: 15,
+        reason: (body as any)?.reason
       }
     });
 
