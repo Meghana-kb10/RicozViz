@@ -59,7 +59,23 @@ export async function middleware(request: NextRequest) {
 
   // Nonce generation for Content Security Policy
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
-  const cspHeader = `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' http://localhost:4000 http://localhost:3002 ws: wss:; frame-ancestors 'none'; object-src 'none'; base-uri 'self';`;
+  const adminApiOrigin =
+    process.env.ADMIN_API_ORIGIN ||
+    process.env.NEXT_PUBLIC_ADMIN_API_URL ||
+    'http://localhost:4000';
+
+  // Note: style-src retains 'unsafe-inline' because Tailwind CSS v4 and Next.js font/style injection insert dynamic inline styles at runtime.
+  const cspHeader = [
+    `default-src 'self'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `style-src 'self' 'unsafe-inline'`,
+    `img-src 'self' data: blob:`,
+    `font-src 'self' data:`,
+    `connect-src 'self' ${adminApiOrigin}`,
+    `frame-ancestors 'none'`,
+    `object-src 'none'`,
+    `base-uri 'self'`
+  ].join('; ');
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);

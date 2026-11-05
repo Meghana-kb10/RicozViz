@@ -15,12 +15,14 @@ import {
 } from '@repo/database';
 import {
   signAdminAccessToken,
+  signAdminPendingToken,
   signAdminRefreshToken,
   verifyAdminRefreshToken,
   ADMIN_REFRESH_COOKIE,
   getAdminRefreshCookieOptions
 } from '../../lib/jwt.js';
 import { totpService } from './totp.service.js';
+import { consumedPendingJtiService } from './consumed-jti.service.js';
 import { AppError } from '../../utils/errors.js';
 import { logger } from '../../utils/logger.js';
 import { logAuditEvent } from '../ricozviz/audit/audit.service.js';
@@ -33,6 +35,7 @@ const DUMMY_HASH = '$2a$12$dummy.hash.to.prevent.timing.attacks.123456789';
 
 export interface AdminAuthResult {
   requires2Fa?: boolean;
+  pendingToken?: string;
   accessToken?: string;
   refreshToken?: string;
   cookieOptions?: ReturnType<typeof getAdminRefreshCookieOptions>;
@@ -46,6 +49,30 @@ export interface AdminAuthResult {
 }
 
 export class AdminAuthService {
+  private assertNotLocked(user: { lockUntil?: Date | null }) {
+    if (user.lockUntil && user.lockUntil.getTime() > Date.now()) {
+      const waitMinutes = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
+      throw AppError.forbidden(`Account is temporarily locked due to repeated failed logins. Please try again in ${waitMinutes} minutes.`);
+    }
+  }
+
+  private async recordFailedAttempt(userId: any, currentAttempts: number, email: string) {
+    const attempts = (currentAttempts || 0) + 1;
+    const updates: { failedLoginAttempts: number; lockUntil?: Date | null } = { failedLoginAttempts: attempts };
+    if (attempts >= 5) {
+      updates.lockUntil = new Date(Date.now() + FIFTEEN_MINUTES_MS);
+      logger.warn(`[AdminAuth] Platform admin account locked due to ${attempts} failed attempts: "${email}"`);
+    }
+    await UserModel.updateOne({ _id: userId }, { $set: updates });
+  }
+
+  private async resetLockout(userId: any) {
+    await UserModel.updateOne(
+      { _id: userId },
+      { $set: { failedLoginAttempts: 0, lockUntil: null } }
+    );
+  }
+
   /**
    * Platform admin login with password, account lockout defense, and TOTP 2FA check.
    */
@@ -56,13 +83,12 @@ export class AdminAuthService {
   ): Promise<AdminAuthResult> {
     const email = input.email.trim().toLowerCase();
     const user = await UserModel.findOne({ email }).select(
-      '+passwordHash +twoFactorSecretEncrypted +twoFactorSecretIv +twoFactorSecretAuthTag +twoFactorSecretKeyVersion +twoFactorBackupCodesHashed'
+      '+passwordHash +twoFactorSecretEncrypted +twoFactorSecretIv +twoFactorSecretAuthTag +twoFactorSecretKeyVersion +twoFactorBackupCodesHashed +lockUntil +failedLoginAttempts'
     );
 
     // 1. Account lockout check
-    if (user?.lockUntil && user.lockUntil.getTime() > Date.now()) {
-      const waitMinutes = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
-      throw AppError.forbidden(`Account is temporarily locked due to repeated failed logins. Please try again in ${waitMinutes} minutes.`);
+    if (user) {
+      this.assertNotLocked(user);
     }
 
     // 2. Reject non-admins with timing-safe comparison
@@ -77,23 +103,12 @@ export class AdminAuthService {
       : false;
 
     if (!passwordMatch) {
-      const attempts = (user.failedLoginAttempts || 0) + 1;
-      const updates: { failedLoginAttempts: number; lockUntil?: Date | null } = { failedLoginAttempts: attempts };
-      if (attempts >= 5) {
-        updates.lockUntil = new Date(Date.now() + FIFTEEN_MINUTES_MS);
-        logger.warn(`[AdminAuth] Platform admin account locked due to 5 failed attempts: "${email}"`);
-      }
-      await UserModel.updateOne({ _id: user._id }, { $set: updates });
+      await this.recordFailedAttempt(user._id, user.failedLoginAttempts || 0, user.email);
       throw AppError.unauthorized('Invalid admin credentials');
     }
 
     // Reset failed attempts on valid password
-    if (user.failedLoginAttempts || user.lockUntil) {
-      await UserModel.updateOne(
-        { _id: user._id },
-        { $set: { failedLoginAttempts: 0, lockUntil: null } }
-      );
-    }
+    await this.resetLockout(user._id);
 
     // 4. TOTP 2FA Verification
     if (user.twoFactorEnabled) {
@@ -123,11 +138,29 @@ export class AdminAuthService {
       }
 
       if (!twoFactorValid) {
+        // Password verified, return short-lived (5 min) single-use 2FA-pending token with NO cookie
         if (!input.totpCode && !input.backupCode) {
-          return { requires2Fa: true, user: { id: user._id.toString(), email: user.email, name: user.name, role: user.role, twoFactorEnabled: true } };
+          const { token: pendingToken } = signAdminPendingToken({
+            sub: user._id.toString(),
+            email: user.email
+          });
+          return {
+            requires2Fa: true,
+            pendingToken,
+            user: {
+              id: user._id.toString(),
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              twoFactorEnabled: true
+            }
+          };
         }
+        await this.recordFailedAttempt(user._id, user.failedLoginAttempts || 0, user.email);
         throw AppError.unauthorized('Invalid two-factor authentication code or backup code');
       }
+
+      await this.resetLockout(user._id);
     }
 
     // 5. Issue 15-minute access token and rotating refresh token
@@ -264,15 +297,55 @@ export class AdminAuthService {
   }
 
   /**
-   * Enroll admin in TOTP 2FA. Generates and encrypts secret.
+   * Enroll admin in TOTP 2FA. Allowed only while admin has no confirmed TOTP.
+   * If already enrolled, requires full twoFactorVerified token plus current TOTP code to re-enroll.
    */
-  async enrollTotp(userId: string): Promise<{
+  async enrollTotp(
+    userId: string,
+    isFullVerifiedToken = false,
+    currentTotpCode?: string
+  ): Promise<{
     secret: string;
     otpauthUri: string;
   }> {
-    const user = await UserModel.findById(toObjectId(userId));
+    const user = await UserModel.findById(toObjectId(userId)).select(
+      '+twoFactorSecretEncrypted +twoFactorSecretIv +twoFactorSecretAuthTag +twoFactorSecretKeyVersion +lockUntil +failedLoginAttempts'
+    );
     if (!user || user.role !== 'PLATFORM_ADMIN') {
       throw AppError.notFound('Admin user not found');
+    }
+
+    this.assertNotLocked(user);
+
+    const isAlreadyEnrolled = Boolean(user.twoFactorEnabled && user.twoFactorVerifiedAt);
+
+    if (isAlreadyEnrolled) {
+      if (!isFullVerifiedToken) {
+        throw AppError.forbidden('Forbidden: Platform admin has already enrolled and confirmed two-factor authentication');
+      }
+
+      if (!currentTotpCode) {
+        throw AppError.badRequest('Current TOTP code is required to re-enroll two-factor authentication');
+      }
+
+      if (!user.twoFactorSecretEncrypted || !user.twoFactorSecretIv || !user.twoFactorSecretAuthTag) {
+        throw AppError.badRequest('Two-factor secret is corrupted or missing');
+      }
+
+      const decryptedSecret = totpService.decryptSecret({
+        encryptedData: user.twoFactorSecretEncrypted,
+        iv: user.twoFactorSecretIv,
+        authTag: user.twoFactorSecretAuthTag,
+        keyVersion: user.twoFactorSecretKeyVersion || 1
+      });
+
+      const isValid = totpService.verifyCode(decryptedSecret, currentTotpCode);
+      if (!isValid) {
+        await this.recordFailedAttempt(user._id, user.failedLoginAttempts || 0, user.email);
+        throw AppError.unauthorized('Invalid current two-factor authentication code');
+      }
+
+      await this.resetLockout(user._id);
     }
 
     const secret = totpService.generateSecret();
@@ -283,6 +356,7 @@ export class AdminAuthService {
     user.twoFactorSecretAuthTag = encrypted.authTag;
     user.twoFactorSecretKeyVersion = encrypted.keyVersion;
     user.twoFactorEnabled = false; // enabled only upon verify
+    user.twoFactorVerifiedAt = undefined;
     await user.save();
 
     return {
@@ -292,45 +366,141 @@ export class AdminAuthService {
   }
 
   /**
-   * Verify TOTP code to complete 2FA enrollment and generate single-use backup codes.
+   * Verify TOTP code or backup code to complete 2FA login/enrollment.
+   * Consumes single-use pending token JTI, resets lockout, issues 15-minute access token
+   * and 7-day refresh token, and enables 2FA if first-time confirmation.
    */
   async verifyTotp(
     userId: string,
-    totpCode: string
-  ): Promise<{ backupCodes: string[] }> {
+    input: AdminTotpVerifyInput,
+    pendingTokenJti?: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    cookieOptions: ReturnType<typeof getAdminRefreshCookieOptions>;
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+      twoFactorEnabled: boolean;
+    };
+    backupCodes?: string[];
+  }> {
+    if (!pendingTokenJti) {
+      throw AppError.unauthorized('Invalid pending token: missing token identifier');
+    }
+
+    if (await consumedPendingJtiService.isConsumed(pendingTokenJti)) {
+      throw AppError.unauthorized('Two-factor pending token has already been consumed');
+    }
+
     const user = await UserModel.findById(toObjectId(userId)).select(
-      '+twoFactorSecretEncrypted +twoFactorSecretIv +twoFactorSecretAuthTag +twoFactorSecretKeyVersion'
+      '+twoFactorSecretEncrypted +twoFactorSecretIv +twoFactorSecretAuthTag +twoFactorSecretKeyVersion +twoFactorBackupCodesHashed +lockUntil +failedLoginAttempts'
     );
     if (!user || user.role !== 'PLATFORM_ADMIN') {
       throw AppError.notFound('Admin user not found');
     }
 
-    if (!user.twoFactorSecretEncrypted || !user.twoFactorSecretIv || !user.twoFactorSecretAuthTag) {
-      throw AppError.badRequest('2FA enrollment has not been initiated for this account');
+    this.assertNotLocked(user);
+
+    let codeValid = false;
+    let backupCodeConsumed = false;
+
+    if (input.totpCode && user.twoFactorSecretEncrypted && user.twoFactorSecretIv && user.twoFactorSecretAuthTag) {
+      const decryptedSecret = totpService.decryptSecret({
+        encryptedData: user.twoFactorSecretEncrypted,
+        iv: user.twoFactorSecretIv,
+        authTag: user.twoFactorSecretAuthTag,
+        keyVersion: user.twoFactorSecretKeyVersion || 1
+      });
+      codeValid = totpService.verifyCode(decryptedSecret, input.totpCode);
+    } else if (input.backupCode && user.twoFactorBackupCodesHashed?.length) {
+      const consumeResult = await totpService.verifyAndConsumeBackupCode(
+        input.backupCode,
+        user.twoFactorBackupCodesHashed
+      );
+      if (consumeResult.valid) {
+        codeValid = true;
+        backupCodeConsumed = true;
+        await UserModel.updateOne(
+          { _id: user._id },
+          { $set: { twoFactorBackupCodesHashed: consumeResult.remainingHashed } }
+        );
+        logger.info(`[AdminAuth] Single-use backup code consumed during 2FA verify for admin "${user.email}".`);
+      }
     }
 
-    const decryptedSecret = totpService.decryptSecret({
-      encryptedData: user.twoFactorSecretEncrypted,
-      iv: user.twoFactorSecretIv,
-      authTag: user.twoFactorSecretAuthTag,
-      keyVersion: user.twoFactorSecretKeyVersion || 1
+    if (!codeValid) {
+      await this.recordFailedAttempt(user._id, user.failedLoginAttempts || 0, user.email);
+      throw AppError.unauthorized('Invalid two-factor authentication code or backup code');
+    }
+
+    await this.resetLockout(user._id);
+    await consumedPendingJtiService.consume(pendingTokenJti, user._id.toString());
+
+    let backupCodes: string[] | undefined;
+    if (!user.twoFactorEnabled || !user.twoFactorVerifiedAt) {
+      const { plaintextCodes, hashedCodes } = await totpService.generateBackupCodes();
+      user.twoFactorEnabled = true;
+      user.twoFactorVerifiedAt = new Date();
+      user.twoFactorBackupCodesHashed = hashedCodes;
+      await user.save();
+      backupCodes = plaintextCodes;
+      logger.info(`[AdminAuth] 2FA successfully confirmed and activated for platform admin "${user.email}".`);
+    }
+
+    const familyId = crypto.randomUUID();
+    const tokenVersion = user.tokenVersion || 0;
+
+    const accessToken = signAdminAccessToken({
+      sub: user._id.toString(),
+      email: user.email,
+      twoFactorVerified: true
     });
 
-    const isValid = totpService.verifyCode(decryptedSecret, totpCode);
-    if (!isValid) {
-      throw AppError.badRequest('Invalid 6-digit TOTP verification code');
-    }
+    const refreshToken = signAdminRefreshToken(user._id.toString(), tokenVersion, familyId);
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
 
-    const { plaintextCodes, hashedCodes } = await totpService.generateBackupCodes();
+    await RefreshTokenModel.create({
+      tokenHash,
+      userId: user._id,
+      familyId,
+      createdByIp: ipAddress || null,
+      userAgent: userAgent || null,
+      expiresAt: new Date(Date.now() + SEVEN_DAYS_MS)
+    });
 
-    user.twoFactorEnabled = true;
-    user.twoFactorVerifiedAt = new Date();
-    user.twoFactorBackupCodesHashed = hashedCodes;
-    await user.save();
+    await logAuditEvent({
+      organizationId: 'platform',
+      userId: user._id.toString(),
+      action: 'ADMIN_LOGIN_SUCCESS',
+      resourceType: 'ADMIN_SESSION',
+      resourceId: user._id.toString(),
+      ipAddress,
+      userAgent,
+      metadata: {
+        email: user.email,
+        method: backupCodeConsumed ? 'BACKUP_CODE' : 'TOTP',
+        firstEnrollment: Boolean(backupCodes)
+      }
+    }).catch(() => {});
 
-    logger.info(`[AdminAuth] 2FA successfully enabled for platform admin "${user.email}".`);
-
-    return { backupCodes: plaintextCodes };
+    return {
+      accessToken,
+      refreshToken,
+      cookieOptions: getAdminRefreshCookieOptions(SEVEN_DAYS_MS),
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        twoFactorEnabled: true
+      },
+      backupCodes
+    };
   }
 
   /**

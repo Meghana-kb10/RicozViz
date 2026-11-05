@@ -42,6 +42,31 @@ const ricozEnvSchema = z.object({
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().int().positive().default(15 * 1024 * 1024)
 });
 
+export function extractDatabaseName(uri: string, dbName?: string): string {
+  if (dbName && dbName.trim().length > 0) return dbName.trim();
+  try {
+    const sanitized = uri.replace('mongodb+srv://', 'http://').replace('mongodb://', 'http://');
+    const url = new URL(sanitized);
+    const pathname = url.pathname.replace(/^\//, '').split('?')[0];
+    if (pathname) return pathname;
+  } catch {
+    const match = uri.match(/\/([^/?]+)(\?|$)/);
+    if (match?.[1]) return match[1];
+  }
+  return '';
+}
+
+export function assertTestDatabaseSafety(nodeEnv: string, uri: string, dbName?: string): void {
+  if (nodeEnv === 'test') {
+    const effectiveDbName = extractDatabaseName(uri, dbName);
+    if (!effectiveDbName || !effectiveDbName.endsWith('_test')) {
+      throw new Error(
+        `[SECURITY ENFORCEMENT REFUSAL] Backend startup refused: NODE_ENV is "test" but database "${effectiveDbName}" does not end with "_test". Dedicated test database ending in "_test" is required.`
+      );
+    }
+  }
+}
+
 export function loadEnv(cwd: string = process.cwd()): AppConfig {
   const nodeEnv = process.env.NODE_ENV || 'development';
 
@@ -114,13 +139,20 @@ export function loadEnv(cwd: string = process.cwd()): AppConfig {
     corsOrigin = corsOriginRaw;
   }
 
+  const effectiveNodeEnv = (nodeEnv === 'production' || nodeEnv === 'test') ? nodeEnv : 'development';
+  const mongodbUri = process.env.MONGODB_URI || (effectiveNodeEnv === 'test' ? 'mongodb://127.0.0.1:27017/ricozviz_test' : 'mongodb://127.0.0.1:27017/core_mono');
+  const mongodbDbName = process.env.MONGODB_DB_NAME || process.env.DB_NAME;
+
+  // Strict Test Database Guard: Refuse to start with NODE_ENV=test unless database name ends in _test
+  assertTestDatabaseSafety(effectiveNodeEnv, mongodbUri, mongodbDbName);
+
   return {
     env: nodeEnv,
-    nodeEnv: nodeEnv === 'production' || nodeEnv === 'test' ? nodeEnv : 'development',
+    nodeEnv: effectiveNodeEnv,
     port: Number(process.env.PORT) || 4000,
     host: process.env.HOST || '0.0.0.0',
-    mongodbUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/core_mono',
-    mongodbDbName: process.env.MONGODB_DB_NAME || process.env.DB_NAME,
+    mongodbUri,
+    mongodbDbName,
     corsOrigin,
     jwtAccessSecret: effectiveJwtAccessSecret,
     jwtRefreshSecret: effectiveJwtRefreshSecret,

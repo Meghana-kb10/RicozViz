@@ -6,7 +6,11 @@
 // ==============================================================================
 
 import type { FastifyInstance } from 'fastify';
-import { platformAdminGuard } from './admin.guard.js';
+import {
+  platformAdminGuard,
+  platformAdminPendingGuard,
+  platformAdminVerifyGuard
+} from './admin.guard.js';
 import { adminAuthController } from './admin-auth.controller.js';
 import { adminTenantsController } from './admin-tenants.controller.js';
 import { adminUsersController } from './admin-users.controller.js';
@@ -27,12 +31,22 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     }
   };
 
+  const adminPendingGuard = {
+    preHandler: [platformAdminPendingGuard],
+    config: authRateLimit.config
+  };
+
+  const adminVerifyGuard = {
+    preHandler: [platformAdminVerifyGuard],
+    config: authRateLimit.config
+  };
+
   // ---- Admin Authentication ---------------------------------------------------
   app.post('/auth/login', authRateLimit, adminAuthController.login.bind(adminAuthController));
   app.post('/auth/refresh', adminAuthController.refresh.bind(adminAuthController));
   app.post('/auth/logout', adminAuthController.logout.bind(adminAuthController));
-  app.post('/auth/totp/enroll', adminGuard, adminAuthController.enrollTotp.bind(adminAuthController));
-  app.post('/auth/totp/verify', adminGuard, adminAuthController.verifyTotp.bind(adminAuthController));
+  app.post('/auth/totp/enroll', adminPendingGuard, adminAuthController.enrollTotp.bind(adminAuthController));
+  app.post('/auth/totp/verify', adminVerifyGuard, adminAuthController.verifyTotp.bind(adminAuthController));
   app.post('/auth/totp/regenerate-backup-codes', adminGuard, adminAuthController.regenerateBackupCodes.bind(adminAuthController));
   app.get('/auth/sessions', adminGuard, adminAuthController.listSessions.bind(adminAuthController));
   app.delete('/auth/sessions/:id', adminGuard, adminAuthController.revokeSession.bind(adminAuthController));

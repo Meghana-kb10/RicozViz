@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     if (payload.requires2Fa) {
       return NextResponse.json({
         requires2Fa: true,
+        pendingToken: payload.pendingToken,
         user: payload.user
       });
     }

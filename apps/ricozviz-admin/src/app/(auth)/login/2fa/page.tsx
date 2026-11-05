@@ -11,30 +11,26 @@ function AdminTwoFactorForm() {
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl') || '/overview';
 
-  const { login } = useAdminAuth();
+  const { pendingToken, verify2Fa } = useAdminAuth();
   const [totpCode, setTotpCode] = useState('');
   const [backupCode, setBackupCode] = useState('');
   const [useBackupMode, setUseBackupMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem('rv_admin_pending_auth');
-      if (stored) {
-        setCredentials(JSON.parse(stored));
-      } else {
-        router.push('/login');
-      }
-    } catch {
+    // Pending token is kept in-memory only. If lost (e.g. direct nav or refresh), redirect to login.
+    if (!pendingToken) {
       router.push('/login');
     }
-  }, [router]);
+  }, [pendingToken, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!credentials) return;
+    if (!pendingToken) {
+      router.push('/login');
+      return;
+    }
 
     if (!useBackupMode && totpCode.trim().length !== 6) {
       setError('Please enter the 6-digit verification code.');
@@ -50,27 +46,14 @@ function AdminTwoFactorForm() {
     setIsSubmitting(true);
 
     try {
-      const payload: any = {
-        email: credentials.email,
-        password: credentials.password
-      };
-
-      if (useBackupMode) {
-        payload.backupCode = backupCode.trim().toLowerCase();
-      } else {
-        payload.totpCode = totpCode.trim();
-      }
-
-      const res = await login(payload);
-
-      if (res.success) {
-        sessionStorage.removeItem('rv_admin_pending_auth');
-        router.push(returnUrl);
-      } else {
-        setError(res.error || 'Invalid two-factor authentication code.');
-      }
+      await verify2Fa(
+        useBackupMode
+          ? { backupCode: backupCode.trim().toLowerCase() }
+          : { totpCode: totpCode.trim() }
+      );
+      router.push(returnUrl);
     } catch (err: any) {
-      setError(err.message || 'Authentication error.');
+      setError(err.message || 'Invalid two-factor authentication code.');
     } finally {
       setIsSubmitting(false);
     }
@@ -187,7 +170,6 @@ function AdminTwoFactorForm() {
             <button
               type="button"
               onClick={() => {
-                sessionStorage.removeItem('rv_admin_pending_auth');
                 router.push('/login');
               }}
               className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-300 transition cursor-pointer"

@@ -22,13 +22,11 @@ export interface AdminPrincipal {
 declare module 'fastify' {
   interface FastifyRequest {
     adminUser?: AdminPrincipal;
+    adminTokenPayload?: AdminAccessTokenPayload & { jti?: string };
   }
 }
 
-export async function platformAdminGuard(
-  request: FastifyRequest,
-  _reply: FastifyReply
-): Promise<void> {
+function extractBearerToken(request: FastifyRequest): string {
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     throw AppError.unauthorized('Missing or malformed Authorization header');
@@ -38,10 +36,12 @@ export async function platformAdminGuard(
   if (!token) {
     throw AppError.unauthorized('No authorization token provided');
   }
+  return token;
+}
 
-  let payload: AdminAccessTokenPayload;
+function verifyAdminTokenWithCustomerCheck(token: string): AdminAccessTokenPayload & { jti?: string } {
   try {
-    payload = verifyAdminAccessToken(token);
+    return verifyAdminAccessToken(token);
   } catch (adminErr) {
     // If it's a valid customer token, explicitly reject with 403 Forbidden
     try {
@@ -56,8 +56,20 @@ export async function platformAdminGuard(
     }
     throw adminErr;
   }
+}
 
-  if (!payload.twoFactorVerified) {
+/**
+ * Standard platform admin guard: strictly requires twoFactorVerified: true.
+ * Rejects 2fa-pending tokens and unverified sessions with 403 Forbidden.
+ */
+export async function platformAdminGuard(
+  request: FastifyRequest,
+  _reply: FastifyReply
+): Promise<void> {
+  const token = extractBearerToken(request);
+  const payload = verifyAdminTokenWithCustomerCheck(token);
+
+  if (payload.type === '2fa-pending' || !payload.twoFactorVerified) {
     throw AppError.forbidden('Forbidden: Two-factor authentication verification required');
   }
 
@@ -66,4 +78,51 @@ export async function platformAdminGuard(
     email: payload.email,
     role: payload.role
   };
+  request.adminTokenPayload = payload;
+}
+
+/**
+ * Guard for /auth/totp/enroll: accepts either a 2fa-pending token (for first-time enrollment)
+ * or a fully verified access token (for re-enrollment).
+ */
+export async function platformAdminPendingGuard(
+  request: FastifyRequest,
+  _reply: FastifyReply
+): Promise<void> {
+  const token = extractBearerToken(request);
+  const payload = verifyAdminTokenWithCustomerCheck(token);
+
+  request.adminUser = {
+    userId: payload.sub,
+    email: payload.email,
+    role: payload.role
+  };
+  request.adminTokenPayload = payload;
+}
+
+/**
+ * Strict guard for /auth/totp/verify: accepts ONLY a 2fa-pending token with JTI.
+ * Rejects full access tokens with 400 Bad Request.
+ */
+export async function platformAdminVerifyGuard(
+  request: FastifyRequest,
+  _reply: FastifyReply
+): Promise<void> {
+  const token = extractBearerToken(request);
+  const payload = verifyAdminTokenWithCustomerCheck(token);
+
+  if (payload.type !== '2fa-pending') {
+    throw AppError.badRequest('Two-factor verification accepts only a 2FA-pending token');
+  }
+
+  if (!payload.jti) {
+    throw AppError.unauthorized('Invalid pending token: missing token identifier');
+  }
+
+  request.adminUser = {
+    userId: payload.sub,
+    email: payload.email,
+    role: payload.role
+  };
+  request.adminTokenPayload = payload;
 }

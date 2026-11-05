@@ -11,6 +11,7 @@ export {
   setAdminAccessToken,
   clearAdminAccessToken,
   setAdminRefreshHandler,
+  setAdminUnauthorizedHandler,
   adminApiFetch,
   apiAdminLogin,
   apiAdminRefresh,
@@ -23,6 +24,7 @@ export {
   apiAdminChangePassword,
   type AdminAuthUser,
   type AdminAuthResult,
+  type AdminVerifyTotpResult,
   type AdminSessionItem
 } from './admin-client.js';
 

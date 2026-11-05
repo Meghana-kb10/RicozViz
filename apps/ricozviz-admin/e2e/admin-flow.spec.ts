@@ -142,62 +142,70 @@ test.describe('Platform Operator Admin Portal Security & Workflows', () => {
     await page.route('**/api/auth/login', async (route) => {
       const body = route.request().postDataJSON() || {};
       if (body.email === adminEmail && body.password === adminPassword) {
-        if (!body.totpCode) {
-          // Password verified, prompts for 2FA
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              requires2Fa: true,
-              user: {
-                id: 'admin_test_operator',
-                email: adminEmail,
-                role: 'PLATFORM_ADMIN',
-                twoFactorEnabled: true
-              }
-            })
-          });
-          return;
-        }
-
-        // TOTP verification step
-        const currentCode = generateTotp(totpSecret);
-        if (body.totpCode === currentCode) {
-          await page.context().addCookies([
-            {
-              name: 'rv_admin_session',
-              value: mockRefreshToken,
-              domain: 'localhost',
-              path: '/'
+        // Password verified, issues single-use 2FA-pending token
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            requires2Fa: true,
+            pendingToken: 'mock_pending_token_jti_7890',
+            user: {
+              id: 'admin_test_operator',
+              email: adminEmail,
+              role: 'PLATFORM_ADMIN',
+              twoFactorEnabled: true
             }
-          ]);
-
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            headers: {
-              'Set-Cookie': `rv_admin_session=${mockRefreshToken}; Path=/; HttpOnly; SameSite=Lax`
-            },
-            body: JSON.stringify({
-              accessToken: mockAccessToken,
-              refreshToken: mockRefreshToken,
-              user: {
-                id: 'admin_test_operator',
-                email: adminEmail,
-                name: 'Platform Operator Lead',
-                role: 'PLATFORM_ADMIN',
-                twoFactorEnabled: true
-              }
-            })
-          });
-          return;
-        }
+          })
+        });
+        return;
       }
 
       await route.fulfill({
         status: 401,
         contentType: 'application/json',
         body: JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } })
+      });
+    });
+
+    await page.route('**/api/auth/2fa', async (route) => {
+      const body = route.request().postDataJSON() || {};
+      const currentCode = generateTotp(totpSecret);
+
+      if (body.pendingToken === 'mock_pending_token_jti_7890' && body.totpCode === currentCode) {
+        await page.context().addCookies([
+          {
+            name: 'rv_admin_session',
+            value: mockRefreshToken,
+            domain: 'localhost',
+            path: '/'
+          }
+        ]);
+
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          headers: {
+            'Set-Cookie': `rv_admin_session=${mockRefreshToken}; Path=/; HttpOnly; SameSite=Lax`
+          },
+          body: JSON.stringify({
+            accessToken: mockAccessToken,
+            refreshToken: mockRefreshToken,
+            user: {
+              id: 'admin_test_operator',
+              email: adminEmail,
+              name: 'Platform Operator Lead',
+              role: 'PLATFORM_ADMIN',
+              twoFactorEnabled: true
+            }
+          })
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Invalid 2FA code' } })
       });
     });
 
@@ -533,5 +541,65 @@ test.describe('Platform Operator Admin Portal Security & Workflows', () => {
     await expect(page.locator('text=ADMIN_TENANT_UNSUSPENDED').first()).toBeVisible();
     await expect(page.locator(`text=${suspendReason}`).first()).toBeVisible();
     await expect(page.locator(`text=${unsuspendReason}`).first()).toBeVisible();
+  });
+
+  test('Security Verification: Zero CSP violations across all admin portal views', async ({
+    page,
+    context
+  }) => {
+    // 1. Verify that the configured test database ends with "_test"
+    const dbUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ricozviz_admin_test';
+    expect(dbUri).toMatch(/_test(\?|$)/);
+
+    // 2. Set valid session cookie so protected pages load completely
+    const sessionToken = signMockAdminSessionToken({
+      sub: 'admin_test_operator',
+      email: 'operator@ricozviz.internal',
+      aud: 'admin',
+      type: 'refresh',
+      role: 'PLATFORM_ADMIN',
+      twoFactorVerified: true,
+      exp: Math.floor(Date.now() / 1000) + 7 * 86400
+    });
+
+    await context.addCookies([
+      {
+        name: 'rv_admin_session',
+        value: sessionToken,
+        domain: 'localhost',
+        path: '/'
+      }
+    ]);
+
+    const cspViolations: string[] = [];
+    page.on('console', (msg) => {
+      const text = msg.text().toLowerCase();
+      if (
+        text.includes('content security policy') ||
+        text.includes('violates the following') ||
+        text.includes('refused to execute inline script') ||
+        text.includes('refused to apply inline style')
+      ) {
+        cspViolations.push(msg.text());
+      }
+    });
+
+    // Check each admin page
+    const adminRoutes = [
+      '/login',
+      '/overview',
+      '/tenants',
+      '/users',
+      '/workers',
+      '/audit',
+      '/system',
+      '/settings'
+    ];
+
+    for (const route of adminRoutes) {
+      await page.goto(route, { waitUntil: 'domcontentloaded' });
+    }
+
+    expect(cspViolations).toEqual([]);
   });
 });

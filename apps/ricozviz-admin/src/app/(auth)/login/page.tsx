@@ -32,8 +32,7 @@ function AdminLoginForm() {
     try {
       const res = await login({ email, password });
       if (res.requires2Fa) {
-        // Redirect to 2FA step
-        sessionStorage.setItem('rv_admin_pending_auth', JSON.stringify({ email, password }));
+        // Redirect to 2FA verification (pendingToken stored in-memory in AdminAuthContext)
         router.push(`/login/2fa?returnUrl=${encodeURIComponent(returnUrl)}`);
         return;
       }

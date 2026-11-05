@@ -60,6 +60,27 @@ export function signAdminAccessToken(payload: {
   );
 }
 
+export function signAdminPendingToken(payload: { sub: string; email: string }): { token: string; jti: string } {
+  const jti = crypto.randomUUID();
+  const options: SignOptions = {
+    expiresIn: '5m'
+  };
+  const token = jwt.sign(
+    {
+      sub: payload.sub,
+      email: payload.email,
+      role: 'PLATFORM_ADMIN',
+      aud: 'admin',
+      twoFactorVerified: false,
+      type: '2fa-pending',
+      jti
+    },
+    config.jwtAdminSecret,
+    options
+  );
+  return { token, jti };
+}
+
 export function signAdminRefreshToken(userId: string, tokenVersion: number, familyId?: string): string {
   const options: SignOptions = {
     expiresIn: '7d'
@@ -116,10 +137,10 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
 
 // ---- Admin Token verification ------------------------------------------------
 
-export function verifyAdminAccessToken(token: string): AdminAccessTokenPayload {
+export function verifyAdminAccessToken(token: string): AdminAccessTokenPayload & { jti?: string } {
   try {
-    const payload = jwt.verify(token, config.jwtAdminSecret) as AdminAccessTokenPayload;
-    if (payload.type !== 'access') {
+    const payload = jwt.verify(token, config.jwtAdminSecret) as AdminAccessTokenPayload & { jti?: string };
+    if (payload.type !== 'access' && payload.type !== '2fa-pending') {
       throw AppError.unauthorized('Invalid token type');
     }
     if (payload.aud !== 'admin' || payload.role !== 'PLATFORM_ADMIN') {

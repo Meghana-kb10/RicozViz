@@ -22,6 +22,10 @@ export default defineConfig({
     command: 'next start --port 3002',
     port: 3002,
     reuseExistingServer: true,
-    timeout: 30000
+    timeout: 30000,
+    env: {
+      MONGODB_URI: 'mongodb://127.0.0.1:27017/ricozviz_admin_test',
+      NODE_ENV: 'test'
+    }
   }
 });

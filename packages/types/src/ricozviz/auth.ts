@@ -61,7 +61,8 @@ export interface AdminAccessTokenPayload {
   role: 'PLATFORM_ADMIN';
   aud: 'admin';
   twoFactorVerified: boolean;
-  type: 'access';
+  type: 'access' | '2fa-pending';
+  jti?: string;
   iat?: number;
   exp?: number;
 }

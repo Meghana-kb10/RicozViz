@@ -7,8 +7,17 @@ export const adminLoginSchema = z.object({
   backupCode: z.string().length(8, 'Backup code must be 8 characters').optional()
 });
 
-export const adminTotpVerifySchema = z.object({
-  totpCode: z.string().length(6, 'TOTP code must be exactly 6 digits')
+export const adminTotpVerifySchema = z
+  .object({
+    totpCode: z.string().length(6, 'TOTP code must be 6 digits').optional(),
+    backupCode: z.string().length(8, 'Backup code must be 8 characters').optional()
+  })
+  .refine((data) => Boolean(data.totpCode || data.backupCode), {
+    message: 'Either totpCode or backupCode is required'
+  });
+
+export const adminTotpEnrollSchema = z.object({
+  currentTotpCode: z.string().length(6, 'TOTP code must be 6 digits').optional()
 });
 
 export const adminRegenerateBackupCodesSchema = z.object({
@@ -86,6 +95,7 @@ export const adminChangePasswordSchema = z.object({
 });
 
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
+export type AdminTotpEnrollInput = z.infer<typeof adminTotpEnrollSchema>;
 export type AdminTotpVerifyInput = z.infer<typeof adminTotpVerifySchema>;
 export type AdminRegenerateBackupCodesInput = z.infer<typeof adminRegenerateBackupCodesSchema>;
 export type AdminTenantListQueryInput = z.infer<typeof adminTenantListQuerySchema>;

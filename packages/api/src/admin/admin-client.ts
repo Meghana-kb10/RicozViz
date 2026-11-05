@@ -71,9 +71,14 @@ export function clearAdminAccessToken(): void {
 // Concurrency queue for admin 401 refresh
 let adminRefreshPromise: Promise<string | null> | null = null;
 let customAdminRefreshHandler: (() => Promise<string | null>) | null = null;
+let customAdminUnauthorizedHandler: (() => void) | null = null;
 
 export function setAdminRefreshHandler(handler: (() => Promise<string | null>) | null): void {
   customAdminRefreshHandler = handler;
+}
+
+export function setAdminUnauthorizedHandler(handler: (() => void) | null): void {
+  customAdminUnauthorizedHandler = handler;
 }
 
 async function executeAdminRefresh(): Promise<string | null> {
@@ -157,6 +162,13 @@ export async function adminApiFetch<T>(path: string, options: RequestInit = {}):
       headers.set('Authorization', `Bearer ${newAccessToken}`);
       response = await fetch(url, { ...fetchOptions, headers });
     } else {
+      if (customAdminUnauthorizedHandler) {
+        try {
+          customAdminUnauthorizedHandler();
+        } catch {
+          // Ignore handler callback errors
+        }
+      }
       throw new AdminApiError(401, 'UNAUTHORIZED', 'Admin session expired');
     }
   }
@@ -193,6 +205,7 @@ export interface AdminAuthUser {
 
 export interface AdminAuthResult {
   requires2Fa?: boolean;
+  pendingToken?: string;
   accessToken?: string;
   user?: AdminAuthUser;
 }
@@ -226,17 +239,44 @@ export async function apiAdminLogout(): Promise<void> {
   }
 }
 
-export async function apiAdminEnrollTotp(): Promise<{ secret: string; otpauthUri: string }> {
+export async function apiAdminEnrollTotp(options?: {
+  pendingToken?: string;
+  currentTotpCode?: string;
+}): Promise<{ secret: string; otpauthUri: string }> {
+  const headers: Record<string, string> = {};
+  if (options?.pendingToken) {
+    headers['Authorization'] = `Bearer ${options.pendingToken}`;
+  }
   return adminApiFetch<{ secret: string; otpauthUri: string }>('/admin/auth/totp/enroll', {
-    method: 'POST'
+    method: 'POST',
+    headers,
+    body: options?.currentTotpCode ? JSON.stringify({ currentTotpCode: options.currentTotpCode }) : undefined
   });
 }
 
-export async function apiAdminVerifyTotp(input: AdminTotpVerifyInput): Promise<{ backupCodes: string[] }> {
-  return adminApiFetch<{ backupCodes: string[] }>('/admin/auth/totp/verify', {
+export interface AdminVerifyTotpResult {
+  accessToken: string;
+  user: AdminAuthUser;
+  backupCodes?: string[];
+}
+
+export async function apiAdminVerifyTotp(
+  input: AdminTotpVerifyInput,
+  pendingToken?: string
+): Promise<AdminVerifyTotpResult> {
+  const headers: Record<string, string> = {};
+  if (pendingToken) {
+    headers['Authorization'] = `Bearer ${pendingToken}`;
+  }
+  const result = await adminApiFetch<AdminVerifyTotpResult>('/admin/auth/totp/verify', {
     method: 'POST',
+    headers,
     body: JSON.stringify(input)
   });
+  if (result.accessToken) {
+    setAdminAccessToken(result.accessToken);
+  }
+  return result;
 }
 
 export async function apiAdminChangePassword(input: AdminChangePasswordInput): Promise<{ message: string }> {

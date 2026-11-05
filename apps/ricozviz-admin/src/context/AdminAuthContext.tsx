@@ -5,14 +5,15 @@ import { useRouter } from 'next/navigation';
 import {
   setAdminAccessToken,
   clearAdminAccessToken,
+  setAdminUnauthorizedHandler,
   apiAdminEnrollTotp,
-  apiAdminVerifyTotp,
   type AdminAuthUser
 } from '@repo/api';
 
 export interface AdminAuthContextType {
   user: AdminAuthUser | null;
   accessToken: string | null;
+  pendingToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   requires2Fa: boolean;
@@ -24,8 +25,8 @@ export interface AdminAuthContextType {
     backupCode?: string;
   }) => Promise<{ requires2Fa?: boolean; success?: boolean; error?: string }>;
   logout: () => Promise<void>;
-  enroll2Fa: () => Promise<{ secret: string; otpauthUri: string }>;
-  verify2Fa: (totpCode: string) => Promise<{ backupCodes: string[] }>;
+  enroll2Fa: (options?: { currentTotpCode?: string }) => Promise<{ secret: string; otpauthUri: string }>;
+  verify2Fa: (codeOrInput: string | { totpCode?: string; backupCode?: string }) => Promise<{ backupCodes: string[] }>;
   refreshSession: () => Promise<boolean>;
 }
 
@@ -35,6 +36,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AdminAuthUser | null>(null);
   const [accessToken, setAccessTokenState] = useState<string | null>(null);
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [requires2Fa, setRequires2Fa] = useState(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
@@ -102,6 +104,24 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refreshSession]);
 
+  // Handle automatic 401 redirection on session expiration (excluding /login and /login/2fa)
+  useEffect(() => {
+    setAdminUnauthorizedHandler(() => {
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
+        if (pathname === '/login' || pathname === '/login/2fa') {
+          return;
+        }
+        applyAccessToken(null);
+        setUser(null);
+        router.push('/login');
+      }
+    });
+    return () => {
+      setAdminUnauthorizedHandler(null);
+    };
+  }, [applyAccessToken, router]);
+
   const login = async (credentials: {
     email: string;
     password: string;
@@ -126,6 +146,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.requires2Fa) {
         setRequires2Fa(true);
+        setPendingToken(data.pendingToken || null);
         setPendingEmail(credentials.email);
         setUser(data.user || null);
         return { requires2Fa: true, success: true };
@@ -135,6 +156,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         applyAccessToken(data.accessToken);
         setUser(data.user || null);
         setRequires2Fa(false);
+        setPendingToken(null);
         setPendingEmail(null);
         return { success: true };
       }
@@ -160,22 +182,50 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       clearAdminAccessToken();
       setUser(null);
       setRequires2Fa(false);
+      setPendingToken(null);
       setPendingEmail(null);
       setIsLoading(false);
       router.push('/login');
     }
   };
 
-  const enroll2Fa = async () => {
-    return apiAdminEnrollTotp();
+  const enroll2Fa = async (options?: { currentTotpCode?: string }) => {
+    return apiAdminEnrollTotp({
+      pendingToken: pendingToken || undefined,
+      currentTotpCode: options?.currentTotpCode
+    });
   };
 
-  const verify2Fa = async (totpCode: string) => {
-    const result = await apiAdminVerifyTotp({ totpCode });
-    if (user) {
-      setUser({ ...user, twoFactorEnabled: true });
+  const verify2Fa = async (codeOrInput: string | { totpCode?: string; backupCode?: string }) => {
+    const payload = typeof codeOrInput === 'string' ? { totpCode: codeOrInput } : codeOrInput;
+
+    const res = await fetch('/api/auth/2fa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        pendingToken,
+        ...payload
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.error?.message || data.message || `2FA verification failed (${res.status})`;
+      throw new Error(msg);
     }
-    return result;
+
+    if (data.accessToken) {
+      applyAccessToken(data.accessToken);
+    }
+    if (data.user) {
+      setUser(data.user);
+    }
+    setRequires2Fa(false);
+    setPendingToken(null);
+    setPendingEmail(null);
+
+    return { backupCodes: data.backupCodes || [] };
   };
 
   return (
@@ -183,6 +233,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         accessToken,
+        pendingToken,
         isAuthenticated: !!accessToken && !!user,
         isLoading,
         requires2Fa,

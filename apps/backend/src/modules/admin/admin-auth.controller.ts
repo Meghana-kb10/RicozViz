@@ -58,7 +58,15 @@ export class AdminAuthController {
     const adminUser = request.adminUser;
     if (!adminUser) throw AppError.unauthorized('Admin unauthorized');
 
-    const result = await adminAuthService.enrollTotp(adminUser.userId);
+    const isFullVerifiedToken =
+      request.adminTokenPayload?.type === 'access' && Boolean(request.adminTokenPayload?.twoFactorVerified);
+    const body = (request.body as { currentTotpCode?: string }) || {};
+
+    const result = await adminAuthService.enrollTotp(
+      adminUser.userId,
+      isFullVerifiedToken,
+      body.currentTotpCode
+    );
     sendSuccess(reply, result, 200);
   }
 
@@ -67,7 +75,22 @@ export class AdminAuthController {
     if (!adminUser) throw AppError.unauthorized('Admin unauthorized');
 
     const input = validate(adminTotpVerifySchema, request.body);
-    const result = await adminAuthService.verifyTotp(adminUser.userId, input.totpCode);
+    const pendingTokenJti = request.adminTokenPayload?.jti;
+    const ipAddress = request.ip || (request.headers['x-forwarded-for'] as string) || undefined;
+    const userAgent = (request.headers['user-agent'] as string) || undefined;
+
+    const result = await adminAuthService.verifyTotp(
+      adminUser.userId,
+      input,
+      pendingTokenJti,
+      ipAddress,
+      userAgent
+    );
+
+    if (result.refreshToken && result.cookieOptions) {
+      reply.setCookie(ADMIN_REFRESH_COOKIE, result.refreshToken, result.cookieOptions);
+    }
+
     sendSuccess(reply, result, 200);
   }
 
