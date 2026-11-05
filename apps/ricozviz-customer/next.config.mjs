@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   // Workspace packages ship raw TypeScript sources, so Next must transpile them.
   transpilePackages: [
     '@repo/api',

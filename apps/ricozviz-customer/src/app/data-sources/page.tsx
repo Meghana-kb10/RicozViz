@@ -325,8 +325,8 @@ export default function DataSourcesPage() {
 
     try {
       const tables = await apiListSourceTables(ds.id);
-      setDiscoveryTables(tables);
-      if (tables.length > 0) {
+      setDiscoveryTables(Array.isArray(tables) ? tables : []);
+      if (Array.isArray(tables) && tables.length > 0) {
         void handleSelectDiscoveryTable(ds.id, tables[0].name);
       }
     } catch (err) {
@@ -346,7 +346,7 @@ export default function DataSourcesPage() {
 
     try {
       const schema = await apiGetSourceTableSchema(dsId, tableName);
-      setDiscoveredTableCols(schema.columns);
+      setDiscoveredTableCols(Array.isArray(schema?.columns) ? schema.columns : []);
     } catch (err) {
       setDiscoveryError(err instanceof ApiError ? err.message : "Failed to fetch table columns");
     } finally {
@@ -774,37 +774,37 @@ export default function DataSourcesPage() {
                     <div className="mt-4 rounded-lg bg-[#181818] border border-[#262626] p-2.5 text-xs text-[#898989] font-mono-code break-all">
                       {ds.type === "POSTGRESQL" && (
                         <span>
-                          {String(ds.connection.host || "")}:{String(ds.connection.port || 5432)} /{" "}
-                          {String(ds.connection.database || "")}
+                          {String(ds.connection?.host || "")}:{String(ds.connection?.port || 5432)} /{" "}
+                          {String(ds.connection?.database || "")}
                         </span>
                       )}
                       {ds.type === "MYSQL" && (
                         <span>
-                          {String(ds.connection.host || "")}:{String(ds.connection.port || 3306)} /{" "}
-                          {String(ds.connection.database || "")}
+                          {String(ds.connection?.host || "")}:{String(ds.connection?.port || 3306)} /{" "}
+                          {String(ds.connection?.database || "")}
                         </span>
                       )}
                       {ds.type === "SQLITE" && (
                         <span>
-                          DB: {String(ds.connection.databasePath || ds.connection.fileName || "")}
+                          DB: {String(ds.connection?.databasePath || ds.connection?.fileName || "")}
                         </span>
                       )}
                       {ds.type === "XLSX" && (
                         <span>
-                          File: {String(ds.connection.fileName || "")} ({String(ds.connection.sheetName || "Sheet1")})
+                          File: {String(ds.connection?.fileName || "")} ({String(ds.connection?.sheetName || "Sheet1")})
                         </span>
                       )}
                       {ds.type === "JSON" && (
                         <span>
-                          File: {String(ds.connection.fileName || "")} (Path: {String(ds.connection.dataPath || "records")})
+                          File: {String(ds.connection?.fileName || "")} (Path: {String(ds.connection?.dataPath || "records")})
                         </span>
                       )}
                       {ds.type === "CSV" && (
-                        <span>File: {String(ds.connection.fileName || "")}</span>
+                        <span>File: {String(ds.connection?.fileName || "")}</span>
                       )}
                       {ds.type === "REST_API" && (
                         <span>
-                          {String(ds.connection.method || "GET")} {String(ds.connection.url || "")}
+                          {String(ds.connection?.method || "GET")} {String(ds.connection?.url || "")}
                         </span>
                       )}
                     </div>

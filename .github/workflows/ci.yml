@@ -1,0 +1,148 @@
+name: Production Infrastructure CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-test:
+    name: Lint, Test, E2E & Container Verification
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      MONGODB_URI: mongodb://127.0.0.1:27017/ricozviz_ci_test
+      REDIS_URL: redis://127.0.0.1:6379
+      JWT_SECRET: super_secret_jwt_key_at_least_32_bytes_long_ci_test!
+      JWT_ADMIN_SECRET: c1b33bb340e34b62e9e9370df7dbf760c020f0e27b85b5612bf629e8d6874799
+      ENCRYPTION_MASTER_KEY_V1: f4b321a5c689de701234567890abcdef1234567890abcdef1234567890abcdef
+      ACTIVE_ENCRYPTION_KEY_VERSION: "1"
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      ADMIN_API_ORIGIN: http://localhost:4000
+
+    steps:
+      - name: Checkout Monorepo
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.0
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Monorepo Typecheck (All 10 Packages)
+        run: pnpm run check-types
+
+      - name: Backend Unit & Integration Tests
+        run: pnpm --filter backend test
+
+      - name: Shared API Package Tests
+        run: pnpm --filter @repo/api test
+
+      - name: Customer Portal Unit Tests
+        run: pnpm --filter ricozviz-customer test
+
+      - name: Monorepo Production Build (Turbo)
+        run: pnpm run build
+        env:
+          NODE_ENV: production
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Customer Playwright E2E Tests (10-Step Workflow + Security)
+        run: pnpm --filter ricozviz-customer test:e2e
+        env:
+          CI: true
+          NODE_ENV: test
+          MONGODB_URI: mongodb://127.0.0.1:27017/ricozviz_customer_ci_test
+
+      - name: Admin Playwright E2E Tests (2FA Lifecycle, Lockout & CSP Validation)
+        run: pnpm --filter ricozviz-admin test:e2e
+        env:
+          CI: true
+          NODE_ENV: test
+          MONGODB_URI: mongodb://127.0.0.1:27017/ricozviz_admin_ci_test
+
+      - name: Validate Docker Compose Configuration
+        run: docker compose config
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          push: false
+          tags: ricozviz/backend:latest
+
+      - name: Build Worker Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile.worker
+          push: false
+          tags: ricozviz/worker:latest
+
+      - name: Build Customer Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/ricozviz-customer/Dockerfile
+          push: false
+          tags: ricozviz/customer:latest
+
+      - name: Build Admin Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/ricozviz-admin/Dockerfile
+          push: false
+          tags: ricozviz/admin:latest
+
+      - name: Upload Test Artifacts (On Failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: |
+            apps/ricozviz-customer/test-results/
+            apps/ricozviz-admin/test-results/
+          retention-days: 7

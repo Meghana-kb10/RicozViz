@@ -1,0 +1,93 @@
+# ==============================================================================
+# RicozViz Production Reverse Proxy - Caddy Configuration
+# ==============================================================================
+# Features:
+# - Automatic TLS termination with internal / ACME certificates
+# - Subdomain and path-based routing for Backend, Customer, and Admin apps
+# - WebSocket proxying with native streaming support
+# - Enterprise security headers (HSTS, nosniff, framing protection)
+# ==============================================================================
+
+{
+    admin off
+    auto_https disable_redirects
+}
+
+# ------------------------------------------------------------------------------
+# 1. API Subdomain & Backend Gateway (api.ricozviz.localhost)
+# ------------------------------------------------------------------------------
+api.ricozviz.localhost, api.localhost {
+    tls internal
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
+
+    reverse_proxy backend:4000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# ------------------------------------------------------------------------------
+# 2. Operator Admin Portal (admin.ricozviz.localhost)
+# ------------------------------------------------------------------------------
+admin.ricozviz.localhost, admin.localhost {
+    tls internal
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+        -Server
+    }
+
+    reverse_proxy admin:3002 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# ------------------------------------------------------------------------------
+# 3. Customer Analytics Portal (ricozviz.localhost)
+# ------------------------------------------------------------------------------
+ricozviz.localhost, localhost {
+    tls internal
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Direct API path proxying convenience
+    handle /api/* {
+        reverse_proxy backend:4000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    handle {
+        reverse_proxy customer:3001 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+}

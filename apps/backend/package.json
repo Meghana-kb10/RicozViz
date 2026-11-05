@@ -10,6 +10,8 @@
     "test": "tsx src/utils/response.test.ts && tsx src/modules/ricozviz/governance/governance.test.ts && tsx src/modules/ricozviz/governance/rls-simulator.test.ts && tsx src/modules/ricozviz/audit/audit-preview.test.ts && tsx src/modules/ricozviz/dataset/duckdb-dataset.test.ts && tsx src/modules/ricozviz/ai/ai.test.ts && tsx src/modules/ricozviz/flow.test.ts && tsx src/modules/ricozviz/security-hardening.test.ts && tsx src/modules/ricozviz/worker-presence.test.ts && tsx src/modules/admin/admin.test.ts && tsx src/modules/ricozviz/auth/customer-auth.test.ts",
     "check-types": "tsc --noEmit",
     "seed:admin": "tsx src/scripts/create-platform-admin.ts",
+    "seed:e2e": "tsx src/scripts/seed-e2e-data.ts",
+    "clean:e2e": "tsx src/scripts/clean-e2e-data.ts",
     "worker": "node dist/worker.js",
     "worker:dev": "tsx watch src/worker.ts"
   },

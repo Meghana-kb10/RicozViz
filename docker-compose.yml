@@ -1,0 +1,186 @@
+# ==============================================================================
+# RicozViz Production Infrastructure - Docker Compose
+# ==============================================================================
+# Services:
+# - mongo: MongoDB 7.0 (Primary Document Datastore)
+# - redis: Redis 7 (Cache, Rate Limiting, Presence & Job Queues)
+# - backend: Fastify 5 REST & Realtime API (Port 4000)
+# - worker: Background Scheduled Job Runner
+# - customer: RicozViz Customer Analytics Portal (Port 3001)
+# - admin: RicozViz Operator Admin Portal (Port 3002)
+# - gateway: Caddy Reverse Proxy & Automatic TLS Termination (Ports 80, 443)
+# ==============================================================================
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: ricozviz-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: ricozviz
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/ricozviz --quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ricozviz-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ricozviz-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - ricozviz-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: ricozviz-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOST: 0.0.0.0
+      MONGODB_URI: mongodb://mongo:27017/ricozviz
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-production_customer_jwt_secret_must_be_32_chars!}
+      JWT_ADMIN_SECRET: ${JWT_ADMIN_SECRET:-production_admin_jwt_secret_must_be_32_chars!}
+      ENCRYPTION_MASTER_KEY_V1: ${ENCRYPTION_MASTER_KEY_V1:-f4b321a5c689de701234567890abcdef1234567890abcdef1234567890abcdef}
+      ACTIVE_ENCRYPTION_KEY_VERSION: "1"
+      CORS_ORIGIN: "http://localhost:3001,http://localhost:3002,http://ricozviz.localhost,http://admin.ricozviz.localhost,https://ricozviz.localhost,https://admin.ricozviz.localhost"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ricozviz-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile.worker
+    container_name: ricozviz-worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/ricozviz
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-production_customer_jwt_secret_must_be_32_chars!}
+      ENCRYPTION_MASTER_KEY_V1: ${ENCRYPTION_MASTER_KEY_V1:-f4b321a5c689de701234567890abcdef1234567890abcdef1234567890abcdef}
+      ACTIVE_ENCRYPTION_KEY_VERSION: "1"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - ricozviz-network
+
+  customer:
+    build:
+      context: .
+      dockerfile: apps/ricozviz-customer/Dockerfile
+    container_name: ricozviz-customer
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      NEXT_PUBLIC_APP_NAME: "RicozViz Customer"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - ricozviz-network
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/ricozviz-admin/Dockerfile
+    container_name: ricozviz-admin
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      JWT_ADMIN_SECRET: ${JWT_ADMIN_SECRET:-production_admin_jwt_secret_must_be_32_chars!}
+      ADMIN_API_ORIGIN: http://backend:4000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3002/login"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - ricozviz-network
+
+  gateway:
+    image: caddy:2-alpine
+    container_name: ricozviz-gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - customer
+      - admin
+    networks:
+      - ricozviz-network
+
+volumes:
+  mongo_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  ricozviz-network:
+    driver: bridge

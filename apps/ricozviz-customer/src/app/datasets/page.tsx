@@ -392,7 +392,7 @@ export default function DatasetsPage() {
         const created = await apiUploadDataset(formData);
         setSuccessMsg(
           `Dataset "${created.name}" (${created.sourceType || "CSV"}, ${created.rowCount} rows, ${
-            created.columnCount || created.columns.length
+            created.columnCount || created.columns?.length || 0
           } columns) uploaded and processed successfully.`
         );
       } else if (creationMode === "DATASOURCE") {
@@ -663,7 +663,7 @@ export default function DatasetsPage() {
       setIsBlendModalOpen(false);
       setSuccessMsg(
         `Blended dataset "${created.name}" created successfully (${created.rowCount} rows, ${
-          created.columnCount || created.columns.length
+          created.columnCount || created.columns?.length || 0
         } columns). It can now be queried and visualized!`
       );
     } catch (err) {
@@ -990,7 +990,7 @@ export default function DatasetsPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-[#666666]">Columns:</span>
                       <span className="text-[#fafafa]">
-                        {ds.columnCount || ds.columns.length} columns
+                        {ds.columnCount || ds.columns?.length || 0} columns
                       </span>
                     </div>
                     {ds.fileSize && (
