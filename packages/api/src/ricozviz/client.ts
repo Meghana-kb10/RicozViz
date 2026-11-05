@@ -99,7 +99,7 @@ let inMemoryAccessToken: string | null = null;
 export function getAccessToken(): string | null {
   if (typeof window !== 'undefined') {
     try {
-      const stored = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+      const stored = window.sessionStorage?.getItem(ACCESS_TOKEN_KEY);
       if (stored) return stored;
     } catch {
       // ignore
@@ -108,25 +108,118 @@ export function getAccessToken(): string | null {
   return inMemoryAccessToken;
 }
 
+let proactiveRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function cancelProactiveRefresh(): void {
+  if (proactiveRefreshTimer) {
+    clearTimeout(proactiveRefreshTimer);
+    proactiveRefreshTimer = null;
+  }
+}
+
+/**
+ * Parses JWT expiration and schedules proactive background refresh before expiration.
+ * Buffer: refreshes 60s before expiry (or 20% before if expiration is under 5 minutes).
+ */
+export function scheduleProactiveRefresh(token: string): void {
+  cancelProactiveRefresh();
+
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      const jsonStr =
+        typeof atob !== 'undefined'
+          ? atob(base64)
+          : Buffer.from(base64, 'base64').toString('utf-8');
+      const payload = JSON.parse(jsonStr) as { exp?: number };
+
+      if (payload.exp && typeof payload.exp === 'number') {
+        const expiresInMs = payload.exp * 1000 - Date.now();
+        // If already expired or under 500ms, do not schedule timer
+        if (expiresInMs <= 500) {
+          return;
+        }
+
+        // Buffer: 60s or 20% of remaining lifetime, whichever is smaller
+        const bufferMs = Math.min(60 * 1000, expiresInMs * 0.2);
+        const delay = Math.max(expiresInMs - bufferMs, 500);
+
+        proactiveRefreshTimer = setTimeout(() => {
+          executeRicozVizRefresh().catch(() => {});
+        }, delay);
+      }
+    }
+  } catch {
+    // If token parsing fails, silently skip proactive scheduling
+  }
+}
+
 export function setAccessToken(token: string | null): void {
   inMemoryAccessToken = token;
   if (typeof window !== 'undefined') {
     try {
+      const doc = typeof document !== 'undefined' ? document : (window as any).document;
       if (token) {
-        sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
-        document.cookie = `${activeSessionCookieName}=true; path=/; max-age=86400; SameSite=Lax`;
+        window.sessionStorage?.setItem(ACCESS_TOKEN_KEY, token);
+        if (doc) {
+          doc.cookie = `${activeSessionCookieName}=true; path=/; max-age=86400; SameSite=Lax`;
+        }
       } else {
-        sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-        document.cookie = `${activeSessionCookieName}=; path=/; max-age=0; SameSite=Lax`;
+        window.sessionStorage?.removeItem(ACCESS_TOKEN_KEY);
+        if (doc) {
+          doc.cookie = `${activeSessionCookieName}=; path=/; max-age=0; SameSite=Lax`;
+        }
+      }
+
+      // Strictly enforce zero-localStorage token hygiene by clearing any legacy tokens
+      if (typeof window.localStorage !== 'undefined') {
+        window.localStorage.removeItem('ricoz_access_token');
+        window.localStorage.removeItem('ricoz_refresh_token');
+        window.localStorage.removeItem('token');
+        window.localStorage.removeItem(ACCESS_TOKEN_KEY);
       }
     } catch {
       // ignore
     }
   }
+
+  if (token) {
+    scheduleProactiveRefresh(token);
+  } else {
+    cancelProactiveRefresh();
+  }
 }
 
 export function clearAccessToken(): void {
   setAccessToken(null);
+}
+
+// ---- Tenant Suspension Handling ----
+
+export type TenantSuspendedHandler = (message?: string) => void;
+let tenantSuspendedHandler: TenantSuspendedHandler | null = null;
+
+export function setOnTenantSuspended(handler: TenantSuspendedHandler | null): void {
+  tenantSuspendedHandler = handler;
+}
+
+export function triggerTenantSuspended(message?: string): void {
+  clearAccessToken();
+
+  if (tenantSuspendedHandler) {
+    tenantSuspendedHandler(message);
+    return;
+  }
+
+  if (typeof window !== 'undefined') {
+    if (!window.location.pathname.startsWith('/suspended')) {
+      window.location.href = '/suspended';
+    }
+  }
 }
 
 // ---- Auth Failure & Return URL Handling ----
@@ -157,7 +250,8 @@ export function triggerAuthFailure(returnUrl?: string): void {
   if (typeof window !== 'undefined') {
     if (
       !window.location.pathname.startsWith('/login') &&
-      !window.location.pathname.startsWith('/register')
+      !window.location.pathname.startsWith('/register') &&
+      !window.location.pathname.startsWith('/suspended')
     ) {
       const encodedReturn = encodeURIComponent(targetUrl);
       window.location.href = `/login?returnUrl=${encodedReturn}`;
@@ -191,6 +285,22 @@ export async function executeRicozVizRefresh(): Promise<string | null> {
       });
 
       if (!res.ok) {
+        let errBody: RawEnvelope<unknown> | null = null;
+        try {
+          errBody = (await res.clone().json()) as RawEnvelope<unknown>;
+        } catch {
+          // ignore
+        }
+
+        if (
+          res.status === 403 &&
+          (errBody?.error?.code === 'TENANT_SUSPENDED' ||
+            errBody?.error?.message?.toLowerCase().includes('suspended'))
+        ) {
+          triggerTenantSuspended(errBody?.error?.message);
+          return null;
+        }
+
         throw new Error(`Refresh failed with HTTP ${res.status}`);
       }
 
@@ -258,6 +368,23 @@ export async function apiFetch<T>(
     headers,
     credentials: 'include' // Send the HttpOnly refresh cookie automatically
   });
+
+  // Handle suspended tenant (HTTP 403 with TENANT_SUSPENDED code or message)
+  if (res.status === 403) {
+    let errBody: RawEnvelope<unknown> | null = null;
+    try {
+      errBody = (await res.clone().json()) as RawEnvelope<unknown>;
+    } catch {
+      // ignore
+    }
+
+    if (
+      errBody?.error?.code === 'TENANT_SUSPENDED' ||
+      errBody?.error?.message?.toLowerCase().includes('suspended')
+    ) {
+      triggerTenantSuspended(errBody?.error?.message);
+    }
+  }
 
   // Handle automatic 401 refresh with concurrency queuing
   if (res.status === 401) {

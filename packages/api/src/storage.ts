@@ -4,24 +4,26 @@ const ACCESS_TOKEN_KEY = 'ricoz_access_token';
 const LEGACY_REFRESH_TOKEN_KEY = 'ricoz_refresh_token';
 
 /**
- * Universal browser token storage with localStorage and memory fallback.
+ * Universal browser token storage using sessionStorage and memory fallback.
+ * Strictly adheres to zero-localStorage policy for security hygiene.
  *
  * ============================================================================
  * SECURITY ARCHITECTURE & TOKEN HYGIENE:
  * ============================================================================
  * Tradeoff Analysis:
- * Storing long-lived refresh tokens in client-accessible storage (such as
- * localStorage or sessionStorage) introduces severe vulnerability to Cross-Site
- * Scripting (XSS) attacks. Any rogue third-party script, dependency compromise,
- * or injected HTML snippet can read `localStorage.getItem('ricoz_refresh_token')`
- * and permanently exfiltrate the user's refresh credential.
+ * Storing long-lived refresh tokens in client-accessible storage introduces severe
+ * vulnerability to Cross-Site Scripting (XSS) attacks. Any rogue third-party script
+ * or dependency compromise can read storage and permanently exfiltrate the credential.
  *
  * Production Resolution:
- * In RicozViz, refresh tokens are strictly transported via `HttpOnly`, `SameSite=Strict`
- * cookies set by the backend Fastify server on `/api/v1/auth`. The browser's native
- * network stack handles cookie inclusion automatically on calls to `/api/v1/auth/refresh`
- * via `credentials: 'include'`, while preventing JavaScript from accessing the cookie.
- * Client storage is reserved exclusively for the short-lived (15m) access token.
+ * In RicozViz, refresh tokens are strictly transported via `HttpOnly`, `SameSite=Lax`
+ * (or Strict) cookies set by the backend Fastify server on `/api/v1/auth`. The browser's
+ * native network stack handles cookie inclusion automatically on calls to
+ * `/api/v1/auth/refresh` via `credentials: 'include'`, while preventing JavaScript
+ * from accessing the cookie.
+ *
+ * Short-lived access tokens (15m) are stored in `sessionStorage` (scoped to tab/session)
+ * or in memory. `localStorage` is explicitly purged and never used.
  * ============================================================================
  */
 export class BrowserTokenStorage implements TokenStorage {
@@ -29,13 +31,13 @@ export class BrowserTokenStorage implements TokenStorage {
   private inMemoryRefresh: string | null = null;
 
   private isBrowser(): boolean {
-    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+    return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
   }
 
   getAccessToken(): string | null {
     if (this.isBrowser()) {
       try {
-        return localStorage.getItem(ACCESS_TOKEN_KEY);
+        return window.sessionStorage?.getItem(ACCESS_TOKEN_KEY);
       } catch {
         return this.inMemoryAccess;
       }
@@ -59,11 +61,14 @@ export class BrowserTokenStorage implements TokenStorage {
 
     if (this.isBrowser()) {
       try {
-        localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-        // Clear any legacy client-side refresh tokens to enforce HttpOnly cookie hygiene
-        localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
+        window.sessionStorage?.setItem(ACCESS_TOKEN_KEY, accessToken);
+        // Explicitly purge any legacy localStorage tokens to enforce zero-localStorage hygiene
+        if (typeof window.localStorage !== 'undefined') {
+          window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+          window.localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
+        }
       } catch {
-        // LocalStorage quota or permission issue fallback
+        // SessionStorage quota or permission issue fallback
       }
     }
   }
@@ -74,8 +79,11 @@ export class BrowserTokenStorage implements TokenStorage {
 
     if (this.isBrowser()) {
       try {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-        localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
+        window.sessionStorage?.removeItem(ACCESS_TOKEN_KEY);
+        if (typeof window.localStorage !== 'undefined') {
+          window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+          window.localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
+        }
       } catch {
         // Ignore
       }

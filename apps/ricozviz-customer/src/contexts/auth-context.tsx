@@ -4,9 +4,10 @@
 // Auth Context
 // ========================================
 // Provides authentication state to the entire application.
-// Handles login, logout, register, and token refresh.
+// Handles login, logout, register, token refresh, and tenant suspension.
 // ========================================
 
+import { useRouter } from "next/navigation";
 import React, {
   createContext,
   useContext,
@@ -24,6 +25,7 @@ import {
   clearAccessToken,
   getAccessToken,
   setOnAuthFailure,
+  setOnTenantSuspended,
   type UserData,
   type OrganizationData,
 } from "../lib/api";
@@ -58,26 +60,54 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [auth, setAuth] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-  // Synchronize React auth state with automatic 401 refresh failures in @repo/api
+  // Synchronize React auth state with automatic 401 refresh failures & suspension in @repo/api
   useEffect(() => {
     setOnAuthFailure(() => {
       setAuth(null);
     });
+    setOnTenantSuspended(() => {
+      setAuth(null);
+      router.push("/suspended");
+    });
     return () => {
       setOnAuthFailure(null);
+      setOnTenantSuspended(null);
     };
-  }, []);
+  }, [router]);
 
   // ---- Restore session on mount ----
   useEffect(() => {
+    const handleAuthError = (err: any) => {
+      if (
+        err?.code === "TENANT_SUSPENDED" ||
+        err?.message?.toLowerCase().includes("suspended")
+      ) {
+        setAuth(null);
+        clearAccessToken();
+        router.push("/suspended");
+      } else {
+        clearAccessToken();
+        setAuth(null);
+      }
+    };
+
     const token = getAccessToken();
     if (token) {
       apiMe()
         .then((data) => {
           setAuth(data);
         })
-        .catch(() => {
+        .catch((err) => {
+          // If suspension error, do not retry refresh
+          if (
+            err?.code === "TENANT_SUSPENDED" ||
+            err?.message?.toLowerCase().includes("suspended")
+          ) {
+            handleAuthError(err);
+            return;
+          }
           // Access token may be expired — try refresh
           apiRefresh()
             .then((refreshData) => {
@@ -87,10 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .then((data) => {
               setAuth(data);
             })
-            .catch(() => {
-              clearAccessToken();
-              setAuth(null);
-            })
+            .catch(handleAuthError)
             .finally(() => setIsLoading(false));
         })
         .finally(() => setIsLoading(false));
@@ -104,23 +131,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .then((data) => {
           setAuth(data);
         })
-        .catch(() => {
-          setAuth(null);
-        })
+        .catch(handleAuthError)
         .finally(() => setIsLoading(false));
     }
-  }, []);
+  }, [router]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const data = await apiLogin({ email, password });
-    setAccessToken(data.accessToken);
-    setAuth({
-      user: data.user,
-      organization: data.organization,
-      role: data.role,
-      permissions: data.permissions,
-    });
-  }, []);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const data = await apiLogin({ email, password });
+        setAccessToken(data.accessToken);
+        setAuth({
+          user: data.user,
+          organization: data.organization,
+          role: data.role,
+          permissions: data.permissions,
+        });
+      } catch (err: any) {
+        if (
+          err?.code === "TENANT_SUSPENDED" ||
+          err?.message?.toLowerCase().includes("suspended")
+        ) {
+          setAuth(null);
+          clearAccessToken();
+          router.push("/suspended");
+        }
+        throw err;
+      }
+    },
+    [router]
+  );
 
   const register = useCallback(
     async (input: {

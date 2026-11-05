@@ -21,8 +21,8 @@ const AUTH_ROUTES = ["/login", "/register"];
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public shared dashboards to be viewed without authentication
-  if (pathname.startsWith("/dashboards/shared")) {
+  // Allow public shared dashboards and suspended page without authentication
+  if (pathname.startsWith("/dashboards/shared") || pathname === "/suspended") {
     return NextResponse.next();
   }
 

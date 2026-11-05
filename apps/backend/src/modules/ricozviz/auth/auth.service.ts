@@ -504,6 +504,11 @@ export async function login(
   }
 
   const { organization, role } = membership;
+
+  if (organization.status === ORGANIZATION_STATUS.SUSPENDED) {
+    throw new AppError(403, 'TENANT_SUSPENDED', 'Organization account is suspended. Contact platform administrator.');
+  }
+
   const tokenVersion = user.tokenVersion ?? 0;
 
   const tokens = await issueTokens({
@@ -570,6 +575,10 @@ export async function me(userId: string, organizationId: string): Promise<RicozV
 
   const { organization, role } = membership;
 
+  if (organization.status === ORGANIZATION_STATUS.SUSPENDED) {
+    throw new AppError(403, 'TENANT_SUSPENDED', 'Organization account is suspended. Contact platform administrator.');
+  }
+
   return {
     user: buildSafeUser({
       id: user._id.toString(),
@@ -618,25 +627,35 @@ export async function refresh(
   const tokenHash = crypto.createHash('sha256').update(cookieToken).digest('hex');
   const storedToken = await RefreshTokenModel.findOne({ tokenHash });
 
-  if (storedToken) {
-    if (storedToken.isRevoked) {
-      // Replay attack detected! Invalidate all tokens in the family to protect account
-      logger.warn('[AuthService] Revoked refresh token reuse detected! Invalidating token family', {
+  if (!storedToken) {
+    if (payload.familyId) {
+      logger.warn('[AuthService] Unknown or missing refresh token in DB! Invalidating token family', {
         userId: user._id.toString(),
-        familyId: storedToken.familyId
+        familyId: payload.familyId
       });
-      await RefreshTokenModel.updateMany({ familyId: storedToken.familyId }, { isRevoked: true }).exec();
+      await RefreshTokenModel.updateMany({ familyId: payload.familyId }, { isRevoked: true }).exec();
       await UserModel.updateOne({ _id: user._id }, { $inc: { tokenVersion: 1 } }).exec();
-      throw AppError.unauthorized('Refresh token has already been used (possible token replay attack)');
     }
-
-    if (storedToken.expiresAt.getTime() < Date.now()) {
-      throw AppError.unauthorized('Refresh token expired');
-    }
-
-    // Mark current token as revoked so it cannot be used again
-    await RefreshTokenModel.updateOne({ _id: storedToken._id }, { isRevoked: true }).exec();
+    throw AppError.unauthorized('Invalid or already used refresh token');
   }
+
+  if (storedToken.isRevoked) {
+    // Replay attack detected! Invalidate all tokens in the family to protect account
+    logger.warn('[AuthService] Revoked refresh token reuse detected! Invalidating token family', {
+      userId: user._id.toString(),
+      familyId: storedToken.familyId
+    });
+    await RefreshTokenModel.updateMany({ familyId: storedToken.familyId }, { isRevoked: true }).exec();
+    await UserModel.updateOne({ _id: user._id }, { $inc: { tokenVersion: 1 } }).exec();
+    throw AppError.unauthorized('Refresh token has already been used (possible token replay attack)');
+  }
+
+  if (storedToken.expiresAt.getTime() < Date.now()) {
+    throw AppError.unauthorized('Refresh token expired');
+  }
+
+  // Mark current token as revoked so it cannot be used again
+  await RefreshTokenModel.updateOne({ _id: storedToken._id }, { isRevoked: true }).exec();
 
   const membership = await getMembership(user._id.toString());
   if (!membership) {
@@ -644,6 +663,10 @@ export async function refresh(
   }
 
   const { organization, role } = membership;
+
+  if (organization.status === ORGANIZATION_STATUS.SUSPENDED) {
+    throw new AppError(403, 'TENANT_SUSPENDED', 'Organization account is suspended. Contact platform administrator.');
+  }
 
   // Issue new rotated token pair under the same family
   const tokens = await issueTokens({

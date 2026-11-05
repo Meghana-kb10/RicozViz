@@ -69,7 +69,7 @@ export async function requireAuth(request: FastifyRequest, _reply: FastifyReply)
   if (orgId) {
     const org = await OrganizationModel.findById(orgId).select('status').lean();
     if (org && org.status === ORGANIZATION_STATUS.SUSPENDED) {
-      throw AppError.forbidden('Organization account is suspended. Contact platform administrator.');
+      throw new AppError(403, 'TENANT_SUSPENDED', 'Organization account is suspended. Contact platform administrator.');
     }
   }
 

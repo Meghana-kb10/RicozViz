@@ -24,7 +24,12 @@ export {
   apiFetch,
   setOnAuthFailure,
   triggerAuthFailure,
-  executeRicozVizRefresh
+  executeRicozVizRefresh,
+  scheduleProactiveRefresh,
+  cancelProactiveRefresh,
+  setOnTenantSuspended,
+  triggerTenantSuspended,
+  type TenantSuspendedHandler
 } from '@repo/api';
 
 // ---- Auth --------------------------------------------------------------------

@@ -81,7 +81,12 @@ export {
   setOnAuthFailure,
   triggerAuthFailure,
   executeRicozVizRefresh,
-  type AuthFailureHandler
+  scheduleProactiveRefresh,
+  cancelProactiveRefresh,
+  setOnTenantSuspended,
+  triggerTenantSuspended,
+  type AuthFailureHandler,
+  type TenantSuspendedHandler
 } from './ricozviz/client.js';
 
 // ---- Endpoints ----

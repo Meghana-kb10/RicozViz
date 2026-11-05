@@ -59,6 +59,7 @@ import {
   type EmbedConfig,
   type EmbedStatusResult,
   getApiBaseUrl,
+  getAccessToken,
   ApiError,
 } from "../../../lib/api";
 
@@ -461,7 +462,7 @@ export default function DashboardDetailPage({
       console.warn("[Collaboration] WebSocket unavailable, falling back to SSE and REST polling");
 
       const baseUrl = getApiBaseUrl();
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+      const token = getAccessToken() || "";
       const streamUrl = `${baseUrl}/api/v1/dashboards/${id}/collaboration/stream?token=${encodeURIComponent(token)}`;
 
       try {

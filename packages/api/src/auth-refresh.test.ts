@@ -118,6 +118,20 @@ async function runTests(): Promise<void> {
       return;
     }
 
+    if (url === '/api/v1/suspended-check') {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: {
+            code: 'TENANT_SUSPENDED',
+            message: 'Organization account is suspended. Contact platform administrator.'
+          }
+        })
+      );
+      return;
+    }
+
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, error: { code: 'NOT_FOUND', message: 'Not found' } }));
   });
@@ -227,7 +241,70 @@ async function runTests(): Promise<void> {
     assert.ok(capturedReturnUrl !== null, 'onAuthFailure callback must be invoked');
     console.log('✓ Refresh failure safely clears session and triggers return URL callback');
 
-    console.log('\n🎉 ALL AUTOMATIC 401 REFRESH & CONCURRENCY TESTS PASSED 100%!\n');
+    // --------------------------------------------------------------------------
+    // TEST 5: Proactive Background Refresh Timer Before Expiration
+    // --------------------------------------------------------------------------
+    console.log('\n--- Test 5: Proactive Auto-Refresh Timer Before Expiration ---');
+    allowRefresh = true;
+    const initialRefreshCount = refreshCallsCount;
+
+    // Create a mock JWT that expires in 1.5 seconds (1500ms)
+    // Buffer is min(60s, 1500 * 0.2 = 300ms) -> delay is 1200ms
+    const shortExpSeconds = Math.floor((Date.now() + 1500) / 1000);
+    const mockPayload = { id: 'usr_proactive', exp: shortExpSeconds };
+    const mockToken =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+      Buffer.from(JSON.stringify(mockPayload)).toString('base64url') +
+      '.mock_proactive_sig';
+
+    setAccessToken(mockToken);
+    validAccessTokens.add(mockToken);
+
+    // Wait 1350ms for proactive timer to execute background refresh
+    await new Promise((resolve) => setTimeout(resolve, 1350));
+
+    assert.strictEqual(
+      refreshCallsCount,
+      initialRefreshCount + 1,
+      'Proactive refresh timer must automatically trigger refresh before token expiration'
+    );
+    const activeTokenAfterProactive = getAccessToken();
+    assert.ok(
+      activeTokenAfterProactive && activeTokenAfterProactive !== mockToken,
+      'Access token must be proactively updated without any 401 error'
+    );
+    console.log('✓ Proactive auto-refresh executed in background before expiration');
+
+    // --------------------------------------------------------------------------
+    // TEST 6: Suspended Tenant Interception & Callback Trigger
+    // --------------------------------------------------------------------------
+    console.log('\n--- Test 6: Suspended Tenant 403 Interception ---');
+    let capturedSuspensionMessage: string | null = null;
+    const { setOnTenantSuspended } = await import('./index.js');
+    setOnTenantSuspended((msg) => {
+      capturedSuspensionMessage = msg || 'suspended';
+    });
+
+    // Configure server route to simulate suspended tenant response
+    let simulateSuspended = true;
+    const originalToken = issueNewToken();
+    setAccessToken(originalToken);
+
+    // Make an API request to a route that returns 403 TENANT_SUSPENDED
+    const suspendedReqError = await (async () => {
+      try {
+        await apiFetch('/api/v1/suspended-check');
+        return null;
+      } catch (err: any) {
+        return err;
+      }
+    })();
+
+    assert.ok(capturedSuspensionMessage !== null, 'Tenant suspension callback must be triggered');
+    assert.strictEqual(getAccessToken(), null, 'Access token must be cleared when tenant is suspended');
+    console.log('✓ Suspended tenant properly detected, token cleared, and suspension callback triggered');
+
+    console.log('\n🎉 ALL AUTOMATIC 401 REFRESH, CONCURRENCY & SUSPENSION TESTS PASSED 100%!\n');
   } finally {
     server.close();
   }
