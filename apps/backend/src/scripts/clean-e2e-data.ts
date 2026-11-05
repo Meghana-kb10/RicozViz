@@ -25,7 +25,7 @@ import { E2E_SEEDS } from './seed-e2e-data.js';
 
 export async function cleanE2eData(): Promise<void> {
   const dbUri = process.env.MONGODB_URI || config.mongodbUri;
-  const dbName = process.env.MONGODB_DB_NAME || config.mongodbDbName;
+  const dbName = process.env.MONGODB_DB_NAME || (dbUri.includes('/') ? undefined : config.mongodbDbName);
 
   assertTestDatabaseSafety('test', dbUri, dbName);
 
@@ -54,19 +54,19 @@ export async function cleanE2eData(): Promise<void> {
     });
 
     await DataSourceModel.deleteMany({
-      _id: { $in: [E2E_SEEDS.DATA_SOURCE_PG.id, E2E_SEEDS.DATA_SOURCE_CSV.id] }
+      organizationId: E2E_SEEDS.TENANT.id
     });
 
     await DatasetModel.deleteMany({
-      _id: { $in: [E2E_SEEDS.DATASET.id] }
+      organizationId: E2E_SEEDS.TENANT.id
     });
 
     await ChartModel.deleteMany({
-      title: 'Transit Duration by Carrier'
+      organizationId: E2E_SEEDS.TENANT.id
     });
 
     await DashboardModel.deleteMany({
-      _id: { $in: [E2E_SEEDS.DASHBOARD.id] }
+      organizationId: E2E_SEEDS.TENANT.id
     });
 
     await AuditLogModel.deleteMany({

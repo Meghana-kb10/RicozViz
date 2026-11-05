@@ -36,10 +36,29 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      postgres:
+        image: postgres:16-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: logistics_dw
+          POSTGRES_USER: readonly_user
+          POSTGRES_PASSWORD: TestPostgresPass123!
+        options: >-
+          --health-cmd "pg_isready -U readonly_user -d logistics_dw"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       NODE_ENV: test
       MONGODB_URI: mongodb://127.0.0.1:27017/ricozviz_ci_test
       REDIS_URL: redis://127.0.0.1:6379
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: logistics_dw
+      POSTGRES_USER: readonly_user
+      POSTGRES_PASSWORD: TestPostgresPass123!
       JWT_SECRET: super_secret_jwt_key_at_least_32_bytes_long_ci_test!
       JWT_ADMIN_SECRET: c1b33bb340e34b62e9e9370df7dbf760c020f0e27b85b5612bf629e8d6874799
       ENCRYPTION_MASTER_KEY_V1: f4b321a5c689de701234567890abcdef1234567890abcdef1234567890abcdef
@@ -85,12 +104,22 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Seed Customer E2E Fixtures
+        run: pnpm --filter backend seed:e2e
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/ricozviz_customer_ci_test
+
       - name: Customer Playwright E2E Tests (10-Step Workflow + Security)
         run: pnpm --filter ricozviz-customer test:e2e
         env:
           CI: true
           NODE_ENV: test
           MONGODB_URI: mongodb://127.0.0.1:27017/ricozviz_customer_ci_test
+
+      - name: Seed Admin E2E Fixtures
+        run: pnpm --filter backend seed:e2e
+        env:
+          MONGODB_URI: mongodb://127.0.0.1:27017/ricozviz_admin_ci_test
 
       - name: Admin Playwright E2E Tests (2FA Lifecycle, Lockout & CSP Validation)
         run: pnpm --filter ricozviz-admin test:e2e

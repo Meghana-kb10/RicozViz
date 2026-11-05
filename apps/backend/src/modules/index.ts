@@ -26,6 +26,11 @@ import { auditRoutes } from './ricozviz/audit/index.js';
 import { aiRoutes } from './ricozviz/ai/index.js';
 import { governanceRoutes } from './ricozviz/governance/index.js';
 import { adminRoutes } from './admin/index.js';
+import { registerCredentialResolver } from './ricozviz/dataset/schema-discovery.js';
+import { credentialService } from './ricozviz/data-source/credential.service.js';
+
+// Wire credential vault into schema discovery
+registerCredentialResolver((ref) => credentialService.getCredentials(ref));
 
 /** Canonical list of migrated endpoints, served from the versioned index route. */
 const RICOZVIZ_V1_ENDPOINTS = [

@@ -3,9 +3,20 @@
 // ==============================================================================
 // Seeds deterministic, isolated test records for E2E workflows into a test database.
 // Refuses to run if database does not end in "_test".
+//
+// Per Phase 8.5 requirement:
+// Only seeds:
+// 1. Test platform admin
+// 2. Test customer
+// 3. Test tenant/workspace
+// 4. Source-database fixtures (PostgreSQL tables: shipments & carriers)
+//
+// Does NOT pre-create application connectors, customer datasets, charts,
+// dashboards, or public share links that the E2E workflow creates.
 // ==============================================================================
 
 import bcrypt from 'bcryptjs';
+import { Client as PgClient } from 'pg';
 import {
   connectDatabase,
   disconnectDatabase,
@@ -14,6 +25,7 @@ import {
   OrganizationMemberModel,
   WorkspaceModel,
   WorkspaceMemberModel,
+  RoleModel,
   DataSourceModel,
   DatasetModel,
   ChartModel,
@@ -46,29 +58,75 @@ export const E2E_SEEDS = {
     id: '67c7e2e00000000000000003',
     name: 'Supply Chain Analytics'
   },
-  DATA_SOURCE_PG: {
-    id: '67c7e2e00000000000000004',
-    name: 'Warehouse Operations PostgreSQL',
-    type: 'POSTGRESQL'
-  },
-  DATA_SOURCE_CSV: {
-    id: '67c7e2e00000000000000005',
-    name: 'Global Shipments CSV',
-    type: 'CSV'
-  },
-  DATASET: {
-    id: '67c7e2e00000000000000006',
-    name: 'Q4 Freight Logistics & Transit Times'
-  },
-  DASHBOARD: {
-    id: '67c7e2e00000000000000007',
-    title: 'Executive Supply Chain Command'
+  POSTGRES: {
+    host: process.env.POSTGRES_HOST || '127.0.0.1',
+    port: Number(process.env.POSTGRES_PORT || 5432),
+    database: process.env.POSTGRES_DB || 'logistics_dw',
+    user: process.env.POSTGRES_USER || 'readonly_user',
+    password: process.env.POSTGRES_PASSWORD || 'TestPostgresPass123!'
   }
 };
 
+/**
+ * Seeds external PostgreSQL source database with genuine analytical tables.
+ */
+export async function seedPostgresSourceDatabase(): Promise<void> {
+  const { host, port, database, user, password } = E2E_SEEDS.POSTGRES;
+  logger.info(`[E2E Seeder] Connecting to external PostgreSQL source: ${host}:${port}/${database}`);
+
+  let client: PgClient | null = null;
+  try {
+    client = new PgClient({ host, port, database, user, password });
+    await client.connect();
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public.shipments (
+        shipment_id VARCHAR(50) PRIMARY KEY,
+        origin_hub VARCHAR(100) NOT NULL,
+        destination_hub VARCHAR(100) NOT NULL,
+        transit_days NUMERIC(5, 2) NOT NULL,
+        freight_charge_usd NUMERIC(10, 2) NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS public.carriers (
+        carrier_id VARCHAR(50) PRIMARY KEY,
+        carrier_name VARCHAR(100) NOT NULL,
+        fleet_size INTEGER NOT NULL,
+        rating NUMERIC(3, 2) NOT NULL
+      );
+
+      INSERT INTO public.carriers (carrier_id, carrier_name, fleet_size, rating) VALUES
+      ('CARRIER_01', 'Apex Freight Global', 240, 4.8),
+      ('CARRIER_02', 'TransContinental Rail & Road', 510, 4.5),
+      ('CARRIER_03', 'Nordic Maritime Logistics', 120, 4.9)
+      ON CONFLICT (carrier_id) DO NOTHING;
+
+      INSERT INTO public.shipments (shipment_id, origin_hub, destination_hub, transit_days, freight_charge_usd, status) VALUES
+      ('SHP-1001', 'ORD-Chicago', 'LHR-London', 2.1, 1450.00, 'DELIVERED'),
+      ('SHP-1002', 'DFW-Dallas', 'FRA-Frankfurt', 1.8, 1200.50, 'IN_TRANSIT'),
+      ('SHP-1003', 'HKG-Hong Kong', 'LAX-Los Angeles', 3.4, 2800.75, 'DELIVERED'),
+      ('SHP-1004', 'SIN-Singapore', 'JFK-New York', 4.0, 3100.00, 'CUSTOMS_CLEARANCE'),
+      ('SHP-1005', 'DXB-Dubai', 'AMS-Amsterdam', 2.6, 1850.25, 'DELIVERED')
+      ON CONFLICT (shipment_id) DO NOTHING;
+    `);
+
+    logger.info('[E2E Seeder] PostgreSQL source fixtures seeded (public.shipments, public.carriers)');
+  } catch (err) {
+    logger.warn('[E2E Seeder] Could not seed PostgreSQL fixtures (database may be offline or configured differently):', {
+      error: err instanceof Error ? err.message : String(err)
+    });
+  } finally {
+    if (client) {
+      await client.end().catch(() => {});
+    }
+  }
+}
+
 export async function seedE2eData(): Promise<void> {
   const dbUri = process.env.MONGODB_URI || config.mongodbUri;
-  const dbName = process.env.MONGODB_DB_NAME || config.mongodbDbName;
+  const dbName = process.env.MONGODB_DB_NAME || (dbUri.includes('/') ? undefined : config.mongodbDbName);
 
   // Enforce strict test database safety guard
   assertTestDatabaseSafety('test', dbUri, dbName);
@@ -133,17 +191,23 @@ export async function seedE2eData(): Promise<void> {
         passwordHash: customerPasswordHash,
         role: 'ADMIN',
         status: 'ACTIVE',
+        failedLoginAttempts: 0,
+        lockUntil: null,
         organizationId: org._id
       },
       { upsert: true, new: true }
     );
+
+    const adminRole = await RoleModel.findOne({ name: 'ADMIN' });
 
     await OrganizationMemberModel.findOneAndUpdate(
       { organizationId: org._id, userId: user._id },
       {
         organizationId: org._id,
         userId: user._id,
-        role: 'ADMIN'
+        roleId: adminRole?._id,
+        role: 'ADMIN',
+        status: 'ACTIVE'
       },
       { upsert: true }
     );
@@ -166,108 +230,24 @@ export async function seedE2eData(): Promise<void> {
       {
         workspaceId: workspace._id,
         userId: user._id,
+        roleId: adminRole?._id,
         role: 'ADMIN'
       },
       { upsert: true }
     );
+    logger.info(`[E2E Seeder] Workspace seeded: ${E2E_SEEDS.WORKSPACE.name}`);
 
-    // 5. Seed Data Sources
-    await DataSourceModel.findByIdAndUpdate(
-      E2E_SEEDS.DATA_SOURCE_PG.id,
-      {
-        _id: E2E_SEEDS.DATA_SOURCE_PG.id,
-        organizationId: org._id,
-        workspaceId: workspace._id,
-        name: E2E_SEEDS.DATA_SOURCE_PG.name,
-        type: E2E_SEEDS.DATA_SOURCE_PG.type,
-        config: {
-          host: '127.0.0.1',
-          port: 5432,
-          database: 'logistics_dw',
-          username: 'pg_readonly'
-        },
-        status: 'CONNECTED'
-      },
-      { upsert: true }
-    );
+    // 5. Clean up any existing customer-created analytical entities to ensure a pristine state
+    await DataSourceModel.deleteMany({ organizationId: org._id });
+    await DatasetModel.deleteMany({ organizationId: org._id });
+    await ChartModel.deleteMany({ organizationId: org._id });
+    await DashboardModel.deleteMany({ organizationId: org._id });
+    logger.info('[E2E Seeder] Analytical entities cleaned to ensure pure E2E generation state');
 
-    await DataSourceModel.findByIdAndUpdate(
-      E2E_SEEDS.DATA_SOURCE_CSV.id,
-      {
-        _id: E2E_SEEDS.DATA_SOURCE_CSV.id,
-        organizationId: org._id,
-        workspaceId: workspace._id,
-        name: E2E_SEEDS.DATA_SOURCE_CSV.name,
-        type: E2E_SEEDS.DATA_SOURCE_CSV.type,
-        config: {
-          fileName: 'global_shipments_q4.csv',
-          delimiter: ','
-        },
-        status: 'CONNECTED'
-      },
-      { upsert: true }
-    );
+    // 6. Seed external PostgreSQL source database fixtures
+    await seedPostgresSourceDatabase();
 
-    // 6. Seed Dataset
-    const dataset = await DatasetModel.findByIdAndUpdate(
-      E2E_SEEDS.DATASET.id,
-      {
-        _id: E2E_SEEDS.DATASET.id,
-        organizationId: org._id,
-        workspaceId: workspace._id,
-        dataSourceId: E2E_SEEDS.DATA_SOURCE_PG.id,
-        name: E2E_SEEDS.DATASET.name,
-        columns: [
-          { name: 'shipment_id', type: 'STRING', isNullable: false },
-          { name: 'origin_hub', type: 'STRING', isNullable: false },
-          { name: 'destination_hub', type: 'STRING', isNullable: false },
-          { name: 'transit_days', type: 'NUMBER', isNullable: false },
-          { name: 'freight_charge_usd', type: 'NUMBER', isNullable: false },
-          { name: 'status', type: 'STRING', isNullable: false }
-        ],
-        rowCount: 1250,
-        status: 'READY'
-      },
-      { upsert: true, new: true }
-    );
-
-    // 7. Seed Chart & Dashboard
-    const chart = await ChartModel.findOneAndUpdate(
-      { organizationId: org._id, title: 'Transit Duration by Carrier' },
-      {
-        organizationId: org._id,
-        workspaceId: workspace._id,
-        datasetId: dataset._id,
-        title: 'Transit Duration by Carrier',
-        type: 'BAR',
-        config: {
-          xAxis: 'origin_hub',
-          yAxis: 'transit_days',
-          aggregation: 'AVG'
-        }
-      },
-      { upsert: true, new: true }
-    );
-
-    await DashboardModel.findByIdAndUpdate(
-      E2E_SEEDS.DASHBOARD.id,
-      {
-        _id: E2E_SEEDS.DASHBOARD.id,
-        organizationId: org._id,
-        workspaceId: workspace._id,
-        title: E2E_SEEDS.DASHBOARD.title,
-        charts: [chart._id],
-        visibility: 'WORKSPACE',
-        shareLink: {
-          token: 'sh_e2e_valid_token_sample',
-          enabled: true,
-          expiresAt: new Date(Date.now() + 30 * 86400000)
-        }
-      },
-      { upsert: true }
-    );
-
-    logger.info('[E2E Seeder] Complete E2E seed dataset successfully populated! 🚀');
+    logger.info('[E2E Seeder] Minimal E2E seeds successfully created! 🚀');
   } finally {
     await disconnectDatabase();
   }

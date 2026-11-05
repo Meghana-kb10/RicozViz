@@ -43,16 +43,16 @@ const ricozEnvSchema = z.object({
 });
 
 export function extractDatabaseName(uri: string, dbName?: string): string {
-  if (dbName && dbName.trim().length > 0) return dbName.trim();
   try {
     const sanitized = uri.replace('mongodb+srv://', 'http://').replace('mongodb://', 'http://');
     const url = new URL(sanitized);
     const pathname = url.pathname.replace(/^\//, '').split('?')[0];
-    if (pathname) return pathname;
+    if (pathname && pathname.trim().length > 0) return pathname.trim();
   } catch {
     const match = uri.match(/\/([^/?]+)(\?|$)/);
-    if (match?.[1]) return match[1];
+    if (match?.[1]) return match[1].trim();
   }
+  if (dbName && dbName.trim().length > 0) return dbName.trim();
   return '';
 }
 
@@ -141,7 +141,7 @@ export function loadEnv(cwd: string = process.cwd()): AppConfig {
 
   const effectiveNodeEnv = (nodeEnv === 'production' || nodeEnv === 'test') ? nodeEnv : 'development';
   const mongodbUri = process.env.MONGODB_URI || (effectiveNodeEnv === 'test' ? 'mongodb://127.0.0.1:27017/ricozviz_test' : 'mongodb://127.0.0.1:27017/core_mono');
-  const mongodbDbName = process.env.MONGODB_DB_NAME || process.env.DB_NAME;
+  const mongodbDbName = extractDatabaseName(mongodbUri, process.env.MONGODB_DB_NAME || process.env.DB_NAME);
 
   // Strict Test Database Guard: Refuse to start with NODE_ENV=test unless database name ends in _test
   assertTestDatabaseSafety(effectiveNodeEnv, mongodbUri, mongodbDbName);

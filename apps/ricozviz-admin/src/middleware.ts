@@ -64,6 +64,12 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_ADMIN_API_URL ||
     'http://localhost:4000';
 
+  const allowedConnectOrigins = Array.from(new Set([
+    adminApiOrigin,
+    'http://localhost:4000',
+    'http://127.0.0.1:4000'
+  ])).join(' ');
+
   // Note: style-src retains 'unsafe-inline' because Tailwind CSS v4 and Next.js font/style injection insert dynamic inline styles at runtime.
   const cspHeader = [
     `default-src 'self'`,
@@ -71,7 +77,7 @@ export async function middleware(request: NextRequest) {
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
-    `connect-src 'self' ${adminApiOrigin}`,
+    `connect-src 'self' ${allowedConnectOrigins}`,
     `frame-ancestors 'none'`,
     `object-src 'none'`,
     `base-uri 'self'`

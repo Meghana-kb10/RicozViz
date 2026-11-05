@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import crypto from 'node:crypto';
+import { execSync } from 'node:child_process';
+import mongoose from 'mongoose';
 
 /**
  * Sign customer access or refresh token with simulated test HMAC.
@@ -26,9 +28,19 @@ test.describe('RicozViz Customer Workflow & Enterprise Security', () => {
   const customerEmail = 'lead@acmeglobal.io';
   const customerPassword = 'Password123#';
   const tenantId = '67c7e2e00000000000000001';
-  const tenantName = 'Acme Global Logistics';
-  const dashboardId = 'dash_supply_chain_01';
-  const sharedToken = 'sh_e2e_valid_token_sample';
+  const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ricozviz_customer_test';
+
+  test.beforeAll(async () => {
+    // Seed isolated test database with admin, customer, workspace, and external PostgreSQL fixtures
+    execSync('pnpm --filter backend seed:e2e', {
+      env: {
+        ...process.env,
+        MONGODB_URI: mongoUri,
+        NODE_ENV: 'test'
+      },
+      stdio: 'inherit'
+    });
+  });
 
   test.beforeEach(async ({ context, page }) => {
     await context.clearCookies();
@@ -45,516 +57,167 @@ test.describe('RicozViz Customer Workflow & Enterprise Security', () => {
   });
 
   // --------------------------------------------------------------------------
-  // TEST 2: Public Shared Dashboard (Zero Auth Required)
+  // TEST 2: Complete Genuine Customer Analytical Workflow
   // --------------------------------------------------------------------------
-  test('Public shared dashboard link is accessible without authentication', async ({ page }) => {
-    await page.route(`**/api/v1/dashboards/shared/${sharedToken}`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            id: dashboardId,
-            name: 'Executive Supply Chain Command',
-            description: 'Real-time transit analytics across freight hubs',
-            layoutConfig: {},
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            charts: [
-              {
-                id: 'chart_1',
-                title: 'Transit Duration by Carrier',
-                name: 'Transit Duration by Carrier',
-                chartType: 'BAR',
-                type: 'BAR',
-                config: { xAxis: 'origin_hub', yAxis: 'transit_days' },
-                datasetColumns: [
-                  { name: 'origin_hub', type: 'STRING' },
-                  { name: 'transit_days', type: 'NUMBER' }
-                ]
-              }
-            ]
-          }
-        })
-      });
-    });
-
-    await page.route(`**/api/v1/dashboards/shared/${sharedToken}/charts/**`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            columns: [
-              { name: 'origin_hub', type: 'STRING' },
-              { name: 'transit_days', type: 'NUMBER' }
-            ],
-            rows: [
-              { origin_hub: 'ORD-Chicago', transit_days: 2.1 },
-              { origin_hub: 'DFW-Dallas', transit_days: 1.8 }
-            ],
-            totalRows: 2
-          }
-        })
-      });
-    });
-
-    await page.goto(`/dashboards/shared/${sharedToken}`);
-
-    // Must NOT redirect to /login
-    await expect(page).toHaveURL(`/dashboards/shared/${sharedToken}`);
-    await expect(page.getByRole('heading', { name: 'Executive Supply Chain Command' })).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=Transit Duration by Carrier')).toBeVisible({ timeout: 5000 });
-  });
-
-  // --------------------------------------------------------------------------
-  // TEST 3: Complete 10-Step Customer Analytical Workflow
-  // --------------------------------------------------------------------------
-  test('Complete Customer Analytical Workflow: 1. Website -> 2. Login -> 3. PostgreSQL -> 4. CSV -> 5. Schema Discovery -> 6. Dataset -> 7. Visualization -> 8. Dashboard -> 9. Signed Link -> 10. Public Access', async ({
+  test('Complete Genuine Workflow: Login -> PostgreSQL Connector -> CSV Connector -> Schema Discovery -> Dataset -> Dashboard -> Signed Public Link -> Unauthenticated Access -> Database Persistence', async ({
     page,
-    context
+    browser
   }) => {
-    const validAccessToken = signMockCustomerToken({
-      id: 'cust_user_01',
-      email: customerEmail,
-      orgId: tenantId,
-      role: 'ADMIN',
-      exp: Math.floor(Date.now() / 1000) + 900
-    });
-
-    const mockDataSources: any[] = [
-      {
-        id: 'ds_pg_01',
-        name: 'Warehouse Operations PostgreSQL',
-        type: 'POSTGRESQL',
-        status: 'CONNECTED',
-        config: { host: '127.0.0.1', port: 5432, database: 'logistics_dw', username: 'pg_readonly' },
-        connection: { host: '127.0.0.1', port: 5432, database: 'logistics_dw', username: 'pg_readonly' },
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'ds_csv_01',
-        name: 'Global Shipments CSV',
-        type: 'CSV',
-        status: 'CONNECTED',
-        config: { fileName: 'global_shipments_q4.csv', delimiter: ',' },
-        connection: { fileName: 'global_shipments_q4.csv', delimiter: ',' },
-        createdAt: new Date().toISOString()
-      }
-    ];
-
-    const mockDatasets: any[] = [
-      {
-        id: 'dataset_01',
-        name: 'Q4 Freight Logistics & Transit Times',
-        rowCount: 1420,
-        columnCount: 4,
-        columns: [
-          { name: 'shipment_id', type: 'STRING' },
-          { name: 'origin_hub', type: 'STRING' },
-          { name: 'destination_hub', type: 'STRING' },
-          { name: 'transit_days', type: 'NUMBER' }
-        ],
-        status: 'READY'
-      }
-    ];
-
-    // Clear session storage before initial load
+    // ------------------------------------------------------------------------
+    // STEP 1 & 2: Login via UI using seeded credentials
+    // ------------------------------------------------------------------------
     await page.goto('/login');
-    await page.evaluate(() => {
-      try {
-        window.sessionStorage?.clear();
-      } catch {}
-    });
+    await expect(page.locator('input#login-email')).toBeVisible({ timeout: 15000 });
 
-    let isAuthenticatedOnServer = false;
-
-    // API interceptors
-    await page.route('**/api/v1/auth/refresh', async (route) => {
-      if (!isAuthenticatedOnServer) {
-        await route.fulfill({
-          status: 401,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: 'No active session' } })
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: { accessToken: validAccessToken } })
-      });
-    });
-
-    await page.route('**/api/v1/auth/login', async (route) => {
-      const body = route.request().postDataJSON() || {};
-      if (body.email === customerEmail && body.password === customerPassword) {
-        isAuthenticatedOnServer = true;
-        await context.addCookies([
-          {
-            name: 'rv_customer_session',
-            value: 'true',
-            domain: 'localhost',
-            path: '/'
-          }
-        ]);
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          headers: {
-            'Set-Cookie': 'rv_customer_session=true; Path=/; SameSite=Lax'
-          },
-          body: JSON.stringify({
-            success: true,
-            data: {
-              accessToken: validAccessToken,
-              user: { id: 'cust_user_01', name: 'Logistics Operations Lead', email: customerEmail, role: 'ADMIN' },
-              organization: { id: tenantId, name: tenantName, status: 'ACTIVE', plan: 'ENTERPRISE' },
-              role: 'ADMIN',
-              permissions: ['*']
-            }
-          })
-        });
-        return;
-      }
-
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } })
-      });
-    });
-
-    await page.route('**/api/v1/auth/me', async (route) => {
-      if (!isAuthenticatedOnServer) {
-        await route.fulfill({
-          status: 401,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } })
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            user: { id: 'cust_user_01', name: 'Logistics Operations Lead', email: customerEmail, role: 'ADMIN' },
-            organization: { id: tenantId, name: tenantName, status: 'ACTIVE', plan: 'ENTERPRISE' },
-            role: 'ADMIN',
-            permissions: ['*']
-          }
-        })
-      });
-    });
-
-    await page.route('**/api/v1/workspaces', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: [{ id: 'ws_01', name: 'Supply Chain Analytics', isDefault: true }]
-        })
-      });
-    });
-
-    await page.route('**/api/v1/data-sources**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDataSources })
-      });
-    });
-
-    await page.route('**/api/v1/datasets/source/**/tables', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: [
-            { name: 'shipments', schema: 'public', rowCount: 1420 },
-            { name: 'carriers', schema: 'public', rowCount: 18 }
-          ]
-        })
-      });
-    });
-
-    await page.route('**/api/v1/datasets/source/**/tables/**/schema', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            tableName: 'shipments',
-            columns: [
-              { name: 'shipment_id', type: 'STRING' },
-              { name: 'origin_hub', type: 'STRING' },
-              { name: 'destination_hub', type: 'STRING' },
-              { name: 'transit_days', type: 'NUMBER' }
-            ]
-          }
-        })
-      });
-    });
-
-    await page.route('**/api/v1/datasets**', async (route) => {
-      const url = route.request().url();
-      if (url.includes('/datasets/source/')) {
-        await route.fallback();
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDatasets })
-      });
-    });
-
-    await page.route(`**/api/v1/dashboards/**/share`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            active: true,
-            shareToken: sharedToken,
-            shareUrl: `http://localhost:3001/dashboards/shared/${sharedToken}`
-          }
-        })
-      });
-    });
-
-    await page.route(`**/api/v1/dashboards/**/collaborators`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            collaborators: [],
-            workspaceMembers: []
-          }
-        })
-      });
-    });
-
-    await page.route(`**/api/v1/dashboards/**/charts`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: [
-            {
-              id: 'chart_1',
-              title: 'Transit Duration by Carrier',
-              name: 'Transit Duration by Carrier',
-              chartType: 'BAR',
-              type: 'BAR',
-              config: { xAxis: 'origin_hub', yAxis: 'transit_days' },
-              datasetColumns: [
-                { name: 'origin_hub', type: 'STRING' },
-                { name: 'transit_days', type: 'NUMBER' }
-              ]
-            }
-          ]
-        })
-      });
-    });
-
-    await page.route(`**/api/v1/dashboards/**/schedule`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: null
-        })
-      });
-    });
-
-    await page.route(`**/api/v1/dashboards/${dashboardId}`, async (route) => {
-      const url = route.request().url();
-      if (url.includes('/share') || url.includes('/collaborators') || url.includes('/charts') || url.includes('/schedule')) {
-        await route.fallback();
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            id: dashboardId,
-            name: 'Executive Supply Chain Command',
-            title: 'Executive Supply Chain Command',
-            description: 'Real-time transit analytics across freight hubs',
-            layoutConfig: {},
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            charts: [
-              {
-                id: 'chart_1',
-                title: 'Transit Duration by Carrier',
-                name: 'Transit Duration by Carrier',
-                chartType: 'BAR',
-                type: 'BAR',
-                config: { xAxis: 'origin_hub', yAxis: 'transit_days' }
-              }
-            ],
-            shareLink: { enabled: true, token: sharedToken }
-          }
-        })
-      });
-    });
-
-    await page.route('**/api/v1/dashboards**', async (route) => {
-      const url = route.request().url();
-      if (
-        url.includes(dashboardId) ||
-        url.includes('/share') ||
-        url.includes('/collaborators') ||
-        url.includes('/charts') ||
-        url.includes('/schedule')
-      ) {
-        await route.fallback();
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: [
-            {
-              id: dashboardId,
-              title: 'Executive Supply Chain Command',
-              charts: [],
-              shareLink: { enabled: true, token: sharedToken }
-            }
-          ]
-        })
-      });
-    });
-
-    // --------------------------------------------------------------------------
-    // STEP 1: Open Customer Website Landing / Login
-    // --------------------------------------------------------------------------
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'Sign in to workspace' })).toBeVisible({ timeout: 10000 });
-
-    // --------------------------------------------------------------------------
-    // STEP 2: Login using seeded customer credentials
-    // --------------------------------------------------------------------------
     await page.fill('input#login-email', customerEmail);
     await page.fill('input#login-password', customerPassword);
-    await page.click('button[type="submit"]');
+    await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/api/v1/auth/login') && res.status() === 200),
+      page.click('button[type="submit"]')
+    ]);
 
-    await expect(page).toHaveURL(/\/dashboards/);
+    // Land on dashboards page after successful genuine login
+    await expect(page).toHaveURL(/\/dashboards/, { timeout: 15000 });
 
-    // --------------------------------------------------------------------------
-    // STEP 3 & 4: Create & Verify PostgreSQL and CSV Data Connectors
-    // --------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    // STEP 3: Create Live PostgreSQL Data Connector
+    // ------------------------------------------------------------------------
     await page.goto('/data-sources');
-    await expect(page.getByRole('heading', { name: 'Data Sources' })).toBeVisible();
-    await expect(page.locator('text=Warehouse Operations PostgreSQL')).toBeVisible();
-    await expect(page.locator('text=Global Shipments CSV')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Data Sources' })).toBeVisible({ timeout: 10000 });
 
-    // --------------------------------------------------------------------------
-    // STEP 5: Discover Database Schema
-    // --------------------------------------------------------------------------
-    await page.locator('button[title*="Discover tables"]').first().click();
-    await expect(page.locator('text=Discover Tables')).toBeVisible();
-    await expect(page.locator('button', { hasText: 'shipments' })).toBeVisible();
+    await page.locator('#add-data-source-btn').click();
+    await expect(page.locator('text=Add New Data Source')).toBeVisible();
 
-    // Click table to inspect discovered columns
+    await page.fill('input[placeholder*="Production Analytics Warehouse"]', 'Warehouse Operations PostgreSQL');
+    await page.fill('input[placeholder="localhost or ip"]', '127.0.0.1');
+    await page.fill('input[placeholder="database_name"]', 'logistics_dw');
+    await page.fill('input[placeholder="postgres"]', 'readonly_user');
+    await page.fill('input[type="password"]', 'TestPostgresPass123!');
+
+    await page.click('button[type="submit"]:has-text("Create Data Source")');
+    await expect(page.getByRole('heading', { name: 'Warehouse Operations PostgreSQL' })).toBeVisible({ timeout: 15000 });
+
+    // ------------------------------------------------------------------------
+    // STEP 4: Create CSV Data Connector
+    // ------------------------------------------------------------------------
+    await page.locator('#add-data-source-btn').click();
+    await expect(page.locator('text=Add New Data Source')).toBeVisible();
+
+    await page.fill('input[placeholder*="Production Analytics Warehouse"]', 'Global Shipments CSV');
+    await page.click('button:has-text("📄 CSV")');
+    await page.fill('input[placeholder="data.csv"]', 'global_shipments_q4.csv');
+
+    await page.click('button[type="submit"]:has-text("Create Data Source")');
+    await expect(page.getByRole('heading', { name: 'Global Shipments CSV' })).toBeVisible({ timeout: 15000 });
+
+    // ------------------------------------------------------------------------
+    // STEP 5: Discover Live Schema from PostgreSQL
+    // ------------------------------------------------------------------------
+    const pgCard = page.locator('div.group', { has: page.getByRole('heading', { name: 'Warehouse Operations PostgreSQL' }) }).first();
+    await pgCard.locator('button[title*="Discover tables"]').click();
+
+    await expect(page.locator('text=Discover Tables')).toBeVisible({ timeout: 15000 });
+    // Live PostgreSQL information_schema.tables discovery
+    await expect(page.locator('button', { hasText: 'shipments' })).toBeVisible({ timeout: 15000 });
+
+    // Click table to inspect live discovered columns
     await page.locator('button', { hasText: 'shipments' }).click();
-    await expect(page.locator('text=transit_days')).toBeVisible();
+    await expect(page.locator('text=transit_days')).toBeVisible({ timeout: 10000 });
 
-    // Close discovery modal
-    await page.locator('button:has-text("Close")').click();
+    // ------------------------------------------------------------------------
+    // STEP 6: Materialize / Create Dataset
+    // ------------------------------------------------------------------------
+    await page.click('button:has-text("Materialize In-Memory Dataset")');
+    await page.waitForTimeout(2000);
 
-    // --------------------------------------------------------------------------
-    // STEP 6: Verify Dataset Catalog
-    // --------------------------------------------------------------------------
-    await page.goto('/datasets');
-    await expect(page.getByRole('heading', { name: 'Datasets' })).toBeVisible();
-    await expect(page.locator('text=Q4 Freight Logistics & Transit Times')).toBeVisible();
+    // ------------------------------------------------------------------------
+    // STEP 7 & 8: Create and Save Dashboard Canvas
+    // ------------------------------------------------------------------------
+    await page.goto('/dashboards');
+    await expect(page.getByRole('heading', { name: 'Executive Dashboards' })).toBeVisible({ timeout: 10000 });
 
-    // --------------------------------------------------------------------------
-    // STEP 7: Visualization Studio
-    // --------------------------------------------------------------------------
-    await page.goto('/visualizations');
-    await expect(page.getByRole('heading', { name: 'Visualizations' })).toBeVisible();
+    await page.click('button:has-text("New Dashboard")');
+    await expect(page.locator('text=Create Canvas')).toBeVisible();
 
-    // --------------------------------------------------------------------------
-    // STEP 8 & 9: Save Visualization to Dashboard & Share Signed Public Link
-    // --------------------------------------------------------------------------
-    await page.goto(`/dashboards/${dashboardId}`);
-    await expect(page.locator('h2', { hasText: 'Executive Supply Chain Command' })).toBeVisible({ timeout: 10000 });
+    await page.fill('input[placeholder*="Executive Revenue Operations"]', 'Executive Supply Chain Command');
+    await page.fill('textarea[placeholder*="Summary of metrics"]', 'Real-time transit analytics across freight hubs');
+    await page.click('button:has-text("Create Canvas")');
 
-    // Open share modal
-    await page.locator('button[title="Share Dashboard via Link"]').click();
-    await expect(page.locator('text=Share & Collaborate')).toBeVisible();
-    await page.locator('button:has-text("Public Share Link")').click();
-    await expect(page.locator(`input[value*="${sharedToken}"]`)).toBeVisible();
+    // Canvas detail page redirect
+    await expect(page).toHaveURL(/\/dashboards\/[a-zA-Z0-9_-]+/, { timeout: 15000 });
+    await expect(page.locator('h2', { hasText: 'Executive Supply Chain Command' })).toBeVisible({ timeout: 15000 });
 
-    // --------------------------------------------------------------------------
-    // STEP 10: Open and Verify Public Signed Link in Incognito / Unauthenticated Context
-    // --------------------------------------------------------------------------
-    await page.route(`**/api/v1/dashboards/shared/${sharedToken}`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            id: dashboardId,
-            name: 'Executive Supply Chain Command',
-            description: 'Real-time transit analytics',
-            layoutConfig: {},
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            charts: [
-              {
-                id: 'chart_1',
-                name: 'Transit Duration by Carrier',
-                type: 'BAR',
-                config: { xAxis: 'origin_hub', yAxis: 'transit_days' },
-                datasetColumns: [
-                  { name: 'origin_hub', type: 'STRING' },
-                  { name: 'transit_days', type: 'NUMBER' }
-                ]
-              }
-            ]
-          }
-        })
-      });
+    // ------------------------------------------------------------------------
+    // STEP 9: Generate Signed Public Share Link
+    // ------------------------------------------------------------------------
+    await page.click('button[title="Share Dashboard via Link"]');
+    await expect(page.locator('text=Share & Collaborate')).toBeVisible({ timeout: 10000 });
+
+    await page.click('button:has-text("Public Share Link")');
+    await page.click('button:has-text("Create Share Link")');
+
+    await expect(page.locator('button:has-text("Copy Link")')).toBeVisible({ timeout: 10000 });
+    const openLinkBtn = page.locator('a:has-text("Open Shared View in New Tab")');
+    await expect(openLinkBtn).toBeVisible({ timeout: 10000 });
+
+    const shareUrl = await openLinkBtn.getAttribute('href');
+    expect(shareUrl).toBeTruthy();
+    expect(shareUrl).toContain('/dashboards/shared/');
+
+    // ------------------------------------------------------------------------
+    // STEP 10: Open Public Signed Link in Fresh Unauthenticated Context
+    // ------------------------------------------------------------------------
+    const incognitoContext = await browser.newContext();
+    const incognitoPage = await incognitoContext.newPage();
+
+    await incognitoPage.goto(shareUrl!);
+    // Zero authentication or redirect to login
+    await expect(incognitoPage).not.toHaveURL(/\/login/);
+    await expect(incognitoPage.getByRole('heading', { name: 'Executive Supply Chain Command' })).toBeVisible({
+      timeout: 15000
     });
+    await incognitoContext.close();
 
-    // Clear session cookies to simulate fresh unauthenticated recipient
-    await context.clearCookies();
-    await page.goto(`/dashboards/shared/${sharedToken}`);
+    // ------------------------------------------------------------------------
+    // STEP 11: Direct Database Verification (MongoDB Persistence)
+    // ------------------------------------------------------------------------
+    const conn = await mongoose.createConnection(mongoUri).asPromise();
+    try {
+      const db = conn.db;
+      if (!db) throw new Error('Database connection handle not found');
 
-    // Confirms public link resolves with zero login redirect
-    await expect(page).toHaveURL(`/dashboards/shared/${sharedToken}`);
-    await expect(page.getByRole('heading', { name: 'Executive Supply Chain Command' })).toBeVisible();
+      // 1. Data sources persisted
+      const pgDsDoc = await db.collection('data_sources').findOne({ name: 'Warehouse Operations PostgreSQL' });
+      expect(pgDsDoc).not.toBeNull();
+      expect(pgDsDoc?.type).toBe('POSTGRESQL');
+
+      const csvDsDoc = await db.collection('data_sources').findOne({ name: 'Global Shipments CSV' });
+      expect(csvDsDoc).not.toBeNull();
+
+      // 2. Dataset persisted
+      const datasetDoc = await db.collection('datasets').findOne({ name: /shipments/i });
+      expect(datasetDoc).not.toBeNull();
+      const colDocs = await db.collection('dataset_columns').find({ datasetId: datasetDoc?._id }).toArray();
+      expect(colDocs.length).toBeGreaterThan(0);
+
+      // 3. Dashboard persisted with shareLink
+      const dashboardDoc = await db.collection('dashboards').findOne({
+        $or: [{ title: 'Executive Supply Chain Command' }, { name: 'Executive Supply Chain Command' }]
+      });
+      expect(dashboardDoc).not.toBeNull();
+      expect(dashboardDoc?.shareTokenActive ?? dashboardDoc?.shareLink?.enabled).toBe(true);
+      expect(dashboardDoc?.shareToken ?? dashboardDoc?.shareLink?.token).toBeTruthy();
+    } finally {
+      await conn.close();
+    }
   });
 
   // --------------------------------------------------------------------------
-  // TEST 4: Security Boundaries - Customer Token 403 on Admin Routes
+  // TEST 3: Security Boundaries - Customer Token 403 on Admin Routes
   // --------------------------------------------------------------------------
   test('Enterprise Security Boundaries: Customer token rejected on Admin endpoints', async ({
     page
   }) => {
-    // Navigate to page first so origin is established
     await page.goto('/login');
 
     const validCustomerToken = signMockCustomerToken({
@@ -593,7 +256,7 @@ test.describe('RicozViz Customer Workflow & Enterprise Security', () => {
   });
 
   // --------------------------------------------------------------------------
-  // TEST 5: Security Boundaries - Admin Token Rejected on Customer Routes
+  // TEST 4: Security Boundaries - Admin Token Rejected on Customer Routes
   // --------------------------------------------------------------------------
   test('Enterprise Security Boundaries: Admin token cannot authorize customer endpoints', async ({
     page
@@ -649,7 +312,7 @@ test.describe('RicozViz Customer Workflow & Enterprise Security', () => {
   });
 
   // --------------------------------------------------------------------------
-  // TEST 6: Tenant Suspension Dedicated Screen
+  // TEST 5: Tenant Suspension Dedicated Screen
   // --------------------------------------------------------------------------
   test('Tenant Suspension: Suspended tenant receives dedicated /suspended screen', async ({
     page
@@ -663,7 +326,7 @@ test.describe('RicozViz Customer Workflow & Enterprise Security', () => {
   });
 
   // --------------------------------------------------------------------------
-  // TEST 7: Expired Token Auto-Refresh & Concurrency Mutex
+  // TEST 6: Expired Token Auto-Refresh & Concurrency Mutex
   // --------------------------------------------------------------------------
   test('Customer Token Auto-Refresh & Concurrency Mutex Queue', async ({ page }) => {
     await page.goto('/login');
@@ -700,7 +363,6 @@ test.describe('RicozViz Customer Workflow & Enterprise Security', () => {
 
     // Execute concurrent request evaluation
     const results = await page.evaluate(async () => {
-      // Direct concurrent fetch simulation
       const reqs = [
         fetch('/api/v1/test-resource', { headers: { Authorization: 'Bearer tok_expired' } }),
         fetch('/api/v1/test-resource', { headers: { Authorization: 'Bearer tok_expired' } })

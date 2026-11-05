@@ -11,7 +11,16 @@ export interface DatabaseConfig {
 
 export async function connectDatabase(config: DatabaseConfig = {}): Promise<typeof mongoose> {
   const uri = config.uri || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/core_mono';
-  const dbName = config.dbName || process.env.MONGODB_DB_NAME || process.env.DB_NAME;
+  let uriDbName: string | undefined;
+  try {
+    const parsed = new URL(uri);
+    const pathname = parsed.pathname.replace(/^\/+/,'');
+    if (pathname && pathname.trim().length > 0) uriDbName = pathname.trim();
+  } catch {
+    const match = uri.match(/\/([^/?]+)(\?|$)/);
+    if (match?.[1]) uriDbName = match[1].trim();
+  }
+  const dbName = uriDbName || config.dbName || process.env.MONGODB_DB_NAME || process.env.DB_NAME;
 
   if (mongoose.connection.readyState === 1) {
     return mongoose;
