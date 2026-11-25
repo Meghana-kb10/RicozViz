@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:4000';
+import { getAdminBackendUrl } from '../../../../lib/server-api-url';
 
 export async function POST(request: NextRequest) {
   try {
+    const BACKEND_URL = getAdminBackendUrl();
     const body = await request.json();
     const backendRes = await fetch(`${BACKEND_URL}/admin/auth/login`, {
       method: 'POST',

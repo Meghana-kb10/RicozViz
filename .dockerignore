@@ -1,0 +1,41 @@
+# Dependencies & Build Artifacts
+node_modules
+*/node_modules
+*/*/node_modules
+.next
+*/.next
+*/*/.next
+dist
+*/dist
+*/*/dist
+.turbo
+*/.turbo
+out
+coverage
+*.tsbuildinfo
+
+# Version Control & Tests
+.git
+.gitignore
+test-results
+*/test-results
+playwright-report
+*/playwright-report
+blob-report
+scratch
+*.log
+
+# Local Environment Secrets (NEVER bake into container images)
+.env
+.env.*
+!.env.example
+*/.env
+*/.env.*
+!*/*.env.example
+*/*/.env
+*/*/.env.*
+!*/*/*.env.example
+
+# OS Artifacts
+.DS_Store
+Thumbs.db

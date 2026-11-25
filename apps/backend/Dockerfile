@@ -23,9 +23,10 @@ RUN corepack enable && corepack prepare pnpm@10.26.0 --activate
 FROM base AS builder
 WORKDIR /app
 ENV NODE_ENV=development
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 # Copy workspace definition and package manifests
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
+COPY .npmrc package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json tsconfig.base.json ./
 COPY packages/api/package.json ./packages/api/
 COPY packages/components/package.json ./packages/components/
 COPY packages/database/package.json ./packages/database/
@@ -73,6 +74,6 @@ USER ricozviz
 EXPOSE 4000
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -fs http://localhost:4000/health || exit 1
+  CMD curl -fs http://localhost:4000/api/v1/health || exit 1
 
 CMD ["node", "apps/backend/dist/index.js"]

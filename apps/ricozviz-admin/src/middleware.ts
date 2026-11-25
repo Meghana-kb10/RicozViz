@@ -59,16 +59,17 @@ export async function middleware(request: NextRequest) {
 
   // Nonce generation for Content Security Policy
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
-  const adminApiOrigin =
-    process.env.ADMIN_API_ORIGIN ||
-    process.env.NEXT_PUBLIC_ADMIN_API_URL ||
-    'http://localhost:4000';
-
-  const allowedConnectOrigins = Array.from(new Set([
-    adminApiOrigin,
-    'http://localhost:4000',
-    'http://127.0.0.1:4000'
-  ])).join(' ');
+  const allowedConnectOrigins = Array.from(
+    new Set(
+      [
+        process.env.ADMIN_API_ORIGIN,
+        process.env.NEXT_PUBLIC_ADMIN_API_URL,
+        process.env.NEXT_PUBLIC_API_URL,
+        'http://localhost:4000',
+        'http://127.0.0.1:4000'
+      ].filter((origin): origin is string => Boolean(origin && origin.trim().length > 0))
+    )
+  ).join(' ');
 
   // Note: style-src retains 'unsafe-inline' because Tailwind CSS v4 and Next.js font/style injection insert dynamic inline styles at runtime.
   const cspHeader = [

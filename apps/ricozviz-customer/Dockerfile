@@ -17,7 +17,7 @@ WORKDIR /app
 ENV NODE_ENV=development
 
 # Copy workspace definition and package manifests
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
+COPY .npmrc package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json tsconfig.base.json ./
 COPY packages/api/package.json ./packages/api/
 COPY packages/components/package.json ./packages/components/
 COPY packages/database/package.json ./packages/database/
@@ -34,8 +34,14 @@ RUN pnpm install --frozen-lockfile
 COPY packages/ ./packages/
 COPY apps/ricozviz-customer/ ./apps/ricozviz-customer/
 
+# Bake client-side public configuration at build time
+ARG NEXT_PUBLIC_API_URL=http://localhost:4000
+ARG NEXT_PUBLIC_APP_NAME="RicozViz Customer"
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+
 # Build standalone Next.js bundle
-RUN pnpm --filter ricozviz-customer build
+RUN NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm --filter ricozviz-customer build
 
 # ---- Production Runner Stage ----
 FROM node:22-alpine AS runner

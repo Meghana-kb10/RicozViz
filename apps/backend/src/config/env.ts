@@ -35,6 +35,7 @@ const ricozEnvSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   CREDENTIAL_ENC_KEY: z.string().min(32, 'CREDENTIAL_ENC_KEY must be at least 32 characters or 64 hex characters').optional(),
+  ENCRYPTION_MASTER_KEY_V1: z.string().min(32, 'ENCRYPTION_MASTER_KEY_V1 must be at least 32 characters or 64 hex characters').optional(),
   CREDENTIAL_ENC_KEY_VERSION: z.coerce.number().int().positive().default(1),
   CREDENTIAL_ENC_KEYS_PREVIOUS: z.string().optional(),
   ALLOWED_ORIGIN: z.string().optional(),
@@ -111,13 +112,13 @@ export function loadEnv(cwd: string = process.cwd()): AppConfig {
 
   const effectiveJwtAccessSecret = parsed.data.JWT_ACCESS_SECRET || parsed.data.JWT_SECRET;
   const effectiveJwtRefreshSecret = parsed.data.JWT_REFRESH_SECRET || parsed.data.JWT_SECRET;
-  const effectiveCredentialKey = parsed.data.CREDENTIAL_ENC_KEY;
+  const effectiveCredentialKey = parsed.data.CREDENTIAL_ENC_KEY || parsed.data.ENCRYPTION_MASTER_KEY_V1;
 
   if (!effectiveJwtAccessSecret || !effectiveJwtRefreshSecret || !effectiveCredentialKey) {
     const missing: string[] = [];
     if (!effectiveJwtAccessSecret) missing.push('JWT_ACCESS_SECRET (or JWT_SECRET)');
     if (!effectiveJwtRefreshSecret) missing.push('JWT_REFRESH_SECRET (or JWT_SECRET)');
-    if (!effectiveCredentialKey) missing.push('CREDENTIAL_ENC_KEY');
+    if (!effectiveCredentialKey) missing.push('CREDENTIAL_ENC_KEY (or ENCRYPTION_MASTER_KEY_V1)');
     console.error(`\n❌ [FATAL] Missing required security environment variables: ${missing.join(', ')}.`);
     console.error(`Please configure them in your .env file or environment. Refer to .env.example for guidance.\n`);
     throw new Error(`Startup failed: Missing required environment variables: ${missing.join(', ')}`);
