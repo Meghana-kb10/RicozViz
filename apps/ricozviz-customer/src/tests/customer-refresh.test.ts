@@ -171,8 +171,8 @@ async function runCustomerTests(): Promise<void> {
   configureRicozVizApi({ baseUrl: `http://127.0.0.1:${port}` });
 
   try {
-    // Generate a token that expires in 1.2 seconds
-    const shortExp = Math.floor((Date.now() + 1200) / 1000);
+    // Generate a token that expires in 1.5 seconds
+    const shortExp = Math.ceil((Date.now() + 1500) / 1000);
     const mockExpiringToken =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
       Buffer.from(JSON.stringify({ sub: "cust_123", exp: shortExp })).toString("base64url") +
@@ -181,8 +181,8 @@ async function runCustomerTests(): Promise<void> {
     activeValidToken = mockExpiringToken;
     setAccessToken(mockExpiringToken);
 
-    // Wait 1100ms for proactive timer to trigger refresh before expiration
-    await new Promise((resolve) => setTimeout(resolve, 1100));
+    // Wait 1400ms for proactive timer to trigger refresh before expiration
+    await new Promise((resolve) => setTimeout(resolve, 1400));
 
     assert.strictEqual(mockRefreshCounter, 1, "Proactive timer must trigger background refresh");
     const renewedToken = getAccessToken();

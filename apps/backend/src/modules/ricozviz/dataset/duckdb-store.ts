@@ -28,6 +28,7 @@ export interface DuckDBTableCacheEntry {
 export class DuckDBStore {
   private instancePromise: Promise<DuckDBInstance> | null = null;
   private readonly loadedTables = new Map<string, DuckDBTableCacheEntry>();
+  private readonly loadingPromises = new Map<string, Promise<string>>();
 
   /**
    * Lazily initialize or return the singleton DuckDB instance.
@@ -133,6 +134,30 @@ export class DuckDBStore {
       return tableName;
     }
 
+    const inflight = this.loadingPromises.get(tableName);
+    if (inflight) {
+      return inflight;
+    }
+
+    const loadPromise = (async () => {
+      try {
+        return await this.loadDatasetTableInternal(dataset, version, tableName, meta, explicitRows);
+      } finally {
+        this.loadingPromises.delete(tableName);
+      }
+    })();
+
+    this.loadingPromises.set(tableName, loadPromise);
+    return loadPromise;
+  }
+
+  private async loadDatasetTableInternal(
+    dataset: QueryableDataset,
+    version: number,
+    tableName: string,
+    meta: Record<string, unknown>,
+    explicitRows?: Record<string, unknown>[]
+  ): Promise<string> {
     // 1. Resolve source rows
     let sourceRows: Record<string, unknown>[] = [];
     if (explicitRows && explicitRows.length > 0) {
@@ -221,6 +246,13 @@ export class DuckDBStore {
           await conn.run(
             `CREATE OR REPLACE TABLE "${tableName}" AS SELECT * FROM read_json_auto('${tmpFile}')`
           );
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          if (errMsg.includes('write-write conflict') || errMsg.includes('already exists')) {
+            logger.warn(`[DuckDBStore] Handled concurrent creation for "${tableName}": ${errMsg}`);
+          } else {
+            throw err;
+          }
         } finally {
           try {
             await fs.promises.unlink(tmpFile);
@@ -244,9 +276,23 @@ export class DuckDBStore {
             else if (rawType.includes('date') || rawType.includes('time')) duckType = 'TIMESTAMP';
             return `"${c.name}" ${duckType}`;
           });
-          await conn.run(`CREATE OR REPLACE TABLE "${tableName}" (${colDefs.join(', ')})`);
+          try {
+            await conn.run(`CREATE OR REPLACE TABLE "${tableName}" (${colDefs.join(', ')})`);
+          } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            if (!errMsg.includes('write-write conflict') && !errMsg.includes('already exists')) {
+              throw err;
+            }
+          }
         } else {
-          await conn.run(`CREATE OR REPLACE TABLE "${tableName}" (_empty_placeholder INT)`);
+          try {
+            await conn.run(`CREATE OR REPLACE TABLE "${tableName}" (_empty_placeholder INT)`);
+          } catch (err: unknown) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            if (!errMsg.includes('write-write conflict') && !errMsg.includes('already exists')) {
+              throw err;
+            }
+          }
         }
       }
 

@@ -23,7 +23,7 @@ export default defineConfig({
       command: 'node dist/index.js',
       cwd: '../backend',
       port: 4000,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 30000,
       env: {
         MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ricozviz_customer_test',
@@ -34,7 +34,7 @@ export default defineConfig({
     {
       command: 'next start --port 3001',
       port: 3001,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 30000,
       env: {
         MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ricozviz_customer_test',

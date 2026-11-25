@@ -89,7 +89,10 @@ const csvConnectionSchema = z.object({
   fileName: z.string().min(1, 'File name is required'),
   delimiter: z.string().min(1).default(','),
   hasHeader: z.boolean().default(true),
-  fileSize: z.number().optional()
+  fileSize: z.number().optional(),
+  filePath: z.string().optional(),
+  fileContent: z.string().optional(),
+  csvText: z.string().optional()
 });
 
 const xlsxConnectionSchema = z.object({

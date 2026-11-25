@@ -242,6 +242,15 @@ export async function seedE2eData(): Promise<void> {
     await DatasetModel.deleteMany({ organizationId: org._id });
     await ChartModel.deleteMany({ organizationId: org._id });
     await DashboardModel.deleteMany({ organizationId: org._id });
+
+    try {
+      await ChartModel.collection.dropIndex('shareToken_1');
+    } catch {}
+    try {
+      await DashboardModel.collection.dropIndex('shareToken_1');
+    } catch {}
+    await ChartModel.syncIndexes();
+    await DashboardModel.syncIndexes();
     logger.info('[E2E Seeder] Analytical entities cleaned to ensure pure E2E generation state');
 
     // 6. Seed external PostgreSQL source database fixtures

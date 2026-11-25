@@ -139,14 +139,14 @@ export function scheduleProactiveRefresh(token: string): void {
 
       if (payload.exp && typeof payload.exp === 'number') {
         const expiresInMs = payload.exp * 1000 - Date.now();
-        // If already expired or under 500ms, do not schedule timer
-        if (expiresInMs <= 500) {
+        // If already expired or under 100ms, do not schedule timer
+        if (expiresInMs <= 100) {
           return;
         }
 
         // Buffer: 60s or 20% of remaining lifetime, whichever is smaller
         const bufferMs = Math.min(60 * 1000, expiresInMs * 0.2);
-        const delay = Math.max(expiresInMs - bufferMs, 500);
+        const delay = Math.max(expiresInMs - bufferMs, 100);
 
         proactiveRefreshTimer = setTimeout(() => {
           executeRicozVizRefresh().catch(() => {});

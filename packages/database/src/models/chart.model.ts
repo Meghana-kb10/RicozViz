@@ -38,11 +38,16 @@ const ChartSchema = new Schema<IChartDocument>(
     position: { type: Schema.Types.Mixed, default: () => ({}) },
     sortOrder: { type: Number, default: 0 },
     isPublic: { type: Boolean, default: false },
-    shareToken: { type: String, default: null, unique: true, sparse: true },
+    shareToken: { type: String, default: undefined },
     shareTokenActive: { type: Boolean, default: true },
     sharedAt: { type: Date, default: null }
   },
   { collection: COLLECTIONS.CHARTS, timestamps: true, versionKey: false }
+);
+
+ChartSchema.index(
+  { shareToken: 1 },
+  { unique: true, partialFilterExpression: { shareToken: { $type: 'string' } } }
 );
 
 export const ChartModel: Model<IChartDocument> =

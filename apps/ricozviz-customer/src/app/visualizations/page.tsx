@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -182,6 +182,7 @@ function VisualizationsStudioContent() {
   const [isQuerying, setIsQuerying] = useState<boolean>(false);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [previewTab, setPreviewTab] = useState<"chart" | "data">("chart");
+  const activeQueryDatasetIdRef = useRef<string | null>(null);
 
   // Saved Visualizations
   const [savedVisualizations, setSavedVisualizations] = useState<VisualizationData[]>([]);
@@ -333,6 +334,8 @@ function VisualizationsStudioContent() {
       return;
     }
 
+    const currentTargetDatasetId = selectedDatasetId;
+    activeQueryDatasetIdRef.current = currentTargetDatasetId;
     setIsQuerying(true);
     setQueryError(null);
 
@@ -438,14 +441,20 @@ function VisualizationsStudioContent() {
         }
       }
 
-      const res = await apiQueryDataset(selectedDatasetId, queryPayload);
-      setQueryResult(res);
+      const res = await apiQueryDataset(currentTargetDatasetId, queryPayload);
+      if (activeQueryDatasetIdRef.current === currentTargetDatasetId) {
+        setQueryResult(res);
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to execute query";
-      setQueryError(msg);
-      setQueryResult(null);
+      if (activeQueryDatasetIdRef.current === currentTargetDatasetId) {
+        const msg = err instanceof Error ? err.message : "Failed to execute query";
+        setQueryError(msg);
+        setQueryResult(null);
+      }
     } finally {
-      setIsQuerying(false);
+      if (activeQueryDatasetIdRef.current === currentTargetDatasetId) {
+        setIsQuerying(false);
+      }
     }
   }, [
     selectedDatasetId,
@@ -463,10 +472,15 @@ function VisualizationsStudioContent() {
 
   // Auto-run query on configuration change
   useEffect(() => {
-    if (selectedDatasetId && (categoryCol || valueCol)) {
+    if (
+      selectedDatasetId &&
+      (categoryCol || valueCol) &&
+      (!categoryCol || columns.some((c) => c.name === categoryCol)) &&
+      (!valueCol || columns.some((c) => c.name === valueCol))
+    ) {
       void executeQuery();
     }
-  }, [selectedDatasetId, chartType, categoryCol, valueCol, secondaryValueCol, groupCol, aggregation, executeQuery]);
+  }, [selectedDatasetId, chartType, categoryCol, valueCol, secondaryValueCol, groupCol, aggregation, columns, executeQuery]);
 
   // Build current chart config object
   const currentChartConfig = useMemo(() => {
@@ -949,8 +963,16 @@ function VisualizationsStudioContent() {
                   </div>
                 ) : (
                   <select
+                    id="dataset-select"
                     value={selectedDatasetId}
-                    onChange={(e) => setSelectedDatasetId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedDatasetId(e.target.value);
+                      setCategoryCol("");
+                      setValueCol("");
+                      setSecondaryValueCol("");
+                      setGroupCol("");
+                      setQueryResult(null);
+                    }}
                     className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
                   >
                     {datasets.map((d) => (
@@ -1045,6 +1067,7 @@ function VisualizationsStudioContent() {
                       <span className="text-[10px] text-[#898989] font-mono-code">Primary Dimension</span>
                     </label>
                     <select
+                      id="category-col-select"
                       value={categoryCol}
                       onChange={(e) => setCategoryCol(e.target.value)}
                       className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
@@ -1066,6 +1089,7 @@ function VisualizationsStudioContent() {
                     <span className="text-[10px] text-[#898989] font-mono-code">Primary Metric</span>
                   </label>
                   <select
+                    id="value-col-select"
                     value={valueCol}
                     onChange={(e) => setValueCol(e.target.value)}
                     className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] px-3 py-2 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"
@@ -1713,6 +1737,7 @@ function VisualizationsStudioContent() {
                   Select Destination Dashboard
                 </label>
                 <select
+                  id="destination-dashboard-select"
                   value={selectedDashboardId}
                   onChange={(e) => setSelectedDashboardId(e.target.value)}
                   className="w-full text-xs rounded-xl border border-[#262626] bg-[#121212] p-2.5 text-[#fafafa] focus:border-[#ff6b35] focus:outline-none"

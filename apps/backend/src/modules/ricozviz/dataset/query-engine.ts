@@ -736,7 +736,9 @@ export class DatasetQueryEngine {
       for (const m of opts.measures) {
         const colExpr = m.column === '*' ? '*' : `"${m.column}"`;
         if (m.aggregation === 'AVG' || m.aggregation === 'SUM') {
-          selectParts.push(`ROUND(${m.aggregation}(${colExpr}), 3) AS "${m.alias}"`);
+          selectParts.push(`ROUND(${m.aggregation}(TRY_CAST(${colExpr} AS DOUBLE)), 3) AS "${m.alias}"`);
+        } else if (m.aggregation === 'MIN' || m.aggregation === 'MAX') {
+          selectParts.push(`${m.aggregation}(TRY_CAST(${colExpr} AS DOUBLE)) AS "${m.alias}"`);
         } else {
           selectParts.push(`${m.aggregation}(${colExpr}) AS "${m.alias}"`);
         }

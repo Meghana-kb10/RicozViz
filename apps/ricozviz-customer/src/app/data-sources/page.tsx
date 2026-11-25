@@ -16,6 +16,7 @@ import {
   apiListSourceTables,
   apiGetSourceTableSchema,
   apiCreateDataset,
+  apiUploadDataset,
   apiImportSourceTable,
   type DataSourceData,
   type DataSourceType,
@@ -87,6 +88,7 @@ export default function DataSourcesPage() {
   const [jsonFileName, setJsonFileName] = useState("data.json");
   const [jsonDataPath, setJsonDataPath] = useState("records");
   // CSV fields
+  const [selectedCsvFile, setSelectedCsvFile] = useState<File | null>(null);
   const [csvFileName, setCsvFileName] = useState("");
   const [csvDelimiter, setCsvDelimiter] = useState(",");
   // REST API fields
@@ -192,6 +194,7 @@ export default function DataSourcesPage() {
     setJsonDataPath("records");
     setCsvFileName("");
     setCsvDelimiter(",");
+    setSelectedCsvFile(null);
     setApiUrl("");
     setApiMethod("GET");
     setApiAuthType("NONE");
@@ -203,6 +206,7 @@ export default function DataSourcesPage() {
 
   function openEditModal(ds: DataSourceData) {
     setEditingSource(ds);
+    setSelectedCsvFile(null);
     setFormType(ds.type);
     setFormName(ds.name);
     setFormDescription(ds.description || "");
@@ -459,14 +463,27 @@ export default function DataSourcesPage() {
         });
         setSuccessMsg(`Data source "${formName}" updated successfully.`);
       } else {
-        await apiCreateDataSource({
+        const createdDs = await apiCreateDataSource({
           name: formName,
           description: formDescription || undefined,
           type: formType,
           connection,
           workspaceId: currentWorkspace?.id,
         });
-        setSuccessMsg(`Data source "${formName}" created successfully.`);
+
+        if (formType === "CSV" && selectedCsvFile) {
+          const formData = new FormData();
+          formData.append("file", selectedCsvFile);
+          formData.append("name", formName || selectedCsvFile.name.replace(/\.[^/.]+$/, ""));
+          if (formDescription) formData.append("description", formDescription);
+          formData.append("dataSourceId", createdDs.id);
+          if (currentWorkspace?.id) formData.append("workspaceId", currentWorkspace.id);
+
+          await apiUploadDataset(formData);
+          setSuccessMsg(`Data source "${formName}" and dataset created from uploaded CSV successfully.`);
+        } else {
+          setSuccessMsg(`Data source "${formName}" created successfully.`);
+        }
       }
 
       setIsModalOpen(false);
@@ -1219,6 +1236,42 @@ export default function DataSourcesPage() {
 
               {formType === "CSV" && (
                 <div className="space-y-3 pt-3 border-t border-[#242424]">
+                  <div>
+                    <label className="block text-xs font-mono-code text-[#898989] mb-1">
+                      Upload CSV File
+                    </label>
+                    <div className="relative border border-dashed border-[#333333] hover:border-[#ff6b35]/50 bg-[#161616] rounded-xl p-4 text-center cursor-pointer transition">
+                      <input
+                        type="file"
+                        id="csv-file-input"
+                        accept=".csv,text/csv"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setSelectedCsvFile(file);
+                          if (file) {
+                            setCsvFileName(file.name);
+                            if (!formName) {
+                              setFormName(file.name.replace(/\.[^/.]+$/, ""));
+                            }
+                          }
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      />
+                      {selectedCsvFile ? (
+                        <div className="flex items-center justify-center gap-2 text-xs font-mono-code text-[#ff6b35]">
+                          <FileSpreadsheet className="h-4 w-4" />
+                          <span className="font-semibold">{selectedCsvFile.name}</span>
+                          <span className="text-[#898989]">({(selectedCsvFile.size / 1024).toFixed(1)} KB)</span>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-[#898989] font-mono-code flex flex-col items-center gap-1">
+                          <FileSpreadsheet className="h-5 w-5 text-[#666666]" />
+                          <span>Click or drag and drop a .csv file here</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-3">
                     <div className="col-span-2">
                       <label className="block text-xs font-mono-code text-[#898989] mb-1">

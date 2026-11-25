@@ -45,7 +45,7 @@ const DashboardSchema = new Schema<IDashboardDocument>(
     },
     ownerId: objectIdRef('User', true),
     layoutConfig: { type: Schema.Types.Mixed, default: () => ({}) },
-    shareToken: { type: String, default: null, unique: true, sparse: true },
+    shareToken: { type: String, default: undefined },
     shareTokenActive: { type: Boolean, default: false },
     sharedAt: { type: Date, default: null },
     shareExpiresAt: { type: Date, default: null }
@@ -53,6 +53,10 @@ const DashboardSchema = new Schema<IDashboardDocument>(
   { collection: COLLECTIONS.DASHBOARDS, timestamps: true, versionKey: false }
 );
 DashboardSchema.index({ organizationId: 1, status: 1 });
+DashboardSchema.index(
+  { shareToken: 1 },
+  { unique: true, partialFilterExpression: { shareToken: { $type: 'string' } } }
+);
 
 export const DashboardModel: Model<IDashboardDocument> =
   defineModel<IDashboardDocument>('Dashboard', DashboardSchema);
