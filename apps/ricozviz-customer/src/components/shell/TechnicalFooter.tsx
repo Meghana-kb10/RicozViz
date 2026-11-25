@@ -90,7 +90,7 @@ export function TechnicalFooter() {
               <ul className="space-y-3 text-sm">
                 <li>
                   <a
-                    href="https://github.com/ricozdev/viz"
+                    href="https://github.com/Meghana-kb10/RicozViz"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white/70 hover:text-white transition duration-200 block"
@@ -226,7 +226,7 @@ export function TechnicalFooter() {
                 </li>
                 <li>
                   <a
-                    href="https://github.com/ricozdev/viz"
+                    href="https://github.com/Meghana-kb10/RicozViz"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white/70 hover:text-white transition duration-200 inline-flex items-center gap-2 group"

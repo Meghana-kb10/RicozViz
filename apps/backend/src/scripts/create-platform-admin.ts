@@ -8,6 +8,8 @@
 //   ADMIN_SEED_EMAIL, ADMIN_SEED_PASSWORD, ADMIN_SEED_NAME
 // ==============================================================================
 
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import bcrypt from 'bcryptjs';
 import { connectDatabase, disconnectDatabase, UserModel } from '@repo/database';
 import { config } from '../config/env.js';
@@ -129,6 +131,10 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}`) {
+const isMain =
+  Boolean(process.argv[1]) &&
+  path.resolve(process.argv[1]!) === path.resolve(fileURLToPath(import.meta.url));
+
+if (isMain) {
   main();
 }

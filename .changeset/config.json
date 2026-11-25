@@ -10,7 +10,7 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "ricozdev/viz"
+      "repo": "Meghana-kb10/RicozViz"
     }
   ],
   "commit": false,
