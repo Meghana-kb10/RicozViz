@@ -1,6 +1,18 @@
 /** @type {import('next').NextConfig} */
+const adminProxyOrigin = (
+  process.env.ADMIN_API_ORIGIN ||
+  process.env.BACKEND_API_URL ||
+  ''
+)
+  .trim()
+  .replace(/\/+$/, '');
+
 const nextConfig = {
   output: 'standalone',
+  // Automatically route admin browser calls same-origin when ADMIN_API_ORIGIN is configured without a public API URL (e.g. Vercel -> Render)
+  ...(adminProxyOrigin && !process.env.NEXT_PUBLIC_ADMIN_API_URL && !process.env.NEXT_PUBLIC_API_URL
+    ? { env: { NEXT_PUBLIC_ADMIN_API_URL: 'same-origin' } }
+    : {}),
   // Workspace packages ship raw TypeScript sources, so Next must transpile them.
   transpilePackages: [
     '@repo/api',
@@ -9,6 +21,15 @@ const nextConfig = {
     '@repo/utils',
     '@repo/validation'
   ],
+  async rewrites() {
+    if (!adminProxyOrigin) return [];
+    return [
+      {
+        source: '/admin/:path*',
+        destination: `${adminProxyOrigin}/admin/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

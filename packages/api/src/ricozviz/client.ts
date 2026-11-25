@@ -27,7 +27,14 @@ export function getApiBaseUrl(): string {
   const envUrl = readPublicEnvUrl();
 
   if (configuredBaseUrl) {
+    if (configuredBaseUrl === '/' || configuredBaseUrl.toLowerCase() === 'same-origin') {
+      return '';
+    }
     return stripTrailingSlash(configuredBaseUrl);
+  }
+
+  if (envUrl && (envUrl === '/' || envUrl.toLowerCase() === 'same-origin')) {
+    return '';
   }
 
   // 1. Valid absolute URL with a domain or port.

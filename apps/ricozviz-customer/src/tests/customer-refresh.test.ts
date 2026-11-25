@@ -171,7 +171,7 @@ async function runCustomerTests(): Promise<void> {
   configureRicozVizApi({ baseUrl: `http://127.0.0.1:${port}` });
 
   try {
-    // Generate a token that expires in 1.5 seconds
+    // Generate a token that expires in 1.5s–2.5s (whole-second JWT exp)
     const shortExp = Math.ceil((Date.now() + 1500) / 1000);
     const mockExpiringToken =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
@@ -179,10 +179,12 @@ async function runCustomerTests(): Promise<void> {
       ".sig_short_lived";
 
     activeValidToken = mockExpiringToken;
+    const remainingMs = shortExp * 1000 - Date.now();
+    const expectedDelayMs = Math.max(remainingMs - Math.min(60000, remainingMs * 0.2), 100);
     setAccessToken(mockExpiringToken);
 
-    // Wait 1400ms for proactive timer to trigger refresh before expiration
-    await new Promise((resolve) => setTimeout(resolve, 1400));
+    // Wait past the scheduled proactive buffer (+300ms margin) before checking
+    await new Promise((resolve) => setTimeout(resolve, Math.ceil(expectedDelayMs + 300)));
 
     assert.strictEqual(mockRefreshCounter, 1, "Proactive timer must trigger background refresh");
     const renewedToken = getAccessToken();

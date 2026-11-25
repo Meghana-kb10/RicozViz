@@ -1,0 +1,42 @@
+# ==============================================================================
+# Render Blueprint — RicozViz Backend API
+# ==============================================================================
+# Pair with:
+#   - MongoDB Atlas (MONGODB_URI)
+#   - Vercel (apps/ricozviz-customer & apps/ricozviz-admin)
+# ==============================================================================
+
+services:
+  - type: web
+    name: ricozviz-api
+    runtime: docker
+    dockerfilePath: ./apps/backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: HOST
+        value: 0.0.0.0
+      - key: MONGODB_URI
+        sync: false # Paste your MongoDB Atlas connection string (including /ricozviz)
+      - key: MONGODB_DB_NAME
+        value: ricozviz
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ADMIN_SECRET
+        generateValue: true
+      - key: CREDENTIAL_ENC_KEY
+        generateValue: true
+      - key: CREDENTIAL_ENC_KEY_VERSION
+        value: "1"
+      - key: ACTIVE_ENCRYPTION_KEY_VERSION
+        value: "1"
+      - key: WEB_APP_URL
+        sync: false # Your Customer Vercel URL (e.g. https://ricozviz.vercel.app)
+      - key: CORS_ORIGIN
+        sync: false # Comma-separated Vercel URLs (e.g. https://ricozviz.vercel.app,https://ricozviz-admin.vercel.app)

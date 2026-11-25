@@ -16,6 +16,7 @@ import { consumeWsTicket } from './modules/ricozviz/collaboration/ws-ticket.serv
 export async function buildApp(): Promise<FastifyInstance> {
   const app = fastify({
     logger: false,
+    trustProxy: true,
     bodyLimit: config.maxUploadSizeBytes
   });
 

@@ -128,16 +128,19 @@ export function loadEnv(cwd: string = process.cwd()): AppConfig {
   const corsOriginRaw = process.env.CORS_ORIGIN || process.env.ALLOWED_ORIGIN || (nodeEnv === 'production' ? 'http://localhost:3000' : '*');
   let corsOrigin: boolean | string | string[];
   if (corsOriginRaw.includes(',')) {
-    corsOrigin = corsOriginRaw.split(',').map((origin) => origin.trim());
+    corsOrigin = corsOriginRaw
+      .split(',')
+      .map((origin) => origin.trim().replace(/\/+$/, ''))
+      .filter(Boolean);
   } else if (corsOriginRaw === '*') {
     if (nodeEnv === 'production') {
       console.warn('⚠️ [SECURITY WARNING] Wildcard CORS (*) is disabled in production. Defaulting to webAppUrl.');
-      corsOrigin = parsed.data.WEB_APP_URL || 'http://localhost:3000';
+      corsOrigin = (parsed.data.WEB_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
     } else {
       corsOrigin = true;
     }
   } else {
-    corsOrigin = corsOriginRaw;
+    corsOrigin = corsOriginRaw.trim().replace(/\/+$/, '');
   }
 
   const effectiveNodeEnv = (nodeEnv === 'production' || nodeEnv === 'test') ? nodeEnv : 'development';

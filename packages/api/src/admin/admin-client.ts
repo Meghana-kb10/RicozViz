@@ -24,11 +24,17 @@ export function configureAdminApi(options: { baseUrl?: string }): void {
 
 export function getAdminApiBaseUrl(): string {
   if (configuredAdminBaseUrl) {
+    if (configuredAdminBaseUrl === '/' || configuredAdminBaseUrl.toLowerCase() === 'same-origin') {
+      return '';
+    }
     return stripTrailingSlash(configuredAdminBaseUrl);
   }
   if (typeof process !== 'undefined' && process.env) {
     const envUrl = (process.env as Record<string, string | undefined>)['NEXT_PUBLIC_ADMIN_API_URL'] ||
       (process.env as Record<string, string | undefined>)['NEXT_PUBLIC_API_URL'];
+    if (envUrl && (envUrl === '/' || envUrl.toLowerCase() === 'same-origin')) {
+      return '';
+    }
     if (envUrl && envUrl.startsWith('http')) {
       return stripTrailingSlash(envUrl);
     }

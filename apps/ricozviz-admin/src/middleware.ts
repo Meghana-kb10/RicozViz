@@ -67,7 +67,7 @@ export async function middleware(request: NextRequest) {
         process.env.NEXT_PUBLIC_API_URL,
         'http://localhost:4000',
         'http://127.0.0.1:4000'
-      ].filter((origin): origin is string => Boolean(origin && origin.trim().length > 0))
+      ].filter((origin): origin is string => Boolean(origin && /^https?:\/\//i.test(origin.trim())))
     )
   ).join(' ');
 

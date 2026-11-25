@@ -518,9 +518,16 @@ export default function DashboardDetailPage({
         const ticketRes = await apiGetDashboardWsTicket(id);
         if (!isMounted) return;
 
-        const baseUrl = getApiBaseUrl();
-        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsHost = baseUrl.replace(/^http(s)?:\/\//, "");
+        const wsBase = process.env.NEXT_PUBLIC_WS_URL || getApiBaseUrl();
+        if (!wsBase || !/^https?:\/\/|^wss?:\/\//i.test(wsBase)) {
+          startFallback();
+          return;
+        }
+        const wsProtocol =
+          wsBase.startsWith("https://") || wsBase.startsWith("wss://") || window.location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
+        const wsHost = wsBase.replace(/^(http|ws)(s)?:\/\//i, "").replace(/\/+$/, "");
         const wsUrl = `${wsProtocol}//${wsHost}/ws/dashboards/${id}?ticket=${encodeURIComponent(ticketRes.ticket)}`;
 
         socket = new WebSocket(wsUrl);

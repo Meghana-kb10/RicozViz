@@ -1,169 +1,137 @@
-# RicozViz Deployment Guide (Fresh Setup from Scratch)
+# RicozViz Deployment Guide
 
-This guide explains how to deploy **RicozViz** (Backend API, Background Worker, Customer Portal, Admin Portal, MongoDB, Redis, and Caddy Reverse Proxy) on any fresh Linux server / VPS (Ubuntu 22.04/24.04 or Debian 12) from scratch using Docker Compose.
-
----
-
-## 1. Server Requirements
-
-- **Server**: Fresh Linux VPS (minimum **2 vCPU / 4 GB RAM / 25 GB disk** recommended for building Next.js & Node.js containers)
-- **Software**: Git + Docker Engine + Docker Compose v2
-- **Ports to open in your server firewall / security group**:
-  - `22` (SSH)
-  - `80` (HTTP) & `443` (HTTPS) — for Caddy reverse proxy
-  - *(Optional, only if accessing ports directly without Caddy)*: `3001` (Customer), `3002` (Admin), `4000` (API)
-- **Domain DNS** *(recommended for production HTTPS)*:
-  Create `A` records pointing to your server's public IP:
-  - `yourdomain.com` -> `<SERVER_IP>` (Customer Portal)
-  - `admin.yourdomain.com` -> `<SERVER_IP>` (Admin Portal)
-  - `api.yourdomain.com` -> `<SERVER_IP>` (Backend API)
+You can deploy **RicozViz** in two ways from scratch:
+- **Option A (Recommended Free/PaaS Cloud Stack)**: **MongoDB Atlas + Render + Vercel**
+- **Option B (Single Linux VPS / Self-Hosted)**: **Docker Compose + Caddy**
 
 ---
 
-## 2. Install Docker & Clone the Repository
+## Option A: Deploy on MongoDB Atlas + Render + Vercel
 
-SSH into your server and install Docker + Git:
+> **Important**: RicozViz uses **MongoDB (Mongoose)** as its application database—not PostgreSQL/Neon. (Once deployed, you can still connect **Neon** or any PostgreSQL warehouse inside the UI under **Data Sources**.)
 
+### Step 1: Create Database on MongoDB Atlas
+1. Create a free **M0 cluster** at [MongoDB Atlas](https://www.mongodb.com/atlas).
+2. Under **Database Access**, create a database user + password.
+3. Under **Network Access**, add `0.0.0.0/0` (required for Render dynamic outbound IPs).
+4. Copy your connection string and ensure `/ricozviz` is included before `?`, e.g.:
+   ```text
+   mongodb+srv://<user>:<password>@<cluster>.mongodb.net/ricozviz?retryWrites=true&w=majority
+   ```
+
+---
+
+### Step 2: Deploy Backend API on Render (`apps/backend`)
+1. Go to [Render](https://render.com) → **New → Blueprint** (uses [render.yaml](./render.yaml) automatically) **OR** **New → Web Service** connected to `Meghana-kb10/RicozViz` (`develop` branch):
+   - **Runtime**: `Docker`
+   - **Dockerfile Path**: `./apps/backend/Dockerfile`
+   - **Docker Context**: `.`
+   - **Health Check Path**: `/api/v1/health`
+2. Set/confirm environment variables on the Render service:
+   - `NODE_ENV` = `production`
+   - `PORT` = `4000`
+   - `HOST` = `0.0.0.0`
+   - `MONGODB_URI` = *(your MongoDB Atlas URI from Step 1)*
+   - `MONGODB_DB_NAME` = `ricozviz`
+   - `JWT_SECRET` = *(generate with `openssl rand -hex 32` or Render auto-generate)*
+   - `JWT_ADMIN_SECRET` = *(generate with `openssl rand -hex 32` — **save this exact value**, you also need it in Vercel Admin)*
+   - `CREDENTIAL_ENC_KEY` = *(generate with `openssl rand -hex 32`)*
+   - `CREDENTIAL_ENC_KEY_VERSION` = `1`
+   - `ACTIVE_ENCRYPTION_KEY_VERSION` = `1`
+   - `WEB_APP_URL` = *(temporary placeholder until Step 3, then update to your Customer Vercel URL)*
+   - `CORS_ORIGIN` = *(temporary placeholder until Step 3/4, then update to `<CUSTOMER_VERCEL_URL>,<ADMIN_VERCEL_URL>`)*
+3. Wait for Render to build & deploy, and note your Render URL, e.g.:
+   `https://ricozviz-api.onrender.com`
+   Verify it returns `200 OK`: `https://ricozviz-api.onrender.com/api/v1/health`
+
+*(Optional)*: Background scheduled reports/alerts (`apps/backend/Dockerfile.worker`) can be deployed later as a **Render Background Worker** (requires a Render paid instance) pointing to the same `MONGODB_URI` and encryption keys.
+
+---
+
+### Step 3: Deploy Customer Portal on Vercel (`apps/ricozviz-customer`)
+1. Go to [Vercel](https://vercel.com) → **Add New → Project** → import `Meghana-kb10/RicozViz`.
+2. Configure **Project Settings**:
+   - **Root Directory**: `apps/ricozviz-customer`
+   - **Node.js Version**: `22.x`
+   - *(Build/install commands are configured via `apps/ricozviz-customer/vercel.json`)*
+3. Add **Environment Variables**:
+   - `BACKEND_API_URL` = `https://ricozviz-api.onrender.com` *(your Render URL; enables first-party same-origin `/api/v1/*` proxying on Vercel so `HttpOnly` `SameSite=Strict` refresh cookies work cleanly)*
+   - `NEXT_PUBLIC_WS_URL` = `https://ricozviz-api.onrender.com` *(optional — enables direct WebSocket collaboration presence to Render; otherwise SSE/polling fallback runs over HTTPS)*
+4. Deploy and copy your Customer Vercel URL (e.g. `https://ricozviz-customer.vercel.app`).
+
+---
+
+### Step 4: Deploy Admin Portal on Vercel (`apps/ricozviz-admin`)
+1. In Vercel → **Add New → Project** → import the same repo `Meghana-kb10/RicozViz`.
+2. Configure **Project Settings**:
+   - **Root Directory**: `apps/ricozviz-admin`
+   - **Node.js Version**: `22.x`
+   - *(Build/install commands are configured via `apps/ricozviz-admin/vercel.json`)*
+3. Add **Environment Variables**:
+   - `ADMIN_API_ORIGIN` = `https://ricozviz-api.onrender.com` *(your Render URL)*
+   - `JWT_ADMIN_SECRET` = *(MUST match the exact `JWT_ADMIN_SECRET` set on Render in Step 2!)*
+4. Deploy and copy your Admin Vercel URL (e.g. `https://ricozviz-admin.vercel.app`).
+
+---
+
+### Step 5: Link Vercel URLs Back on Render & Create First Admin
+1. Back in **Render → Environment**, update:
+   - `WEB_APP_URL` = `https://ricozviz-customer.vercel.app`
+   - `CORS_ORIGIN` = `https://ricozviz-customer.vercel.app,https://ricozviz-admin.vercel.app`
+   *(Render restarts automatically on env change.)*
+2. Seed your first Platform Admin user against your MongoDB Atlas database (from your local terminal, or Render Shell on paid plans):
+   ```bash
+   # From your local repo checkout:
+   MONGODB_URI="<your_atlas_uri>" \
+   JWT_SECRET="<same_jwt_secret>" \
+   JWT_ADMIN_SECRET="<same_jwt_admin_secret>" \
+   CREDENTIAL_ENC_KEY="<same_enc_key>" \
+   pnpm --filter backend seed:admin -- \
+     --email "admin@yourdomain.com" \
+     --password "ChangeMe#StrongPass123" \
+     --name "Platform Admin"
+   ```
+3. Open your Admin Vercel URL → log in → scan the TOTP 2FA QR code and save your backup codes.
+
+> **Note**: Whenever you change `BACKEND_API_URL`, `ADMIN_API_ORIGIN`, or `NEXT_PUBLIC_*` on Vercel, trigger a **Redeploy** so Next.js picks up the updated rewrite target.
+
+---
+
+## Option B: Deploy on a Single Linux VPS (Docker Compose + Caddy)
+
+### 1. Server Requirements
+- Fresh Ubuntu 22.04/24.04 or Debian 12 VM (minimum **2 vCPU / 4 GB RAM / 25 GB disk**)
+- Open firewall ports: `22`, `80`, `443`
+
+### 2. Install Docker & Clone
 ```bash
 sudo apt-get update && sudo apt-get install -y git curl ca-certificates
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER
-# Log out and back in (or run `newgrp docker`) so docker works without sudo
-```
+newgrp docker
 
-Clone your repository (`develop` branch):
-
-```bash
 git clone -b develop https://github.com/Meghana-kb10/RicozViz.git
 cd RicozViz
 ```
 
----
-
-## 3. Generate Secrets & Configure `.env`
-
-Create a root `.env` file from `.env.example`:
-
+### 3. Configure `.env`
 ```bash
 cp .env.example .env
+openssl rand -hex 32   # Key 1 -> JWT_SECRET
+openssl rand -hex 32   # Key 2 -> JWT_ADMIN_SECRET
+openssl rand -hex 32   # Key 3 -> CREDENTIAL_ENC_KEY & ENCRYPTION_MASTER_KEY_V1
 ```
+Edit `.env` with those secrets plus `MONGODB_URI=mongodb://mongo:27017/ricozviz`, `REDIS_URL=redis://redis:6379`, and your domain URLs (`WEB_APP_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_ADMIN_API_URL`, `CORS_ORIGIN`). Update `deploy/docker/Caddyfile` with your domains if using HTTPS.
 
-Generate three fresh 256-bit cryptographic keys (run each command and save the output):
-
-```bash
-openssl rand -hex 32   # use for JWT_SECRET
-openssl rand -hex 32   # use for JWT_ADMIN_SECRET
-openssl rand -hex 32   # use for CREDENTIAL_ENC_KEY (and ENCRYPTION_MASTER_KEY_V1)
-```
-
-Edit `.env` and set your secrets and URLs:
-
-```env
-NODE_ENV=production
-
-# Cryptographic Secrets (paste the 3 keys generated above)
-JWT_SECRET=<your_generated_jwt_secret>
-JWT_ADMIN_SECRET=<your_generated_admin_secret>
-CREDENTIAL_ENC_KEY=<your_generated_encryption_key>
-CREDENTIAL_ENC_KEY_VERSION=1
-ENCRYPTION_MASTER_KEY_V1=<same_encryption_key>
-ACTIVE_ENCRYPTION_KEY_VERSION=1
-
-# Database / Cache (Docker internal hostnames)
-MONGODB_URI=mongodb://mongo:27017/ricozviz
-REDIS_URL=redis://redis:6379
-POSTGRES_PASSWORD=<choose_a_strong_postgres_password>
-
-# Public Domains (replace with your real domains, or http://<SERVER_IP>:4000 etc. for IP testing)
-WEB_APP_URL=https://yourdomain.com
-NEXT_PUBLIC_API_URL=https://api.yourdomain.com
-NEXT_PUBLIC_ADMIN_API_URL=https://api.yourdomain.com
-CORS_ORIGIN=https://yourdomain.com,https://admin.yourdomain.com
-```
-
-> **Security Note**: Never commit `.env` to Git. Keep `JWT_ADMIN_SECRET` strictly server-side (never prefix it with `NEXT_PUBLIC_`).
-
----
-
-## 4. Configure Domains & HTTPS in Caddy (Optional for Custom Domains)
-
-Open `deploy/docker/Caddyfile` and replace the local hostnames (`api.ricozviz.localhost`, `admin.ricozviz.localhost`, `ricozviz.localhost`) with your real domain names, and remove `tls internal` so Caddy automatically provisions free Let's Encrypt SSL certificates:
-
-```caddyfile
-api.yourdomain.com {
-    reverse_proxy backend:4000
-}
-
-admin.yourdomain.com {
-    reverse_proxy admin:3002
-}
-
-yourdomain.com {
-    handle /api/* {
-        reverse_proxy backend:4000
-    }
-    handle {
-        reverse_proxy customer:3001
-    }
-}
-```
-
-*(If you are just testing locally on the same machine, you can leave `deploy/docker/Caddyfile` as-is and access `http://localhost:3001`, `http://localhost:3002`, and `http://localhost:4000` directly.)*
-
----
-
-## 5. Build & Start All Services
-
+### 4. Build, Boot & Seed Admin
 ```bash
 docker compose build
 docker compose up -d
-```
-
-Check container status (wait ~30 seconds for all healthchecks to turn `healthy`):
-
-```bash
 docker compose ps
-```
-
-Verify live endpoints:
-
-```bash
 curl -fs http://localhost:4000/api/v1/health
-```
 
----
-
-## 6. Create Your First Platform Admin Account
-
-Run the built-in admin seed CLI inside the running `backend` container (password must be 12+ characters with uppercase, lowercase, number, and special character):
-
-```bash
 docker compose exec backend node apps/backend/dist/scripts/create-platform-admin.js \
   --email "admin@yourdomain.com" \
   --password "ChangeMe#StrongPass123" \
   --name "Platform Admin"
-```
-
-1. Open the Admin Portal (`https://admin.yourdomain.com` or `http://localhost:3002`).
-2. Log in with the email and password above.
-3. Complete the mandatory **TOTP 2FA enrollment** by scanning the QR code with an authenticator app (Google Authenticator / 1Password / Authy) and save your backup codes.
-
----
-
-## 7. Updating Later
-
-When you push new changes to `develop`:
-
-```bash
-cd RicozViz
-git pull origin develop
-docker compose build
-docker compose up -d
-```
-
-To view logs or restart a single service:
-
-```bash
-docker compose logs -f backend worker customer admin
-docker compose restart backend
 ```
