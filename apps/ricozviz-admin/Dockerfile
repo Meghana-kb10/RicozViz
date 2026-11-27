@@ -41,7 +41,8 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_ADMIN_API_URL=$NEXT_PUBLIC_ADMIN_API_URL
 
 # Build standalone Next.js bundle
-RUN NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm --filter ricozviz-admin build
+RUN NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 pnpm --filter ricozviz-admin build && \
+    mkdir -p /app/apps/ricozviz-admin/public
 
 # ---- Production Runner Stage ----
 FROM node:22-alpine AS runner
