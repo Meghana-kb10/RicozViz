@@ -1,9 +1,26 @@
-import { connectDatabase, disconnectDatabase, ensureSystemRolesAndPermissions } from '@repo/database';
+import { connectDatabase, disconnectDatabase, ensureSystemRolesAndPermissions, UserModel } from '@repo/database';
 import { logger } from '@repo/utils';
 import { config } from './config/env.js';
 import { buildApp } from './app.js';
+import { createPlatformAdmin } from './scripts/create-platform-admin.js';
 
 const { port, host, mongodbUri, mongodbDbName, env } = config;
+
+async function bootstrapFirstAdminIfRequested(): Promise<void> {
+  const seedEmail = process.env.ADMIN_SEED_EMAIL?.trim();
+  const seedPassword = process.env.ADMIN_SEED_PASSWORD?.trim();
+  if (!seedEmail || !seedPassword) return;
+
+  const existingAdmin = await UserModel.exists({ role: 'PLATFORM_ADMIN' });
+  if (existingAdmin) return;
+
+  const result = await createPlatformAdmin({
+    email: seedEmail,
+    password: seedPassword,
+    name: process.env.ADMIN_SEED_NAME?.trim() || 'Platform Administrator'
+  });
+  logger.info(`[Bootstrap] Auto-seeded initial PLATFORM_ADMIN: ${result.email}`);
+}
 
 async function bootstrap() {
   try {
@@ -20,6 +37,13 @@ async function bootstrap() {
     // Seed system roles/permissions when the catalogue is empty or partial.
     void ensureSystemRolesAndPermissions().catch((err) => {
       logger.error('Failed to initialize system roles and permissions at boot', {
+        error: err instanceof Error ? err.message : String(err)
+      });
+    });
+
+    // Optional first-boot admin creation when ADMIN_SEED_EMAIL + ADMIN_SEED_PASSWORD are set on PaaS hosts (e.g. Render Free)
+    void bootstrapFirstAdminIfRequested().catch((err) => {
+      logger.error('Failed to bootstrap initial platform admin at boot', {
         error: err instanceof Error ? err.message : String(err)
       });
     });

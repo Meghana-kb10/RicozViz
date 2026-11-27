@@ -8,7 +8,7 @@ const backendProxyOrigin = (
   .replace(/\/+$/, '');
 
 const nextConfig = {
-  output: 'standalone',
+  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
   // Automatically route browser REST + refresh cookie calls same-origin when BACKEND_API_URL proxy is configured (e.g. Vercel -> Render)
   ...(backendProxyOrigin && !process.env.NEXT_PUBLIC_API_URL
     ? { env: { NEXT_PUBLIC_API_URL: 'same-origin' } }

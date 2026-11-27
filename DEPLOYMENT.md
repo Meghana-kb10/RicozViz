@@ -78,10 +78,9 @@ You can deploy **RicozViz** in two ways from scratch:
 1. Back in **Render → Environment**, update:
    - `WEB_APP_URL` = `https://ricozviz-customer.vercel.app`
    - `CORS_ORIGIN` = `https://ricozviz-customer.vercel.app,https://ricozviz-admin.vercel.app`
-   *(Render restarts automatically on env change.)*
-2. Seed your first Platform Admin user against your MongoDB Atlas database (from your local terminal, or Render Shell on paid plans):
+   - *(Render Free tier — easiest way to create your first admin)*: also set `ADMIN_SEED_EMAIL` (your email) and `ADMIN_SEED_PASSWORD` (12+ chars with uppercase, lowercase, number, and symbol). The backend automatically creates this `PLATFORM_ADMIN` once on boot when no admin exists yet. *(Remove `ADMIN_SEED_PASSWORD` after your first login.)*
+2. Or seed from your local terminal against your MongoDB Atlas URI:
    ```bash
-   # From your local repo checkout:
    MONGODB_URI="<your_atlas_uri>" \
    JWT_SECRET="<same_jwt_secret>" \
    JWT_ADMIN_SECRET="<same_jwt_admin_secret>" \

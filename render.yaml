@@ -9,6 +9,7 @@
 services:
   - type: web
     name: ricozviz-api
+    branch: develop
     runtime: docker
     dockerfilePath: ./apps/backend/Dockerfile
     dockerContext: .
@@ -37,6 +38,10 @@ services:
       - key: ACTIVE_ENCRYPTION_KEY_VERSION
         value: "1"
       - key: WEB_APP_URL
-        sync: false # Your Customer Vercel URL (e.g. https://ricozviz.vercel.app)
+        value: http://localhost:3001 # Update to your Customer Vercel URL after Step 3
       - key: CORS_ORIGIN
-        sync: false # Comma-separated Vercel URLs (e.g. https://ricozviz.vercel.app,https://ricozviz-admin.vercel.app)
+        value: http://localhost:3001,http://localhost:3002 # Update to <CUSTOMER_VERCEL_URL>,<ADMIN_VERCEL_URL> after deploying Vercel
+      - key: ADMIN_SEED_EMAIL
+        sync: false # Optional: set once to auto-create your first PLATFORM_ADMIN on boot
+      - key: ADMIN_SEED_PASSWORD
+        sync: false # Optional: 12+ chars with uppercase, lowercase, number, and symbol

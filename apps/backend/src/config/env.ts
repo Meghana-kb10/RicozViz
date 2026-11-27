@@ -39,7 +39,10 @@ const ricozEnvSchema = z.object({
   CREDENTIAL_ENC_KEY_VERSION: z.coerce.number().int().positive().default(1),
   CREDENTIAL_ENC_KEYS_PREVIOUS: z.string().optional(),
   ALLOWED_ORIGIN: z.string().optional(),
-  WEB_APP_URL: z.string().url().default('http://localhost:3000'),
+  WEB_APP_URL: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().url().default('http://localhost:3000')
+  ),
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().int().positive().default(15 * 1024 * 1024)
 });
 
@@ -144,8 +147,13 @@ export function loadEnv(cwd: string = process.cwd()): AppConfig {
   }
 
   const effectiveNodeEnv = (nodeEnv === 'production' || nodeEnv === 'test') ? nodeEnv : 'development';
-  const mongodbUri = process.env.MONGODB_URI || (effectiveNodeEnv === 'test' ? 'mongodb://127.0.0.1:27017/ricozviz_test' : 'mongodb://127.0.0.1:27017/core_mono');
-  const mongodbDbName = extractDatabaseName(mongodbUri, process.env.MONGODB_DB_NAME || process.env.DB_NAME);
+  const mongodbUri =
+    process.env.MONGODB_URI?.trim() ||
+    (effectiveNodeEnv === 'test' ? 'mongodb://127.0.0.1:27017/ricozviz_test' : 'mongodb://127.0.0.1:27017/core_mono');
+  const mongodbDbName = extractDatabaseName(
+    mongodbUri,
+    process.env.MONGODB_DB_NAME?.trim() || process.env.DB_NAME?.trim()
+  );
 
   // Strict Test Database Guard: Refuse to start with NODE_ENV=test unless database name ends in _test
   assertTestDatabaseSafety(effectiveNodeEnv, mongodbUri, mongodbDbName);

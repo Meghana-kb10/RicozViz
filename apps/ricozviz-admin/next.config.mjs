@@ -8,7 +8,7 @@ const adminProxyOrigin = (
   .replace(/\/+$/, '');
 
 const nextConfig = {
-  output: 'standalone',
+  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
   // Automatically route admin browser calls same-origin when ADMIN_API_ORIGIN is configured without a public API URL (e.g. Vercel -> Render)
   ...(adminProxyOrigin && !process.env.NEXT_PUBLIC_ADMIN_API_URL && !process.env.NEXT_PUBLIC_API_URL
     ? { env: { NEXT_PUBLIC_ADMIN_API_URL: 'same-origin' } }
